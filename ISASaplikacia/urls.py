@@ -21,3 +21,14 @@ urlpatterns = [
     path('admin/', admin.site.urls),
 ]
 
+from django.contrib import admin
+from django.urls import path
+from django.http import HttpResponse
+
+def home(request):
+    return HttpResponse("✅ Vitaj v ISAS aplikácii! Server beží správne 🚀")
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('', home),
+]
