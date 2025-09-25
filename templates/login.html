@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <title>Prihlásenie | ISAS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light d-flex align-items-center justify-content-center vh-100">
+    <div class="card shadow-lg" style="width: 400px;">
+        <div class="card-header bg-primary text-white text-center">
+            <h4>🔑 Prihlásenie do ISAS</h4>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label for="username" class="form-label">Používateľské meno</label>
+                    <input type="text" class="form-control" id="username" name="username" placeholder="Zadajte meno">
+                </div>
+                <div class="mb-3">
+                    <label for="password" class="form-label">Heslo</label>
+                    <input type="password" class="form-control" id="password" name="password" placeholder="Zadajte heslo">
+                </div>
+                <button type="submit" class="btn btn-primary w-100">Prihlásiť sa</button>
+            </form>
+        </div>
+        <div class="card-footer text-center">
+            <small class="text-muted">© 2025 ISAS</small>
+        </div>
+    </div>
+</body>
+</html>

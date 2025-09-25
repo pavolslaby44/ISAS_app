@@ -17,7 +17,11 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path
+from django.contrib.auth import views as auth_views
+from . import views
 
 urlpatterns = [
-    path('', admin.site.urls),  # admin bude na hlavnej adrese /
+    path("admin/", admin.site.urls),
+    path("", views.dashboard, name="dashboard"),
+    path("logout/", auth_views.LogoutView.as_view(next_page="/admin/login/"), name="logout"),
 ]
