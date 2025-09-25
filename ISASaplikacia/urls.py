@@ -17,11 +17,9 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path
-from django.contrib.auth import views as auth_views
 from . import views
 
 urlpatterns = [
-    path("admin/", admin.site.urls),
-    path("", views.dashboard, name="dashboard"),
-    path("logout/", auth_views.LogoutView.as_view(next_page="/admin/login/"), name="logout"),
+    path('', views.home),         # root -> redirect na admin
+    path('admin/', admin.site.urls),
 ]
