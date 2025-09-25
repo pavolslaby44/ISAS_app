@@ -101,3 +101,9 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+try:
+    from custom_auth.startup import create_superuser
+    create_superuser()
+except Exception as e:
+    print("⚠️ Superuser creation skipped:", e)
+
