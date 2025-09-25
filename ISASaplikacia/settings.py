@@ -107,3 +107,10 @@ try:
 except Exception as e:
     print("⚠️ Superuser creation skipped:", e)
 
+import django
+django.setup()
+from .startup import create_superuser
+
+create_superuser()
+
+
