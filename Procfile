@@ -1,0 +1,1 @@
+web: gunicorn ISASaplikacia.wsgi:application
