@@ -1,2 +1,2 @@
 release: python manage.py migrate && python manage.py create_default_superuser
-web: gunicorn ISASaplikacia.wsgi:application
+web: gunicorn isasaplikacia.wsgi:application
