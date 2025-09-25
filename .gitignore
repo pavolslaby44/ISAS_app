@@ -17,8 +17,10 @@ venv/
 db.sqlite3
 
 # Django static files
-staticfiles/
 static/
+staticfiles/*
+!staticfiles/admin/
+!staticfiles/admin/**
 
 # VS Code / IDE
 .vscode/
@@ -27,3 +29,4 @@ static/
 # OS files
 .DS_Store
 Thumbs.db
+
