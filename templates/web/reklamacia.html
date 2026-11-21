@@ -1,0 +1,531 @@
+{% extends 'web/base.html' %}
+
+{% block title %}{{ titulok_stranky|default:"Garančný servis a reklamácie" }} | {{ nastavenia.titulok_webu|default:identita.nazov_spolocnosti }}{% endblock %}
+{% block description %}Formulár pre nahlásenie garančného servisu a reklamácií (RMA). V prípade akejkoľvek prevádzkovej nezrovnalosti v záručnej dobe garantujeme okamžité spracovanie.{% endblock %}
+
+{% block extra_head %}
+{% if canonical_url %}<link rel="canonical" href="{{ canonical_url }}">{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="bg-gray-100 py-4 border-b border-gray-200">
+    <div class="max-w-7xl mx-auto px-6 text-sm text-gray-500 font-medium">
+        <a href="{% url 'webbuilder:home' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="hover:text-brand transition">Domov</a>
+        <span class="mx-2">/</span>
+        <span class="text-gray-900">{{ titulok_stranky|default:"Garančný servis (RMA)" }}</span>
+    </div>
+</div>
+
+<section class="py-16 bg-white px-6 flex-grow">
+    <div class="max-w-3xl mx-auto">
+        <div class="text-center mb-10">
+            <div class="inline-flex items-center justify-center p-4 bg-slate-50 text-slate-600 rounded-2xl mb-4 border border-slate-200 shadow-sm text-3xl">🛡️</div>
+            <h1 class="text-3xl md:text-4xl font-extrabold mb-4 text-gray-900">{{ titulok_stranky|default:"Garančný servis a reklamácie" }}</h1>
+            <p class="text-gray-600 text-lg">
+                Za každým servisným zásahom si stojíme. 
+                {% if platna_reklamacna_lehota %}
+                    Pre vašu spoločnosť evidujeme zmluvnú lehotu spracovania do <span class="font-bold text-gray-900">{{ platna_reklamacna_lehota }} dní</span>.
+                {% elif globalne_nastavenia and globalne_nastavenia.pracovny_cas_od and globalne_nastavenia.pracovny_cas_do %}
+                    V prípade nezrovnalosti v záručnej dobe garantujeme spracovanie v prevádzkovom čase ({{ globalne_nastavenia.pracovny_cas_od|time:"H:i" }} – {{ globalne_nastavenia.pracovny_cas_do|time:"H:i" }}{% if not globalne_nastavenia.pracovat_vikendy %}, v pracovné dni{% endif %}).
+                {% else %}
+                    V prípade akejkoľvek prevádzkovej nezrovnalosti v záručnej dobe garantujeme bezodkladné nasadenie technického oddelenia.
+                {% endif %}
+            </p>
+            {% if sla_telemetria and sla_telemetria.status and sla_telemetria.sprava %}
+            <div class="mt-3 inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold
+                {% if sla_telemetria.status == 'OPTIMALNA' %}bg-emerald-100 text-emerald-800 border border-emerald-200
+                {% elif sla_telemetria.status == 'ZVYSENA' %}bg-amber-100 text-amber-800 border border-amber-200
+                {% elif sla_telemetria.status == 'KRITICKA' %}bg-rose-100 text-rose-800 border border-rose-200
+                {% else %}bg-slate-100 text-slate-700 border border-slate-200{% endif %}">
+                <span class="w-2 h-2 rounded-full {% if sla_telemetria.status == 'OPTIMALNA' %}bg-emerald-500 animate-pulse{% elif sla_telemetria.status == 'ZVYSENA' %}bg-amber-500{% elif sla_telemetria.status == 'KRITICKA' %}bg-rose-500{% else %}bg-slate-400{% endif %}"></span>
+                <span>{{ sla_telemetria.sprava }}</span>
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="bg-white p-8 rounded-3xl border border-gray-200 shadow-xl">
+            <form id="warrantyForm" class="space-y-5" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="text" name="website_url" class="hidden" tabindex="-1" autocomplete="off">
+                <input type="hidden" name="typ_leadu" value="WARRANTY">
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">Názov vašej firmy *</label>
+                        <input type="text" name="firma" required value="{% if b2b_klient %}{{ b2b_klient.Nazov_spolocnosti }}{% elif request.user.is_authenticated and request.user.zakaznik_profil %}{{ request.user.zakaznik_profil.Nazov_spolocnosti }}{% endif %}" placeholder="{% if b2b_klient and b2b_klient.kontaktna_osoba %}Firma (kontakt: {{ b2b_klient.kontaktna_osoba }}){% else %}Firma / Meno{% endif %}" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 ring-brand outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">Číslo faktúry / zákazky *</label>
+                        <input type="text" name="faktura" required list="doklady_list" placeholder="{% if industry_terms.ticket_placeholder %}{{ industry_terms.ticket_placeholder }}{% else %}FAK-{% now 'Y' %}-001{% endif %}" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 ring-brand outline-none font-mono">
+                        {% if klient_faktury or klient_objednavky %}
+                        <datalist id="doklady_list">
+                            {% for f in klient_faktury %}
+                                <option value="{{ f.cislo_faktury }}" data-zariadenie="{{ f.zariadenie_id|default:'' }}">Faktúra {{ f.cislo_faktury }}{% if f.variabilny_symbol and f.variabilny_symbol != f.cislo_faktury %} (VS: {{ f.variabilny_symbol }}){% endif %} (z dňa {{ f.datum_vystavenia|date:"d.m.Y" }})</option>
+                            {% endfor %}
+                            {% for obj in klient_objednavky %}
+                                <option value="{{ obj.cislo_objednavky_interne }}">Zákazka {{ obj.cislo_objednavky_interne }}{% if obj.cislo_objednavky_klienta %} (PO: {{ obj.cislo_objednavky_klienta }}){% endif %} (z dňa {{ obj.datum_prijatia|date:"d.m.Y" }})</option>
+                            {% endfor %}
+                        </datalist>
+                        {% if klient_faktury %}
+                        <div class="mt-1.5 flex flex-wrap gap-1 text-[11px] text-gray-500 items-center">
+                            <span class="font-medium">Rýchly výber:</span>
+                            {% for f in klient_faktury|slice:":3" %}
+                            <button type="button" class="btn-prefill-rma text-brand bg-brand/5 hover:bg-brand/10 border border-brand/20 px-1.5 py-0.5 rounded font-mono transition" data-doklad="{{ f.cislo_faktury }}" {% if f.zariadenie_id %}data-zariadenie="{{ f.zariadenie_id }}"{% endif %} data-popis="Reklamácia dodávky k faktúre {{ f.cislo_faktury }}">
+                                {{ f.cislo_faktury }}
+                            </button>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">Kontaktný e-mail *</label>
+                        <input type="email" name="email" required value="{% if b2b_klient %}{{ b2b_klient.email|default:request.user.email }}{% elif request.user.is_authenticated and request.user.zakaznik_profil %}{{ request.user.zakaznik_profil.email|default:request.user.email }}{% endif %}" placeholder="E-mail pre komunikáciu" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 ring-brand outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">Kontaktný telefón *</label>
+                        <input type="tel" name="telefon" required value="{% if b2b_klient %}{{ b2b_klient.telefon|default:'' }}{% elif request.user.is_authenticated and request.user.zakaznik_profil %}{{ request.user.zakaznik_profil.telefon|default:'' }}{% endif %}" placeholder="Telefónne číslo" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 ring-brand outline-none">
+                    </div>
+                </div>
+
+                {% if klient_zariadenia %}
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Dotknuté {{ industry_terms.zariadenie_genitiv|default:"zariadenie" }} (z vašej evidencie)</label>
+                    <select name="zariadenie_id" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 ring-brand outline-none">
+                        <option value="">-- Vyberte evidované {{ industry_terms.zariadenie_genitiv|default:"zariadenie" }} (voliteľné) --</option>
+                        {% for z in klient_zariadenia %}
+                            <option value="{{ z.bezpecnostny_kluc|default:z.id }}" data-id="{{ z.id }}">
+                                {{ z.verejny_nazov }}{% if z.rok_vyroby %} (r. {{ z.rok_vyroby }}){% endif %}{% if z.datum_instalacie %} • Inštalované: {{ z.datum_instalacie|date:"d.m.Y" }}{% endif %}{% if z.vyrobne_cislo and z.vyrobne_cislo != 'Nezadané' %} (S/N: {{ z.vyrobne_cislo }}){% endif %}{% if z.meter_display and z.meter_display != '—' %} • {{ z.meter_label }}: {{ z.meter_display }}{% endif %}{% if z.umiestnenie %} • {{ z.umiestnenie }}{% endif %}{% if z.predlzena_zaruka_do %} — [V ZÁRUKE do {{ z.predlzena_zaruka_do|date:"d.m.Y" }}]{% elif z.zaruka_do %} — [V ZÁRUKE do {{ z.zaruka_do|date:"d.m.Y" }}]{% elif z.je_v_zaruke %} — [V ZÁRUKE]{% endif %}{% if z.v_servisnom_rezime %} — [🛠️ V ÚDRŽBE]{% endif %}{% if z.ma_otvoreny_servis %} — [⚠️ SERVIS V RIEŠENÍ]{% endif %}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% else %}
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Identifikácia {{ industry_terms.zariadenie_genitiv|default:"zariadenia" }} (Výrobné číslo / Typ zo štítku)</label>
+                    <input type="text" name="zariadenie_manual" placeholder="Napr. Výrobné číslo (S/N), typové označenie zo štítku..." class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 ring-brand outline-none">
+                </div>
+                {% endif %}
+                
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Presný popis vady *</label>
+                    <textarea name="popis" rows="5" required class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 ring-brand outline-none" placeholder="{{ industry_terms.poziadavka_placeholder|default:'Popíšte prosím detailne, čo presne nefunguje alebo aký chybový stav zariadenie vykazuje...' }}"></textarea>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">📸 Fotografia / Video vady (Urýchli vybavenie)</label>
+                    <input type="file" name="priloha" accept="image/*,video/*" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-bold file:bg-brand/10 file:text-brand">
+                </div>
+                
+                {% if b2b_klient and b2b_klient.vyzaduje_povolenie_vstupu %}
+                <div class="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-2.5">
+                    <div class="flex items-start gap-2.5">
+                        <span class="text-xl leading-none">🛂</span>
+                        <div class="flex-grow">
+                            <span class="font-bold block text-sm text-amber-900 mb-0.5">Evidujeme požiadavku na povolenie vstupu (Gate Pass):</span> 
+                            <span>V prípade výjazdu technika do vašich priestorov náš dispečing vopred pripraví a overí náležitosti vstupu</span>{% if b2b_klient.email_vratnice %} s vašou SBS/vrátnicou (<span class="font-semibold">{{ b2b_klient.email_vratnice }}</span>{% if b2b_klient.telefon_vratnica %}, tel: {{ b2b_klient.telefon_vratnica }}{% endif %}){% endif %}.
+                        </div>
+                    </div>
+                    {% if b2b_klient.instrukcie_vstupu %}
+                    <div class="pl-8 text-amber-900/90 text-[11px] leading-relaxed border-t border-amber-200/60 pt-2 whitespace-pre-line">
+                        <span class="font-semibold">Inštrukcie pre vstup:</span> {{ b2b_klient.instrukcie_vstupu }}
+                    </div>
+                    {% endif %}
+                    {% if b2b_klient.sablona_vstupu or b2b_klient.url_vstupneho_portalu %}
+                    <div class="pl-8 pt-1 flex flex-wrap gap-2 text-[11px]">
+                        {% if b2b_klient.sablona_vstupu %}
+                            <a href="{% if b2b_klient.sablona_vstupu %}{{ b2b_klient.sablona_vstupu.url }}{% endif %}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 font-semibold text-amber-900 hover:underline bg-amber-100 px-2 py-1 rounded-lg">
+                                📎 Stiahnuť formulár priepustky
+                            </a>
+                        {% endif %}
+                        {% if b2b_klient.url_vstupneho_portalu %}
+                            <a href="{{ b2b_klient.url_vstupneho_portalu }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 font-semibold text-amber-900 hover:underline bg-amber-100 px-2 py-1 rounded-lg">
+                                🔗 Registračný portál pre vstup
+                            </a>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if compliance_disclaimer %}
+                <div class="text-xs text-gray-500 bg-slate-50 border border-slate-200 rounded-xl p-3 leading-relaxed text-justify">
+                    {{ compliance_disclaimer }}
+                </div>
+                {% endif %}
+
+                <button type="submit" class="w-full bg-gray-900 hover:bg-brand text-white font-bold text-lg py-4 rounded-xl transition shadow-md mt-2">Odoslať na garančné oddelenie</button>
+
+                {% if email_reklamacie or identita.telefon %}
+                <div class="mt-4 pt-4 border-t border-gray-100 text-center text-xs text-gray-500">
+                    Priamy kontakt na garančný dispečing: 
+                    {% if identita.telefon %}<span class="font-medium text-gray-700">{{ identita.telefon }}</span>{% endif %}
+                    {% if email_reklamacie %}{% if identita.telefon %}<span class="mx-1">•</span>{% endif %}<span class="font-medium text-gray-700">{{ email_reklamacie }}</span>{% endif %}
+                </div>
+                {% endif %}
+            </form>
+        </div>
+
+        {% if klient_stroje_v_zaruke %}
+        <div class="mt-8 bg-sky-50/60 p-6 rounded-3xl border border-sky-200 shadow-sm">
+            <h2 class="text-lg font-bold text-gray-900 mb-2 flex items-center gap-2">
+                <span>⚙️</span> Vaše evidované {{ industry_terms.zariadenia_mnozno|default:"zariadenia" }} v platnej záruke
+            </h2>
+            <p class="text-xs text-gray-600 mb-4">Prehľad techniky s aktívnou štandardnou alebo predĺženou zárukou výrobcu/SLA:</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {% for szar in klient_stroje_v_zaruke %}
+                <div class="bg-white p-3.5 rounded-xl border border-sky-100 text-xs shadow-2xs flex flex-col justify-between gap-2">
+                    <div>
+                        <div class="font-bold text-gray-900 flex justify-between items-center gap-2">
+                            <span>{{ szar.verejny_nazov }}</span>
+                            <div class="flex items-center gap-1.5 shrink-0">
+                                {% if szar.v_servisnom_rezime %}
+                                    <span class="text-amber-800 bg-amber-100 font-semibold px-2 py-0.5 rounded-full text-[11px]">🛠️ V údržbe</span>
+                                {% endif %}
+                                <span class="text-sky-700 bg-sky-100 font-semibold px-2 py-0.5 rounded-full">
+                                    {% if szar.predlzena_zaruka_do %}SLA do {{ szar.predlzena_zaruka_do|date:"d.m.Y" }}{% else %}do {{ szar.zaruka_do|date:"d.m.Y" }}{% endif %}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="text-gray-500 mt-1 space-y-0.5">
+                            {% if szar.datum_instalacie %}<div>Inštalované: <span class="font-medium text-gray-700">{{ szar.datum_instalacie|date:"d.m.Y" }}</span></div>{% endif %}
+                            {% if szar.vyrobne_cislo and szar.vyrobne_cislo != 'Nezadané' %}<div>S/N: <span class="font-mono text-gray-700">{{ szar.vyrobne_cislo }}</span></div>{% endif %}
+                            {% if szar.umiestnenie %}<div>{{ industry_terms.umiestnenie|default:"Umiestnenie" }}: <span class="text-gray-700">{{ szar.umiestnenie }}</span></div>{% endif %}
+                            {% if szar.meter_display and szar.meter_display != '—' %}<div>{{ szar.meter_label }}: <span class="font-semibold text-gray-700">{{ szar.meter_display }}</span></div>{% endif %}
+                        </div>
+                        {% if szar.ui_parametre %}
+                        <div class="mt-2 pt-1.5 border-t border-sky-100/80 flex flex-wrap gap-1">
+                            {% for p in szar.ui_parametre|slice:":3" %}
+                                <span class="inline-flex items-center text-[10px] bg-sky-100/70 text-sky-900 font-medium px-1.5 py-0.5 rounded">
+                                    {{ p.nazov }}: {{ p.hodnota }}
+                                </span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="pt-2 border-t border-gray-100 flex items-center justify-between">
+                        {% if szar.bezpecnostny_kluc %}
+                            <a href="{% url 'webbuilder:machine_passport' kluc=szar.bezpecnostny_kluc %}" target="_blank" class="text-brand hover:underline font-semibold inline-flex items-center gap-1">📖 Pas</a>
+                        {% else %}<span></span>{% endif %}
+                        <button type="button" class="btn-prefill-rma text-xs font-semibold text-sky-800 bg-sky-100 hover:bg-sky-200 px-2.5 py-1 rounded-lg transition" data-zariadenie="{{ szar.bezpecnostny_kluc|default:szar.id }}" data-popis="Garančná požiadavka na {{ szar.verejny_nazov }}">
+                            🛡️ Reklamovať
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if aktivne_zaruky_prace %}
+        <div class="mt-8 bg-emerald-50/60 p-6 rounded-3xl border border-emerald-200 shadow-sm">
+            <h2 class="text-lg font-bold text-gray-900 mb-2 flex items-center gap-2">
+                <span>🛡️</span> Vaše aktívne záruky na vykonané servisné opravy
+            </h2>
+            <p class="text-xs text-gray-600 mb-4">Evidujeme platnú zmluvnú záruku na nedávno realizované odborné práce a servisné výkony:</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {% for az in aktivne_zaruky_prace %}
+                <div class="bg-white p-3.5 rounded-xl border border-emerald-100 text-xs shadow-2xs flex flex-col justify-between gap-2">
+                    <div>
+                        <div class="font-bold text-gray-900 flex justify-between items-center">
+                            <span>{{ az.typ_prace }}</span>
+                            <span class="text-emerald-700 bg-emerald-100 font-semibold px-2 py-0.5 rounded-full">do {{ az.zaruka_do|date:"d.m.Y" }}</span>
+                        </div>
+                        {% if az.zariadenie %}
+                        <div class="text-gray-500 mt-1">
+                            {{ industry_terms.zariadenie_fallback_nazov|default:"Zariadenie" }}: <span class="text-gray-700 font-medium">{{ az.zariadenie.verejny_nazov }}</span>
+                            {% if az.zariadenie.bezpecnostny_kluc %}
+                                <a href="{% url 'webbuilder:machine_passport' kluc=az.zariadenie.bezpecnostny_kluc %}" target="_blank" class="text-brand hover:underline font-semibold ml-1">📖 Pas</a>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        <div class="text-gray-400 text-[11px] mt-0.5">Protokol #{{ az.poradove_cislo|default:az.servisny_zaznam_id }} zo dňa {{ az.datum_servisu|date:"d.m.Y" }} (Záruka {{ az.mesiace }} mes.)</div>
+                    </div>
+                    <div class="pt-2 border-t border-gray-100 flex justify-end">
+                        <button type="button" class="btn-prefill-rma text-xs font-semibold text-emerald-800 bg-emerald-100 hover:bg-emerald-200 px-2.5 py-1 rounded-lg transition" data-doklad="Protokol #{{ az.poradove_cislo|default:az.servisny_zaznam_id }}" data-zariadenie="{% if az.zariadenie %}{{ az.zariadenie.bezpecnostny_kluc|default:az.zariadenie.id }}{% endif %}" data-popis="Reklamácia vykonanej práce: {{ az.typ_prace }} (Protokol #{{ az.poradove_cislo|default:az.servisny_zaznam_id }})">
+                            ⚡ Uplatniť záruku práce
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if klient_reklamacie %}
+        <div class="mt-12 bg-white p-6 md:p-8 rounded-3xl border border-gray-200 shadow-md">
+            <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <span>📋</span> Vaše nahlásené garančné požiadavky
+            </h2>
+            <div class="divide-y divide-gray-100">
+                {% for rek in klient_reklamacie %}
+                <div class="py-3 flex flex-col gap-2 text-sm">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-2">
+                        <div>
+                            <span class="font-bold text-gray-800">{{ rek.cislo_objednavky_interne }}</span>
+                            {% if rek.cislo_objednavky_klienta %}
+                                <span class="text-xs text-gray-600 font-medium ml-1.5">(PO: {{ rek.cislo_objednavky_klienta }})</span>
+                            {% endif %}
+                            <span class="text-gray-400 text-xs ml-2">({{ rek.datum_prijatia|date:"d.m.Y" }})</span>
+                            {% if rek.zariadenia.all %}
+                                <div class="text-xs text-gray-500 mt-0.5 flex flex-wrap gap-1.5 items-center">
+                                    {% for rz in rek.zariadenia.all %}
+                                        {% if rz.bezpecnostny_kluc %}
+                                            <a href="{% url 'webbuilder:machine_passport' kluc=rz.bezpecnostny_kluc %}" target="_blank" class="text-brand hover:underline font-medium inline-flex items-center gap-0.5">
+                                                ⚙️ {{ rz.verejny_nazov }}
+                                            </a>
+                                        {% else %}
+                                            <span>⚙️ {{ rz.verejny_nazov }}</span>
+                                        {% endif %}
+                                        {% if not forloop.last %}<span class="text-gray-300">•</span>{% endif %}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            {% if rek.subor_objednavky %}
+                                <a href="{% if rek.subor_objednavky %}{{ rek.subor_objednavky.url }}{% endif %}" target="_blank" rel="noopener noreferrer" class="text-xs text-brand hover:underline inline-flex items-center gap-1 font-medium bg-brand/5 px-2 py-1 rounded-lg">
+                                    📎 Príloha
+                                </a>
+                            {% endif %}
+                            {% for u in rek.vytvorene_ulohy.all %}
+                                {% if u.technici.all %}
+                                    <span class="text-xs text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md font-medium" title="Priradený technik">
+                                        👨‍🔧 {% for t in u.technici.all %}{{ t.meno }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                                    </span>
+                                {% endif %}
+                                {% for sz in u.servisne_zaznamy.all %}
+                                    {% if sz.protokol_uzavrety and sz.uzavrety_pdf_dokument %}
+                                        <a href="{% if sz.uzavrety_pdf_dokument %}{{ sz.uzavrety_pdf_dokument.url }}{% endif %}" target="_blank" rel="noopener noreferrer" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-lg transition font-medium inline-flex items-center gap-1" title="Podpísané dňa: {{ sz.cas_podpisu|default:sz.vytvorene|date:'d.m.Y' }}">
+                                            📄 Protokol ({{ sz.cas_podpisu|default:sz.vytvorene|date:"d.m.Y" }})
+                                        </a>
+                                    {% endif %}
+                                    {% if sz.protokol_uzavrety and sz.koren_problemu and sz.koren_problemu != 'NEHODNOTENE' %}
+                                        <span class="px-2 py-0.5 rounded-md text-[11px] font-semibold 
+                                            {% if sz.je_reklamacia_opravnena %}bg-emerald-100 text-emerald-800 border border-emerald-200
+                                            {% else %}bg-amber-100 text-amber-800 border border-amber-200{% endif %}" title="Klasifikácia príčiny podľa uzavretého servisného protokolu">
+                                            {{ sz.verejny_koren_problemu_display }}
+                                        </span>
+                                    {% endif %}
+                                {% endfor %}
+                            {% endfor %}
+                            {% if rek.termin_dodania %}
+                                <span class="text-xs font-semibold px-2 py-0.5 rounded-md
+                                    {% if rek.je_po_termine %}bg-rose-100 text-rose-800
+                                    {% elif rek.dni_do_terminu is not None and rek.dni_do_terminu <= 3 %}bg-amber-100 text-amber-800
+                                    {% else %}bg-slate-100 text-slate-700{% endif %}">
+                                    ⏳ Termín: {{ rek.termin_dodania|date:"d.m.Y" }}
+                                    {% if rek.je_po_termine %}(Po termíne +{{ rek.dni_do_terminu }} d.)
+                                    {% elif rek.dni_do_terminu is not None %}(Zostáva {{ rek.dni_do_terminu }} d.){% endif %}
+                                </span>
+                            {% endif %}
+                            {% if rek.priorita %}
+                                <span class="px-2 py-0.5 rounded-md text-xs font-semibold
+                                    {% if rek.priorita == 'VYSOKA' %}bg-rose-100 text-rose-800
+                                    {% elif rek.priorita == 'STREDNA' %}bg-amber-100 text-amber-800
+                                    {% else %}bg-slate-100 text-slate-700{% endif %}" title="Priorita požiadavky / SLA">
+                                    {{ rek.get_priorita_display }}
+                                </span>
+                            {% endif %}
+                            <span class="px-2.5 py-1 rounded-full text-xs font-semibold
+                                {% if rek.stav == 'NOVA' %}bg-blue-100 text-blue-700
+                                {% elif rek.stav == 'SCHVALENA' %}bg-amber-100 text-amber-700
+                                {% elif rek.stav == 'VYBAVENA' or rek.stav == 'VYFAKTUROVANA' %}bg-emerald-100 text-emerald-700
+                                {% elif rek.stav == 'ZAMIETNUTA' %}bg-rose-100 text-rose-700
+                                {% else %}bg-gray-100 text-gray-600{% endif %}">
+                                {{ rek.get_stav_display }}
+                            </span>
+                        </div>
+                    </div>
+                    {% for u in rek.vytvorene_ulohy.all %}
+                        {% for sz in u.servisne_zaznamy.all %}
+                            {% if sz.protokol_uzavrety and sz.formalne_zhodnotenie_ai %}
+                            <div class="text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-slate-700 leading-relaxed">
+                                <span class="font-bold text-slate-900 block mb-0.5">🛠️ Výsledok technického šetrenia (Protokol):</span>
+                                {{ sz.formalne_zhodnotenie_ai }}
+                            </div>
+                            {% endif %}
+                        {% endfor %}
+                    {% endfor %}
+                    {% if rek.poznamka_klienta %}
+                    <details class="text-xs text-gray-500 bg-gray-50 rounded-lg p-2 border border-gray-100">
+                        <summary class="cursor-pointer font-medium text-gray-600 hover:text-gray-900 select-none">Zobraziť nahlásený popis požiadavky</summary>
+                        <div class="mt-1.5 whitespace-pre-line text-gray-700 leading-relaxed pl-2 border-l-2 border-gray-300">
+                            {{ rek.poznamka_klienta }}
+                        </div>
+                    </details>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if servisne_strediska %}
+        <div class="mt-8 bg-slate-50 p-6 md:p-8 rounded-3xl border border-slate-200">
+            <h2 class="text-lg font-bold text-gray-900 mb-2 flex items-center gap-2">
+                <span>🏢</span> Autorizované strediská pre osobné odovzdanie
+            </h2>
+            <p class="text-xs text-gray-500 mb-4">V prípade potreby fyzického doručenia dielu alebo zariadenia na diagnostiku môžete využiť naše prevádzky:</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {% for stredisko in servisne_strediska %}
+                <div class="bg-white p-4 rounded-2xl border border-gray-200 text-sm">
+                    <div class="font-bold text-gray-900 flex items-center justify-between">
+                        <span>{{ stredisko.nazov }}</span>
+                        {% if stredisko.kod_pobocky %}
+                            <span class="text-[11px] font-mono text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{{ stredisko.kod_pobocky }}</span>
+                        {% endif %}
+                    </div>
+                    {% if stredisko.adresa %}<div class="text-gray-600 text-xs mt-1">{{ stredisko.adresa }}</div>{% endif %}
+                    {% if stredisko.veduci_skladu %}
+                        <div class="text-xs text-gray-500 mt-1">Vedúci strediska: {{ stredisko.veduci_skladu }}</div>
+                    {% elif stredisko.zodpovedny_zamestnanec %}
+                        <div class="text-xs text-gray-500 mt-1">Zodpovedná osoba: {{ stredisko.zodpovedny_zamestnanec }}</div>
+                    {% endif %}
+                    <div class="mt-2 text-xs text-gray-500 space-y-0.5">
+                        {% with kontakt_tel=stredisko.telefon|default:stredisko.zodpovedny_zamestnanec.telefon kontakt_mail=stredisko.email|default:stredisko.zodpovedny_zamestnanec.email %}
+                            {% if kontakt_tel %}<div>📞 {{ kontakt_tel }}</div>{% endif %}
+                            {% if kontakt_mail %}<div>📧 {{ kontakt_mail }}</div>{% endif %}
+                        {% endwith %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if reklamacne_faq %}
+        <div class="mt-8 bg-white p-6 md:p-8 rounded-3xl border border-gray-200 shadow-sm">
+            <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <span>🛡️</span> Garančné podmienky a časté otázky
+            </h2>
+            <div class="space-y-3">
+                {% for faq in reklamacne_faq %}
+                <details class="group bg-gray-50 rounded-2xl p-4 border border-gray-200 transition">
+                    <summary class="font-semibold text-gray-800 cursor-pointer list-none flex justify-between items-center text-sm">
+                        <span>{{ faq.otazka }}</span>
+                        <span class="text-gray-400 group-open:rotate-180 transition-transform">▼</span>
+                    </summary>
+                    <div class="mt-3 text-sm text-gray-600 border-t border-gray-200/60 pt-3 leading-relaxed">
+                        {{ faq.odpoved|safe }}
+                    </div>
+                </details>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const warrantyForm = document.getElementById('warrantyForm');
+    if (warrantyForm) {
+        // 🚀 SMART PREFILL: Automatické predvyplnenie formulára pri kliknutí na záruku stroja alebo práce
+        document.querySelectorAll('.btn-prefill-rma').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const doklad = this.getAttribute('data-doklad');
+                const zariadenieKey = this.getAttribute('data-zariadenie');
+                const popis = this.getAttribute('data-popis');
+
+                if (doklad) {
+                    const inputDoklad = warrantyForm.querySelector('input[name="faktura"]');
+                    if (inputDoklad) inputDoklad.value = doklad;
+                }
+                if (zariadenieKey) {
+                    const selectZar = warrantyForm.querySelector('select[name="zariadenie_id"]');
+                    if (selectZar) {
+                        const cleanKey = String(zariadenieKey).trim().toLowerCase();
+                        const optMatch = Array.from(selectZar.options).find(o => {
+                            const valNorm = (o.value || '').trim().toLowerCase();
+                            const idNorm = (o.dataset.id || '').trim().toLowerCase();
+                            return (valNorm && valNorm === cleanKey) || (idNorm && idNorm === cleanKey);
+                        });
+                        if (optMatch) {
+                            selectZar.value = optMatch.value;
+                            selectZar.dispatchEvent(new Event('change', { bubbles: true }));
+                        }
+                    }
+                }
+                if (popis) {
+                    const textareaPopis = warrantyForm.querySelector('textarea[name="popis"]');
+                    if (textareaPopis && !textareaPopis.value.trim()) {
+                        textareaPopis.value = popis + ' - ';
+                    }
+                }
+                warrantyForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            });
+        });
+
+        // 🔗 SMART LINK: Reaktívne a defenzívne prepájanie dokladu so zariadením (okamžitá odozva na input aj change)
+        const fakturaInput = warrantyForm.querySelector('input[name="faktura"]');
+        const dokladyList = document.getElementById('doklady_list');
+        if (fakturaInput && dokladyList) {
+            const syncZariadeniePodlaDokladu = function() {
+                const rawVal = (fakturaInput.value || '').trim().toLowerCase();
+                const selectZar = warrantyForm.querySelector('select[name="zariadenie_id"]');
+                if (!selectZar) return;
+
+                if (!rawVal) return;
+
+                const opt = Array.from(dokladyList.options).find(o => (o.value || '').trim().toLowerCase() === rawVal);
+                if (opt && opt.dataset.zariadenie) {
+                    const targetId = String(opt.dataset.zariadenie).trim().toLowerCase();
+                    const optMatch = Array.from(selectZar.options).find(o => {
+                        const valNorm = (o.value || '').trim().toLowerCase();
+                        const idNorm = (o.dataset.id || '').trim().toLowerCase();
+                        return (valNorm && valNorm === targetId) || (idNorm && idNorm === targetId);
+                    });
+                    if (optMatch && selectZar.value !== optMatch.value) {
+                        selectZar.value = optMatch.value;
+                        selectZar.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                }
+            };
+
+            fakturaInput.addEventListener('input', syncZariadeniePodlaDokladu);
+            fakturaInput.addEventListener('change', syncZariadeniePodlaDokladu);
+        }
+
+        warrantyForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const btn = warrantyForm.querySelector('button[type="submit"]');
+            const originalText = btn.innerText;
+            
+            btn.disabled = true;
+            btn.innerText = 'Odosielam...';
+            
+            fetch('{% url "webbuilder:submit_special_lead" %}', {
+                method: 'POST',
+                body: new FormData(warrantyForm),
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.status === 'success') {
+                    warrantyForm.innerHTML = `
+                        <div class="text-center py-8">
+                            <div class="text-5xl mb-4">✅</div>
+                            <h3 class="text-2xl font-bold text-gray-900 mb-2">Garančná požiadavka bola prijatá</h3>
+                            <p class="text-gray-600">Váš podnet sme zaevidovali a odovzdali garančnému oddeleniu. Budeme vás kontaktovať v čo najkratšom čase.</p>
+                        </div>
+                    `;
+                } else {
+                    alert(`❌ Chyba: ${data.message}`);
+                    btn.disabled = false;
+                    btn.innerText = originalText;
+                }
+            })
+            .catch(() => {
+                alert('❌ Nastala chyba pri komunikácii so serverom.');
+                btn.disabled = false;
+                btn.innerText = originalText;
+            });
+        });
+    }
+</script>
+{% endblock %}

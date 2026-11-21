@@ -1,0 +1,611 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}🛠️ Položky predpisu{% endblock %}
+
+{% block extrahead %}
+    {{ block.super }}
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<style>
+    /* --- 💎 ISAS VIVID LIGHT DASHBOARD (1:1 UNIFIED) --- */
+    :root {
+        --primary-indigo: #6366f1;
+        --primary-dark: #4f46e5;
+        --slate-950: #0f172a;
+        --slate-800: #1e293b;
+        --slate-400: #64748b;
+        --emerald: #10b981;
+        --emerald-dark: #059669;
+        --warn-red: #ef4444;
+        --hyper-glass: rgba(255, 255, 255, 0.85);
+    }
+
+    .breadcrumbs, #content > h1, .pretitle, #content-main > h1 { display: none !important; }
+
+    #content { 
+        background: transparent !important;
+        min-height: calc(100vh - 60px); 
+        padding: 40px 30px !important; 
+        display: flex; 
+        flex-direction: column; 
+        align-items: center;
+    }
+
+    /* ZJEDNOTENÁ ŠÍRKA */
+    .isas-ultimate-wrapper { 
+        width: 100%; 
+        max-width: 1400px; 
+        animation: introFadeUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); 
+    }
+    @keyframes introFadeUp { from { opacity: 0; transform: translateY(30px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+    /* --- ⬅️ LUXURY HEADER & NAV --- */
+    .dashboard-header {
+        display: flex; justify-content: space-between; align-items: center; 
+        margin-bottom: 25px; width: 100%;
+    }
+
+    .dashboard-title {
+        font-size: 30px !important; font-weight: 950 !important; color: var(--slate-950) !important;
+        margin: 0 !important; display: flex; align-items: center; gap: 15px; letter-spacing: -0.5px;
+    }
+
+    .back-link {
+        display: inline-flex; align-items: center; gap: 10px; color: var(--slate-800) !important;
+        text-decoration: none !important; font-weight: 800; font-size: 12px; text-transform: uppercase;
+        letter-spacing: 1.5px; transition: 0.3s ease;
+        padding: 10px 22px; background: rgba(255,255,255,0.7); border-radius: 100px; 
+        backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.8);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+    }
+    .back-link:hover { color: var(--primary-indigo) !important; background: white; box-shadow: 0 10px 20px -5px rgba(99, 102, 241, 0.2); transform: translateX(-4px); }
+
+    /* --- 🧊 PREMIUM CARD + GRID BEZ SCROLLOVANIA --- */
+    .isas-configurator-grid {
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr; /* Ľavý panel kúsok širší */
+        gap: 30px;
+        align-items: start;
+    }
+
+    .premium-card {
+        background: var(--hyper-glass); backdrop-filter: blur(30px) saturate(180%); -webkit-backdrop-filter: blur(30px) saturate(180%);
+        border-radius: 30px; box-shadow: 0 35px 80px -20px rgba(0, 0, 0, 0.1), inset 0 0 0 1px rgba(255, 255, 255, 0.9);
+        padding: 35px 40px; position: relative; overflow: visible;
+    }
+    
+    /* Pravý panel dostane obmedzenú výšku a vlastný scrollbar, aby stránka nešla dole */
+    #pravy_panel_predpisov {
+        max-height: calc(100vh - 150px);
+        overflow-y: auto;
+    }
+    /* Úhľadný posuvník pre pravý panel */
+    #pravy_panel_predpisov::-webkit-scrollbar { width: 6px; }
+    #pravy_panel_predpisov::-webkit-scrollbar-track { background: transparent; }
+    #pravy_panel_predpisov::-webkit-scrollbar-thumb { background: rgba(99, 102, 241, 0.2); border-radius: 10px; }
+    #pravy_panel_predpisov::-webkit-scrollbar-thumb:hover { background: rgba(99, 102, 241, 0.5); }
+
+    .premium-card::before {
+        content: ''; position: absolute; top: 0; left: 0; right: 0; height: 6px;
+        background: linear-gradient(90deg, #6366f1, #10b981, #6366f1); background-size: 200% auto; animation: gradientFlow 5s linear infinite;
+        border-radius: 30px 30px 0 0;
+    }
+    @keyframes gradientFlow { 0% { background-position: 0% center; } 100% { background-position: 200% center; } }
+
+    .premium-card h2 {
+        margin-top: 0; color: var(--slate-950); font-size: 18px; font-weight: 900; margin-bottom: 25px;
+    }
+
+    /* GRID FORMULÁRA */
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 25px; }
+    .form-grid-asym { display: grid; grid-template-columns: 2.5fr 1fr; gap: 20px 25px; margin-top: 20px; }
+
+    .field-wrapper { display: flex; flex-direction: column; position: relative; }
+    .field-wrapper.full-width { grid-column: span 2; }
+    
+    .field-wrapper label {
+        font-weight: 800; color: var(--slate-400); font-size: 11px; text-transform: uppercase;
+        letter-spacing: 1.2px; margin-bottom: 10px; padding-left: 8px; transition: color 0.3s;
+    }
+    .field-wrapper:focus-within label { color: var(--primary-indigo); }
+
+    /* --- PREMIUM INPUTY (Prispôsobené na 50px aby sa nescrollovalo) --- */
+    .premium-input {
+        width: 100% !important; height: 50px !important; background: rgba(255, 255, 255, 0.9) !important; 
+        border: 2px solid #e2e8f0 !important; border-radius: 16px !important; padding: 10px 20px !important; 
+        font-size: 14px !important; font-weight: 700 !important; color: var(--slate-800) !important;
+        transition: all 0.3s ease !important; outline: none !important; box-sizing: border-box !important; 
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.02) !important;
+        appearance: none; -webkit-appearance: none; -moz-appearance: none;    
+    }
+    .premium-input:focus { background: #fff !important; border-color: var(--primary-indigo) !important; box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1) !important; }
+    .premium-input:disabled { opacity: 0.7; cursor: not-allowed; background: rgba(241, 245, 249, 0.7) !important; border-color: transparent !important; color: var(--slate-400) !important; }
+
+    /* OPRAVA ROLETIEK NA MOBILE */
+    select.premium-input {
+        padding-right: 35px !important;
+        background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+        background-repeat: no-repeat; background-position: right 14px center; background-size: 16px;
+        line-height: 1.2 !important;
+    }
+    input.premium-input { line-height: normal !important; }
+
+    /* PREŠTÝLOVANIE SELECT2 DO VIVID LIGHT DIZAJNU */
+    .select2-container--default .select2-selection--single {
+        height: 50px !important; border-radius: 16px !important; border: 2px solid #e2e8f0 !important;
+        background: rgba(255, 255, 255, 0.9) !important; display: flex; align-items: center;
+        font-size: 14px; font-weight: 700; color: var(--slate-800); box-shadow: inset 0 2px 4px rgba(0,0,0,0.02) !important;
+    }
+    .select2-container--default.select2-container--focus .select2-selection--single {
+        border-color: var(--primary-indigo) !important; background-color: #ffffff !important; box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1) !important;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__arrow { height: 46px !important; right: 15px !important; }
+    .select2-container--default .select2-selection--single .select2-selection__rendered { padding-left: 20px !important; color: var(--slate-800) !important; }
+
+    /* --- THE GREEN ISAS BUTTON --- */
+    .btn-action {
+        width: 100%; height: 55px; background: linear-gradient(135deg, var(--emerald) 0%, var(--emerald-dark) 100%);
+        color: white; border: none; border-radius: 16px; font-size: 15px; font-weight: 900;
+        text-transform: uppercase; letter-spacing: 1.5px; cursor: pointer; position: relative;
+        overflow: hidden; transition: all 0.3s ease; margin-top: 25px;
+        box-shadow: 0 15px 30px -10px rgba(16, 185, 129, 0.5); display: flex; align-items: center; justify-content: center; gap: 12px; z-index: 1;
+    }
+    .btn-action:hover:not(:disabled) { transform: translateY(-3px); box-shadow: 0 20px 40px -10px rgba(16, 185, 129, 0.6); }
+    .btn-action:disabled { opacity: 0.8; cursor: wait; }
+    .btn-shine { position: absolute; top: 0; left: -100%; width: 120%; height: 100%; background: linear-gradient(120deg, transparent, rgba(255,255,255,0.4), transparent); transition: 0.7s; z-index: -1;}
+    .btn-action:hover .btn-shine { left: 100%; }
+
+    /* --- PRAVÝ PANEL POLOŽKY (Zladené s VIVID) --- */
+    .predpis-karta { 
+        background: rgba(255,255,255,0.6); border: 1px solid rgba(255,255,255,0.8); 
+        padding: 15px 20px; border-radius: 16px; margin-bottom: 15px; transition: all 0.3s; 
+    }
+    .predpis-karta:hover { background: rgba(255,255,255,0.9); box-shadow: 0 10px 25px rgba(0,0,0,0.03); transform: translateY(-2px);}
+    .predpis-hlavicka { 
+        display: inline-block; background: #e0e7ff; color: var(--primary-dark); 
+        padding: 6px 14px; border-radius: 12px; font-size: 11px; font-weight: 800; text-transform: uppercase; margin-bottom: 15px; letter-spacing: 0.5px;
+    }
+    .predpis-zoznam { margin: 0; padding-left: 0; list-style: none; }
+    .predpis-zoznam li { padding: 10px 0; border-bottom: 1px dashed #cbd5e1; font-size: 13px; color: var(--slate-800); display: flex; align-items: center; gap: 12px; }
+    .predpis-zoznam li:last-child { border-bottom: none; padding-bottom: 0;}
+    
+    .badge-mnozstvo { background: var(--primary-indigo); color: white; padding: 4px 10px; border-radius: 8px; font-weight: 800; font-size: 11px; box-shadow: 0 2px 5px rgba(99, 102, 241, 0.3);}
+    .diel-nazov { flex-grow: 1; font-weight: 700; color: var(--slate-800); }
+    .btn-odstranit { background: #fee2e2; color: var(--warn-red); border: none; width: 30px; height: 30px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; transition: all 0.2s; }
+    .btn-odstranit:hover { background: var(--warn-red); color: #ffffff; transform: scale(1.1); box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3);}
+
+    /* Vylepšené Dropdown Menu (Vyhľadávanie a Odznaky) */
+    .select2-dropdown { border: 1px solid var(--primary-indigo) !important; border-radius: 16px !important; box-shadow: 0 25px 50px rgba(0,0,0,0.15) !important; overflow: hidden; padding: 10px; margin-top: 5px; }
+    .select2-search--dropdown { padding: 5px 5px 15px 5px; }
+    .select2-search--dropdown .select2-search__field { 
+        border-radius: 12px; border: 2px solid #e2e8f0; padding: 12px 15px 12px 40px; 
+        font-family: inherit; font-size: 14px; font-weight: 600; outline: none; transition: 0.3s;
+        background: #f8fafc url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="%2394a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>') no-repeat 12px center;
+    }
+    .select2-search--dropdown .select2-search__field:focus { border-color: var(--primary-indigo); background-color: white; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.1); }
+    .select2-container--default .select2-results__option { padding: 12px 18px; font-size: 14px; font-weight: 700; color: var(--slate-800); border-radius: 10px; margin-bottom: 2px; transition: 0.2s; }
+    .select2-container--default .select2-results__option--highlighted[aria-selected] { background-color: #eef2ff !important; color: var(--primary-dark) !important; }
+
+    /* MOBILNÁ RESPONZIVITA */
+    @media (max-width: 1024px) {
+        #content { padding: 20px 15px !important; }
+        .dashboard-header { flex-direction: column; align-items: flex-start; gap: 15px; }
+        .back-link { width: 100%; justify-content: center; box-sizing: border-box; }
+        .isas-configurator-grid { grid-template-columns: 1fr; }
+        .premium-card { padding: 25px 20px; }
+        .form-grid, .form-grid-asym { grid-template-columns: 1fr; gap: 15px; }
+        .field-wrapper.full-width { grid-column: span 1; }
+        #pravy_panel_predpisov { max-height: none; overflow-y: visible; }
+    }
+
+    /* --- 📂 HIERARCHIA V PREDPISE --- */
+    .kat-sekcia { margin-top: 20px; border-top: 1px solid #f1f5f9; padding-top: 10px; }
+    .kat-nazov { 
+        font-size: 11px; font-weight: 900; color: var(--slate-400); 
+        text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 10px; 
+        display: flex; align-items: center; gap: 6px;
+    }
+    .podkat-blok { 
+        background: rgba(99, 102, 241, 0.04); border-radius: 18px; 
+        padding: 15px; margin-bottom: 12px; border-left: 4px solid var(--primary-indigo);
+    }
+    .badge-podkat { 
+        display: inline-flex; align-items: center; background: white; 
+        color: var(--primary-dark); padding: 4px 12px; border-radius: 10px; 
+        font-size: 11px; font-weight: 800; margin-bottom: 12px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid #eef2ff;
+    }
+</style>
+
+<div class="isas-ultimate-wrapper">
+
+    <div class="dashboard-header">
+        <h1 class="dashboard-title">🛠️ Pridať položku pre: <span style="color: var(--primary-indigo);">{{ zariadenie.nazov|default:zariadenie }}</span></h1>
+        <a href="{{ zakaznik_url }}" class="back-link">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+            Naspäť na kartu zákazníka
+        </a>
+    </div>
+
+    <div class="isas-configurator-grid">
+
+        <div class="premium-card">
+            <form id="konfigurator_form" method="POST" action="">
+                {% csrf_token %}
+                
+                <div class="form-grid">
+                    <div class="field-wrapper full-width">
+                        <label>📌 Typ Servisu / Práce</label>
+                        <select name="typ_prace" class="premium-input" required>
+                            <option value="" id="typ_prace_placeholder">📋 Vyberte zo zoznamu</option>
+                            <!-- 🚀 Tu natívne prechádzame QuerySet a pridávame tvoju vytúženú ikonu -->
+                            {% for praca in typy_prac %}
+                                <option value="{{ praca.id }}">🔧 {{ praca.nazov }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                <div class="field-wrapper">
+                        <label>🗂️ Kategória</label>
+                        <select id="main_category" name="category" class="premium-input">
+                            <option value="" disabled selected hidden>🗂️ Vyberte kategóriu...</option>
+                            <!-- 🚀 Tu používame premennú poslanú z views.py -->
+                            {% for value, label in kategorie_moznosti %}
+                                <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="field-wrapper">
+                        <label>📂 Podkategória</label>
+                        <select id="sub_category" class="premium-input" disabled>
+                            </select>
+                        <input type="hidden" name="model_name" id="hidden_model_name">
+                    </div>
+                </div>
+
+                <div class="form-grid-asym">
+                    <div class="field-wrapper">
+                        <label>🔍 Konkrétna položka zo skladu</label>
+                        <select name="diel_id" id="diel_search" class="premium-input" style="width: 100%;" disabled required>
+                            </select>
+                    </div>
+
+                    <div class="field-wrapper">
+                        <label id="mnozstvo_label">📊 Zadané množstvo</label>
+                        <input type="number" name="mnozstvo" value="1" min="1" class="premium-input" style="text-align: center; font-size: 18px;" required>
+                    </div>
+                </div>
+
+                <button type="submit" id="btn_ulozit_ajax" class="btn-action">
+                    <div class="btn-shine"></div>
+                    <span id="btn-text">Uložiť ⚡</span>
+                </button>
+            </form>
+        </div>
+
+        <div class="premium-card" id="pravy_panel_predpisov">
+            <h2>📋 Aktuálny predpis položiek pre zariadenie</h2>
+            
+            {% if existujuce_predpisy %}
+                {% for predpis in existujuce_predpisy %}
+                    <div class="predpis-karta">
+                        <div class="predpis-hlavicka">{{ predpis.typ_prace.nazov }}</div>
+                        {% regroup predpis.zoradene_polozky by temp_kategoria as kategoria_list %}
+                    
+                    {% for kat in kategoria_list %}
+                        <div class="kat-sekcia">
+                            <div class="kat-nazov">{{ kat.grouper }}</div>
+                            
+                            {% regroup kat.list by temp_podkategoria as podkat_list %}
+                            
+                            {% for podkat in podkat_list %}
+                                <div class="podkat-blok">
+                                    <div class="badge-podkat">{{ podkat.grouper }}</div>
+                                    <ul class="predpis-zoznam">
+                                        {% for polozka in podkat.list %}
+                                            <li>
+                                                <span class="badge-mnozstvo">{{ polozka.mnozstvo }} {{ polozka.diel.merna_jednotka|default:"ks" }}</span>
+                                                <span class="diel-nazov">{{ polozka.diel|default:"Neznáma / odstránená položka" }}</span>
+                                                <button class="btn-odstranit" data-id="{{ polozka.id }}" title="Odstrániť z predpisu">❌</button>
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endfor %}
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div style="text-align: center; padding: 40px 20px;">
+                    <div style="font-size: 45px; margin-bottom: 15px; opacity: 0.8;">📦</div>
+                    <h3 style="color: var(--slate-800); margin: 0 0 8px 0; font-size: 16px;">Zatiaľ prázdne</h3>
+                    <p style="color: var(--slate-400); font-size: 13px; margin: 0;">📝 Pridajte prvú položku pomocou formulára vľavo.</p>
+                </div>
+            {% endif %}
+        </div>
+
+    </div>
+</div>
+
+{{ js_category_map|json_script:"js-category-map" }}
+<script>
+$(document).ready(function() {
+    // --- MÁGIA PRE MOBILY ---
+    const isMobile = window.innerWidth <= 950;
+    const txtTypPrace = isMobile ? "" : "📋 Vyberte zo zoznamu...";
+    const txtKategoria = isMobile ? "" : "🗂️ Vyberte kategóriu...";
+    const txtZamknute = isMobile ? "🔒" : "🔒 Uzamknuté";
+    
+    $('#typ_prace_placeholder').text(txtTypPrace).prop('disabled', true).prop('hidden', true);
+    
+    const categoryMapEl = document.getElementById('js-category-map');
+    const categoryMap = categoryMapEl ? JSON.parse(categoryMapEl.textContent) : {};
+    const $mainSelect = $('#main_category');
+    const $subSelect = $('#sub_category');
+    const $hiddenModel = $('#hidden_model_name');
+    const $dielSearch = $('#diel_search');
+
+    function escapeHtmlSafe(str) {
+        return String(str || '').replace(/[&<>'"]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[m]));
+    }
+
+    function osekajSkladoveStavy() {
+        const isasRegex = /\s*\([\d\.,\s]+[a-zA-Z]+2?\)\s*$/; 
+        $('.diel-nazov').each(function() {
+            let povodnyText = $(this).text();
+            if (isasRegex.test(povodnyText)) {
+                $(this).text(povodnyText.replace(isasRegex, '').trim());
+            }
+        });
+    }
+    osekajSkladoveStavy();
+
+    // ✨ Jednorazová čistá aktivácia Select2
+    $('select[name="typ_prace"]').select2({ width: '100%' });
+    $mainSelect.select2({ width: '100%' });
+    $subSelect.select2({ width: '100%' });
+
+    $mainSelect.on('change', function() {
+        $subSelect.empty().append(new Option(txtKategoria, '', true, true));
+        $subSelect.find('option:first').prop('disabled', true).prop('hidden', true);
+        
+        if ($dielSearch.hasClass("select2-hidden-accessible")) {
+            $dielSearch.select2('destroy');
+        }
+        $dielSearch.empty().append(new Option(txtZamknute, '')).prop('disabled', true);
+        $hiddenModel.val('');
+
+        const selectedCat = $(this).val();
+        if (selectedCat && categoryMap[selectedCat]) {
+            $subSelect.prop('disabled', false);
+            $.each(categoryMap[selectedCat], function(subName, modelName) {
+                $subSelect.append(new Option(subName, modelName));
+            });
+        } else {
+            $subSelect.empty().append(new Option(txtZamknute, '')).prop('disabled', true);
+        }
+        
+        // 🔄 Prekreslí vizuál Select2 po nahratí nových podkategórií
+        $subSelect.trigger('change.select2');
+    });
+
+    $subSelect.on('change', function() {
+    const modelName = $(this).val();
+    $hiddenModel.val(modelName);
+    
+    $('#mnozstvo_label').html('📊 Zadané množstvo');
+
+    if ($dielSearch.hasClass("select2-hidden-accessible")) {
+        $dielSearch.select2('destroy');
+    }
+    $dielSearch.empty().append(new Option(isMobile ? '🔄' : '🔄 Načítavam...', '')).prop('disabled', true);
+
+    if (!modelName) {
+        $dielSearch.empty().append(new Option(txtZamknute, ''));
+        return;
+    }
+
+    $.getJSON('{% url "evidencia:ajax_get_diely" %}', { model_name: modelName }, function(data) {
+        $dielSearch.empty();
+        if (data.results && data.results.length > 0) {
+            $dielSearch.append(new Option('', '', true, true)); 
+            const isasRegex = /\s*\([\d\.,\s]+[a-zA-Z]+2?\)\s*$/; 
+            
+            $.each(data.results, function(i, item) {
+                // NEPRIESTRELNÉ ČÍTANIE TEXTU
+                let nazov = item.text || item.label || item.name || String(item);
+                
+                let unit = item.unit || 'ks'; 
+
+                let cistyNazov = nazov.replace(isasRegex, '').trim();
+                let opt = new Option(cistyNazov, item.id, false, false);
+                $(opt).attr('data-unit', unit);
+                
+                $dielSearch.append(opt);
+            });
+            
+            // 🧠 ISAS INTELIGENCIA: Získanie dynamickej ikony z práve zvolenej podkategórie
+            const zvolenyTextPodkategorie = $('#sub_category option:selected').text().trim();
+            // Rozdelíme text podľa medzery a zoberieme prvú časť (čo je u teba vždy emoji)
+            let dynamickaIkona = zvolenyTextPodkategorie ? zvolenyTextPodkategorie.split(' ')[0] : '📦';
+            // Poistka: Ak by prvé slovo náhodou nebolo emoji (malo by viac znakov), vrátime krabicu
+            if (dynamickaIkona.length > 4) dynamickaIkona = '📦';
+
+            $dielSearch.prop('disabled', false);
+            $dielSearch.select2({
+                placeholder: isMobile ? "🔍 Hľadať..." : "🔍 Začnite písať názov položky...",
+                allowClear: true, 
+                width: '100%', 
+                language: { noResults: function() { return "Nenašla sa žiadna zhoda"; } },
+                
+                // 🎨 MÁGIA PRE ODZNAKY V ROZBAĽOVACOM MENU (100% XSS SAFE)
+                templateResult: function(state) {
+                    if (!state.id) return state.text;
+                    const safeUnit = escapeHtmlSafe($(state.element).attr('data-unit') || 'ks');
+                    const safeText = escapeHtmlSafe(state.text);
+                    const safeIkona = escapeHtmlSafe(dynamickaIkona);
+                    return $(`
+                        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                            <span style="font-weight: 700; color: #1e293b; font-size: 14px;">${safeText}</span>
+                            <span style="background: #e0e7ff; color: #4338ca; padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: 900; letter-spacing: 0.5px; border: 1px solid #c7d2fe; box-shadow: inset 0 2px 4px rgba(255,255,255,0.5);">
+                                ${safeIkona} ${safeUnit}
+                            </span>
+                        </div>
+                    `);
+                },
+                
+                // 🎨 MÁGIA PRE ZOBRAZENIE PO VYBRATÍ (100% XSS SAFE)
+                templateSelection: function(state) {
+                    if (!state.id) return state.text;
+                    const safeUnit = escapeHtmlSafe($(state.element).attr('data-unit') || 'ks');
+                    const safeText = escapeHtmlSafe(state.text);
+                    const safeIkona = escapeHtmlSafe(dynamickaIkona);
+                    return $(`
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="font-weight: 800; color: #0f172a;">${safeText}</span>
+                            <span style="background: #f1f5f9; color: #475569; padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 800; border: 1px solid #cbd5e1;">
+                                ${safeIkona} ${safeUnit}
+                            </span>
+                        </div>
+                    `);
+                }
+            });
+
+            // DYNAMICKÁ ZMENA LABELU (XSS SAFE)
+            $dielSearch.on('select2:select', function (e) {
+                const safeUnit = escapeHtmlSafe($(e.params.data.element).attr('data-unit') || 'ks');
+                $('#mnozstvo_label').html(`📊 Zadané množstvo <span style="color:var(--primary-indigo); font-size:14px; margin-left:4px;">(${safeUnit})</span>`);
+            });
+
+            $dielSearch.on('select2:clear change', function() {
+                if(!$(this).val()) $('#mnozstvo_label').html('📊 Zadané množstvo');
+            });
+
+        } else {
+            $dielSearch.append(new Option(isMobile ? '❌' : '❌ Sklad je prázdny', '')).prop('disabled', true);
+        }
+    }).fail(function() {
+        $dielSearch.empty().append(new Option(isMobile ? '⚠️' : '⚠️ Chyba pri načítaní.', '')).prop('disabled', true);
+        if (typeof showISASToast === 'function') {
+            showISASToast("Chyba spojenia so serverom. Skontrolujte pripojenie.", "🔌", "error");
+        }
+    });
+});
+
+    // 4. AJAX UKLADANIE (DEFENZÍVNE OŠETRENÉ)
+    $('#konfigurator_form').on('submit', function(e) {
+        e.preventDefault();
+        
+        if (!$('#diel_search').val()) {
+            showISASToast('Prosím, vyberte konkrétnu položku zo skladu.', '⚠️', 'warning');
+            return false;
+        }
+
+        const mnozstvoVal = Number($('input[name="mnozstvo"]').val());
+        if (isNaN(mnozstvoVal) || mnozstvoVal <= 0) {
+            if (typeof showISASToast === 'function') {
+                showISASToast('Zadajte platné množstvo (väčšie ako 0).', '⚠️', 'warning');
+            }
+            return false;
+        }
+
+        const $form = $(this);
+        const $btn = $('#btn_ulozit_ajax');
+        const originalText = $('#btn-text').html();
+
+        $('#btn-text').html('Spracovávam... ⏳');
+        $btn.prop('disabled', true).css('pointer-events', 'none');
+
+        $.ajax({
+            type: $form.attr('method') || 'POST',
+            url: $form.attr('action') || window.location.href,
+            data: $form.serialize(),
+            success: function(response) {
+                const $parsed = $('<div>').append($.parseHTML(response)).find('#pravy_panel_predpisov');
+                if ($parsed.length) {
+                    $('#pravy_panel_predpisov').html($parsed.html());
+                    osekajSkladoveStavy();
+                }
+
+                $('#btn-text').html('✅ HOTOVO');
+                if (typeof showISASToast === 'function') {
+                    showISASToast('Položka bola úspešne pridaná.', '✅', 'success');
+                }
+                
+                setTimeout(function() {
+                    $form[0].reset();
+                    $('#main_category').val('').trigger('change'); 
+                    $('#btn-text').html(originalText);
+                    $btn.prop('disabled', false).css('pointer-events', 'auto');
+                }, 1500);
+            },
+            error: function() {
+                if (typeof showISASToast === 'function') {
+                    showISASToast("Chyba spojenia so serverom. Skontrolujte pripojenie.", "🔌", "error");
+                }
+                $('#btn-text').html(originalText);
+                $btn.prop('disabled', false).css('pointer-events', 'auto');
+            }
+        });
+    });
+
+    // 5. AJAX MAZANIE BEZ ROZMAZANÝCH FĽAKOV
+    $(document).on('click', '.btn-odstranit', function(e) {
+        e.preventDefault();
+        const itemId = $(this).data('id');
+        const $li = $(this).closest('li');
+        const nazovDielu = $li.find('.diel-nazov').text();
+        
+        const escapedNazov = String(nazovDielu).replace(/[&<>'"]/g, match => {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[match];
+        });
+        
+        const vykonajZmazanie = function() {
+            $li.css({'opacity': '0.4', 'pointer-events': 'none', 'transition': '0.3s'});
+
+            $.ajax({
+                type: 'POST',
+                url: window.location.href,
+                data: {
+                    'delete_id': itemId,
+                    'csrfmiddlewaretoken': $('input[name=csrfmiddlewaretoken]').val()
+                },
+                success: function(response) {
+                    const $parsed = $('<div>').append($.parseHTML(response)).find('#pravy_panel_predpisov');
+                    if ($parsed.length) {
+                        $('#pravy_panel_predpisov').html($parsed.html());
+                        osekajSkladoveStavy();
+                    }
+                    if (typeof showISASToast === 'function') {
+                        showISASToast('Položka bola úspešne odstránená!', '✅', 'success');
+                    }
+                },
+                error: function() {
+                    if (typeof showISASToast === 'function') {
+                        showISASToast("Položku sa nepodarilo vymazať. Skontrolujte pripojenie.", "🔌", "error");
+                    }
+                    $li.css({'opacity': '1', 'pointer-events': 'auto'});
+                }
+            });
+        };
+
+        if (typeof window.showGlobalConfirmModal === 'function') {
+            window.showGlobalConfirmModal(
+                "Odstrániť položku?",
+                `Prajete si odstrániť položku <br><strong style="color: var(--primary-indigo); font-size: 16px;">${escapedNazov}</strong><br> z tohto predpisu?`,
+                vykonajZmazanie
+            );
+        } else if (window.confirm(`Prajete si odstrániť položku "${nazovDielu.trim()}" z tohto predpisu?`)) {
+            vykonajZmazanie();
+        }
+    });
+});
+</script>
+{% endblock %}

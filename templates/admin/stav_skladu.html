@@ -1,0 +1,608 @@
+{% extends "admin/change_form.html" %}
+{% load static %}
+
+{% block extrahead %}
+    {{ block.super }}
+    <!-- 🟢 ISAS PRELOADER JS -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            var failsafe = setTimeout(function() { document.body.classList.add('isas-ready'); }, 2500);
+            window.addEventListener('load', function() {
+                setTimeout(function() {
+                    clearTimeout(failsafe);
+                    document.body.classList.add('isas-ready');
+                }, 150); 
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block extrastyle %}
+    {{ block.super }}
+    <style>
+        /* ==========================================================================
+           0. ISAS PRELOADER (Načítavacia bublina) ⏳
+           ========================================================================== */
+        #content-main,
+        #floating-sn-search-container {
+            opacity: 0 !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
+        }
+
+        body.isas-ready #floating-sn-search-container {
+            opacity: 1 !important;
+            visibility: visible !important;
+            transition: opacity 0.4s ease-in-out !important;
+        }
+
+        #isas-preloader-wrapper {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            display: flex; align-items: center; justify-content: center;
+            z-index: 9999999; pointer-events: none;
+        }
+
+        .isas-loader-box {
+            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);
+            padding: 20px 40px; border-radius: 50px; border: 2px solid #bae6fd;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15); display: flex; align-items: center; gap: 15px;
+            font-size: 16px; font-weight: 800; color: #0f172a; transition: all 0.5s ease;
+        }
+
+        .isas-spinner {
+            width: 24px; height: 24px; border: 4px solid #e0f2fe; border-top: 4px solid #0284c7;
+            border-radius: 50%; animation: isas-spin 0.8s linear infinite;
+        }
+        @keyframes isas-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        body.isas-ready #content-main {
+            opacity: 1 !important; visibility: visible !important; pointer-events: auto !important;
+            transition: opacity 0.6s ease-in-out !important;
+        }
+        body.isas-ready .isas-loader-box { opacity: 0 !important; transform: scale(0.9) translateY(-20px) !important; }
+
+        @media (max-width: 768px) {
+            .isas-loader-box {
+                flex-direction: column !important; text-align: center !important;
+                padding: 25px 20px !important; border-radius: 24px !important;
+                width: 85% !important; box-sizing: border-box !important; gap: 12px !important;
+            }
+            .isas-loader-box span { font-size: 14px !important; line-height: 1.4 !important; }
+            #isas-preloader-wrapper { height: 100vh !important; height: 100svh !important; }
+        }
+
+        /* ==========================================================================
+           1. ZÁKLADNÝ LAYOUT (Zjednotené s ISAS CORE) 🏗️
+           ========================================================================== */
+        #content { background: transparent !important; padding: 40px 30px !important; min-height: 90vh; }
+        .breadcrumbs, #content > h1, .pretitle, #content-main > h1, .object-tools { display: none !important; }
+        body { overflow-x: hidden; }
+
+        @media (max-width: 768px) {
+            #content { padding: 15px 10px !important; }
+        }
+
+        /* ==========================================================================
+           2. HLAVIČKA POBOČKY (Identická so skladom) 🏢
+           ========================================================================== */
+        .isas-warehouse-header { 
+            position: relative; overflow: hidden; display: flex; justify-content: space-between; align-items: center; 
+            gap: 30px; padding: 40px !important; background-color: #ffffff; border-radius: 24px; 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.03); margin-bottom: 30px; margin-top: 5px; 
+        }
+        .isas-warehouse-header::before { 
+            content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; 
+            background: radial-gradient(circle at 30% 50%, rgba(59, 130, 246, 0.08) 0%, transparent 40%), 
+                        radial-gradient(circle at 70% 30%, rgba(34, 197, 94, 0.05) 0%, transparent 40%); 
+            animation: animateBg 25s infinite linear; z-index: 0; pointer-events: none; 
+        }
+        @keyframes animateBg { 0% { transform: rotate(0deg) scale(1); } 50% { transform: rotate(180deg) scale(1.05); } 100% { transform: rotate(360deg) scale(1); } }
+        
+        .header-main-info { flex: 1; display: flex; flex-direction: column; justify-content: center; position: relative; z-index: 1; }
+        .header-actions-container { display: flex; flex-direction: column; gap: 15px; min-width: 340px; position: relative; z-index: 1; }
+        
+        .action-btn-back { 
+            display: flex; align-items: center; justify-content: center; gap: 12px; padding: 14px 20px; 
+            background: linear-gradient(135deg, #64748b 0%, #334155 100%); color: #ffffff !important; 
+            text-decoration: none !important; border-radius: 14px; font-size: 13px; font-weight: 800; 
+            text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.3s ease; 
+            box-shadow: 0 6px 15px rgba(71, 85, 105, 0.25); border: 1px solid rgba(255,255,255,0.1); 
+        }
+        .action-btn-back:hover { transform: translateY(-4px); box-shadow: 0 12px 25px rgba(71, 85, 105, 0.4); background: linear-gradient(135deg, #475569 0%, #1e293b 100%); }
+        
+        @keyframes dance-icon { 0%, 100% { transform: translateY(0) rotate(0deg); } 25% { transform: translateY(-5px) rotate(-6deg); } 75% { transform: translateY(-5px) rotate(6deg); } }
+        .dancing-icon { animation: dance-icon 2.5s ease-in-out infinite; transform-origin: bottom center; }
+
+        /* ==========================================================================
+           3. DETEKTÍV DIZAJN (Predvolene skrytý, zapína sa výhradne v Leveli 3) 🕵️‍♂️
+           ========================================================================== */
+        #floating-sn-search-container { position: fixed !important; bottom: 21px !important; right: 126px !important; z-index: 999998 !important; display: none; align-items: center !important; gap: 15px !important; pointer-events: none !important; margin: 0 !important; padding: 0 !important; }
+        #floating-sn-search-container > * { pointer-events: auto !important; margin: 0 !important; }
+        #floating-sn-search-container::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; }
+        #sn-search-results-floating:empty { display: none !important; }
+
+        #sn-search-input-wrapper { background: transparent !important; border-radius: 16px !important; box-shadow: none !important; padding: 0 !important; display: flex !important; align-items: center !important; width: 0 !important; opacity: 0 !important; overflow: hidden !important; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important; border: 0px solid transparent !important; }
+        #sn-search-input-wrapper.active { width: 350px !important; padding: 10px 18px !important; background: white !important; border: 2px solid #ff9800 !important; box-shadow: 0 15px 40px rgba(0,0,0,0.2) !important; opacity: 1 !important; }
+        #floating-sn-input { border: none !important; outline: none !important; width: 100% !important; font-size: 15px !important; font-weight: 800 !important; color: #0f172a !important; background: transparent !important; min-width: 0 !important; margin: 0 !important; padding: 0 !important; }
+        
+        #floating-search-trigger { width: 85px !important; height: 85px !important; border-radius: 50% !important; background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%) !important; color: white !important; border: 4px solid white !important; cursor: pointer !important; box-shadow: 0 15px 35px rgba(255, 152, 0, 0.5), inset 0 0 20px rgba(255,255,255,0.2) !important; display: flex !important; align-items: center !important; justify-content: center !important; font-size: 38px !important; transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55) !important; animation: subtlePulseDetective 3s infinite ease-in-out !important; margin: 0 !important; }
+        @keyframes subtlePulseDetective { 0% { transform: scale(1); box-shadow: 0 15px 35px rgba(255, 152, 0, 0.5); } 50% { transform: scale(1.06); box-shadow: 0 20px 45px rgba(255, 152, 0, 0.7); } 100% { transform: scale(1); box-shadow: 0 15px 35px rgba(255, 152, 0, 0.5); } }
+        @media (min-width: 1025px) {
+            #floating-search-trigger:hover { transform: scale(1.15) rotate(15deg) !important; animation: none !important; }
+        }
+        #floating-search-trigger:active { transform: scale(1.15) rotate(15deg) !important; animation: none !important; transition: transform 0.1s !important; }
+        
+        #sn-search-results-floating { position: absolute !important; bottom: 110px !important; right: 0 !important; width: 350px !important; max-height: 450px !important; background: white !important; border-radius: 20px !important; box-shadow: 0 25px 60px rgba(0,0,0,0.3) !important; overflow-y: auto !important; display: none; border: 1px solid #e2e8f0 !important; pointer-events: auto !important; padding: 10px !important; z-index: 999998 !important; }
+        .sn-floating-item { padding: 14px 18px !important; border-bottom: 1px solid #f1f5f9 !important; cursor: pointer !important; border-radius: 12px !important; transition: all 0.2s !important; }
+        .sn-floating-item:hover { background: #fff3e0 !important; }
+        .sn-floating-item strong { display: block !important; font-size: 14px !important; color: #0f172a !important; margin-bottom: 3px !important; }
+        .sn-floating-item span { font-size: 10px !important; font-weight: 900 !important; color: #f57c00 !important; text-transform: uppercase !important; }
+        
+        .vivid-row-flash td { background-color: #ff9800 !important; transition: background-color 0.4s ease !important; border-top: none !important; border-bottom: none !important; }
+        .vivid-row-flash td .fake-input, .vivid-row-flash td .qty-badge { background: transparent !important; color: white !important; border-color: rgba(255,255,255,0.4) !important; box-shadow: none !important; }
+
+        @media (max-width: 1024px) {
+            .isas-warehouse-header { flex-direction: column !important; padding: 20px !important; height: auto !important; }
+            .header-main-info { width: 100% !important; text-align: center !important; }
+            .header-main-info > div:first-child { flex-direction: column !important; justify-content: center !important; }
+            .header-main-title { font-size: 2.2rem !important; text-align: center !important; white-space: normal !important; line-height: 1.2 !important; }
+            .header-subtitle { border-left: none !important; border-top: 3px solid #3b82f6 !important; padding-top: 10px !important; margin-top: 15px !important; text-align: center !important; }
+            
+            .header-actions-container { width: 100% !important; min-width: 0 !important; margin-top: 20px !important; }
+            .action-btn-back { width: 100% !important; box-sizing: border-box !important; justify-content: center !important; text-align: center !important; }
+
+            #floating-sn-search-container { 
+                right: 95px !important; 
+                bottom: 20px !important; 
+                left: auto !important; 
+                flex-direction: row !important; 
+                justify-content: flex-end !important;
+                z-index: 999998 !important; 
+            }
+            
+            #floating-search-trigger { 
+                width: 65px !important; height: 65px !important; font-size: 26px !important; margin: 0 !important; padding: 0 !important;
+                position: relative !important; z-index: 2 !important; 
+            }
+            
+            #sn-search-input-wrapper {
+                position: absolute !important;
+                bottom: 80px !important; 
+                right: -65px !important; 
+                width: 0 !important;
+                opacity: 0 !important;
+                transform: translateY(10px) !important;
+                transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+                z-index: 1 !important;
+                margin: 0 !important;
+            }
+            
+            #sn-search-input-wrapper.active { 
+                width: calc(100vw - 40px) !important; 
+                opacity: 1 !important;
+                transform: translateY(0) !important;
+            }
+            
+            #sn-search-results-floating { 
+                position: absolute !important;
+                bottom: 135px !important; 
+                right: -65px !important; 
+                width: calc(100vw - 40px) !important; 
+            }
+            
+            /* 🛑 MAGICKÝ FIX: Ak je pole zatvorené, natvrdo skryjeme aj výsledky! */
+            #sn-search-input-wrapper:not(.active) + #floating-search-trigger ~ #sn-search-results-floating,
+            #floating-sn-search-container:has(#sn-search-input-wrapper:not(.active)) #sn-search-results-floating {
+                display: none !important;
+            }
+        }
+
+        /* ==========================================================================
+           4. ŠTÝLY PRE TABUĽKU ÚROVNE 3 A INLINE 📊
+           ========================================================================== */
+        .isas-drawer { background: white; border-radius: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); overflow: hidden; margin-top: 20px; }
+        
+        body .isas-drawer:not(.isas-opened) .djn-table,
+        body .isas-drawer:not(.isas-opened) .empty-state-wrapper { 
+            display: none !important; 
+        }
+
+        .isas-drawer > h2 { cursor: pointer; user-select: none; }
+        .isas-drawer > h2::before { content: '▶'; display: inline-block; margin-right: 12px; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); font-size: 11px; color: inherit; opacity: 0.7; }
+        .isas-drawer.isas-opened > h2::before { transform: rotate(90deg); opacity: 1; }
+
+        .djn-table { width: 100% !important; border-collapse: separate !important; border-spacing: 0 10px !important; padding: 10px 20px; background: #f8fafc; }
+        .djn-table th { background-color: #f1f5f9 !important; color: #64748b !important; font-size: 11px !important; font-weight: 800 !important; text-transform: uppercase !important; padding: 12px 15px !important; border-bottom: 2px solid #e2e8f0 !important; letter-spacing: 0.5px !important; text-align: left !important; }
+        .djn-table td { padding: 0 15px !important; vertical-align: middle !important; background: white; border-top: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9;}
+        .djn-table tr td:first-child { border-left: 1px solid #f1f5f9; border-radius: 12px 0 0 12px; }
+        .djn-table tr td:last-child { border-right: 1px solid #f1f5f9; border-radius: 0 12px 12px 0; }
+        
+        .fake-input { border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 15px; font-size: 14px; font-weight: 700; color: #1e293b; background-color: #ffffff; height: 42px; display: flex; align-items: center; box-shadow: inset 0 1px 2px rgba(0,0,0,0.02); }
+        .qty-badge { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 20px; border-radius: 8px; font-size: 16px; font-weight: 900; background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; min-width: 50px;}
+        .qty-zero { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+
+        .empty-state-wrapper { padding: 80px 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+        .empty-icon { font-size: 70px; filter: grayscale(100%); opacity: 0.6; margin-bottom: 25px; }
+
+    </style>
+{% endblock %}
+
+{% block content %}
+
+<!-- 🟢 ISAS PRELOADER HTML -->
+<div id="isas-preloader-wrapper">
+    <div class="isas-loader-box">
+        <div class="isas-spinner"></div>
+        <span>{{ preloader_text|default:"⏳ Vstupujete do databázy skladu - filiálky..." }}</span>
+    </div>
+</div>
+
+<div id="hidden-params" data-kat="{{ kat }}" data-sub="{{ sub }}" style="display:none;"></div>
+
+<div id="content-main">
+    
+    <!-- 1. IDENTICKÁ HLAVIČKA -->
+    <div class="isas-warehouse-header">
+        <div class="header-main-info">
+            <div style="display: flex; align-items: center; gap: 30px; justify-content: flex-start;">
+                <div style="display: flex; align-items: center; justify-content: flex-start; gap: 20px;">
+                    <span class="header-icon dancing-icon" style="font-size: 4.5rem; line-height: 1; display: inline-block; filter: drop-shadow(0 10px 15px rgba(0,0,0,0.15));">
+                        {% if filialka.typ_skladu == 'AUTO' %}🚐{% elif filialka.typ_skladu == 'KONTAJNER' %}🏗️{% elif filialka.typ_skladu == 'INE' %}📦{% else %}🏢{% endif %}
+                    </span>
+                    <span class="header-main-title" style="font-size: 4.5rem; font-family: 'Montserrat', 'Inter', sans-serif; font-weight: 850; background: linear-gradient(135deg, #1e293b 0%, #3b82f6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1)); letter-spacing: -2px; padding-bottom: 5px; margin: 0;">
+                        {{ filialka.nazov }}
+                    </span>
+                </div>
+            </div>
+            <div style="display: flex; flex-direction: column; width: 100%; align-items: flex-start; margin-top: 5px;">
+                <h1 style="margin:0 !important; font-size: 26px !important; font-weight: 900 !important; color: #1e293b !important; border:none !important; background:none !important; letter-spacing: -0.5px;">
+                    Prezeranie zásob pobočky {% if filialka.kod_pobocky %}[{{ filialka.kod_pobocky }}]{% endif %}
+                </h1>
+                <div style="display: flex; justify-content: flex-start; margin-top: 10px;">
+                    <span class="header-subtitle" style="font-size: 14px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 1.5px; border-left: 4px solid #3b82f6; padding-left: 14px;">
+                        Správa databázy položiek a zásob v sklade 📋
+                    </span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="header-actions-container">
+            <a href="{% url 'admin:Evidencia_filialka_changelist' %}" class="action-btn-back">
+                <span class="arrow-icon">⬅️</span> Naspäť na zoznam pobočiek
+            </a>
+            <a href="{% url 'admin:filialka_logistika' filialka.id %}" class="action-btn-back" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border: none; box-shadow: 0 6px 15px rgba(59, 130, 246, 0.3);">
+                <span class="arrow-icon">🚛</span> Vykonať Presun (Logistika)
+            </a>
+        </div>
+    </div>
+
+    <!-- 2. KONTAJNER PRE DYNAMICKÉ KARTY (Generované cez JS) -->
+    <div id="dynamic-sklad-ui"></div>
+
+    <!-- 3. SKRYTÁ TABUĽKA (Zobrazí sa len v Leveli 3 - Konkrétna podkategória) -->
+    <div id="raw-data-table" style="display: none;">
+        <div class="isas-drawer"> <!-- 🟢 DEFAULTNE ZATVORENÉ (BEZ .isas-opened) -->
+            <h2 id="drawer-header-title" style="margin:0; padding: 18px 24px; font-size: 16px; font-weight: 900; text-transform: uppercase; display: flex; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
+                <!-- Nadpis sa doplní dynamicky -->
+            </h2>
+            
+            {% if stav_poloziek %}
+            <table class="djn-table">
+                <thead>
+                    <tr>
+                        <th style="width: 75%;">Názov evidovanej položky 🏷️</th>
+                        <th style="width: 25%; text-align: center !important;">Zostatok na tomto sklade 🔢</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- 🟢 DYNAMICKÉ OBJEKTY A MERNÉ JEDNOTKY -->
+                    {% for polozka in stav_poloziek %}
+                    <tr class="item-row">
+                        <td style="padding: 8px 15px !important;">
+                            <div class="fake-input search-target">{{ polozka.nazov }}</div>
+                        </td>
+                        <td style="padding: 8px 15px !important; text-align: center !important;">
+                            {% if polozka.pocet and polozka.pocet > 0 %}
+                                <div class="qty-badge">{{ polozka.pocet }} <span style="font-size: 13px; opacity: 0.8;">{{ polozka.jednotka|default:'ks' }}</span></div>
+                            {% else %}
+                                <div class="qty-badge qty-zero">{{ polozka.pocet|default:0 }} <span style="font-size: 13px; opacity: 0.8;">{{ polozka.jednotka|default:'ks' }}</span></div>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="empty-state-wrapper">
+                <div class="empty-icon">🪹</div>
+                <div style="font-size: 24px; font-weight: 900; color: #1e293b; margin-bottom: 10px;">Zatiaľ prázdne</div>
+                <div style="font-size: 14px; color: #64748b; font-weight: 600;">V tejto kategórii tu neevidujeme žiadne položky. 🤷‍♂️</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+
+<div id="floating-sn-search-container" style="display: none !important;">
+    <!-- SEM SA BUDÚ VYSKAKOVAŤ VÝSLEDKY -->
+    <div id="sn-search-results-floating"></div> 
+    
+    <div id="sn-search-input-wrapper">
+        <input type="text" id="floating-sn-input" placeholder="🕵️ Detektív hľadá položku na sklade filiálky...🔍" autocomplete="off">
+    </div>
+    <button id="floating-search-trigger" title="🔍 Hľadať položku na pobočke">🕵️</button>
+</div>
+
+{{ sklad_config_json|default:"{}"|json_script:"sklad-config-data" }}
+{{ kat|default:""|json_script:"sklad-kat-data" }}
+{{ sub|default:""|json_script:"sklad-sub-data" }}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    
+    // BEZPEČNÁ PRIAMA INJEKCIA DÁT S DEFAULT FALLBACKOM
+    const rawConfigData = JSON.parse(document.getElementById('sklad-config-data').textContent);
+    const configData = (typeof rawConfigData === 'string') ? JSON.parse(rawConfigData || '{}') : rawConfigData;
+    const config = (configData && configData.hierarchy) ? configData.hierarchy : null;
+    
+    // 🎨 DYNAMICKÁ INTELIGENTNÁ CYKLÁCIA FARIEB
+    const colorThemes = [
+        { bg: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)', text: '#1e40af', shadow: 'rgba(59, 130, 246, 0.2)' },
+        { bg: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)', text: '#065f46', shadow: 'rgba(16, 185, 129, 0.2)' },
+        { bg: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)', text: '#991b1b', shadow: 'rgba(239, 68, 68, 0.2)' },
+        { bg: 'linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%)', text: '#581c87', shadow: 'rgba(168, 85, 247, 0.2)' },
+        { bg: 'linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)', text: '#9a3412', shadow: 'rgba(249, 115, 22, 0.2)' }
+    ];
+
+    const kat = JSON.parse(document.getElementById('sklad-kat-data').textContent);
+    const sub = JSON.parse(document.getElementById('sklad-sub-data').textContent);
+
+    const container = document.getElementById('dynamic-sklad-ui');
+    const rawTable = document.getElementById('raw-data-table');
+    const detektiv = document.getElementById('floating-sn-search-container');
+
+    // Musíme použiť setProperty s 'important', aby sme prebili CSS v hlavičke! 🛡️
+    if (detektiv) {
+        detektiv.style.setProperty('display', 'none', 'important');
+    }
+
+    if (!config || Object.keys(config).length === 0) {
+        if (typeof showISASToast === "function") {
+            showISASToast("Dáta konfigurácie skladu chýbajú alebo sú poškodené.", "⚠️", "error");
+        }
+        console.error("ISAS ERROR: Dáta konfigurácie Skladu chýbajú.");
+        return;
+    }
+
+    // 🟢 FUNKCIA PRE OTVÁRANIE A ZATVÁRANIE INLINU (Identická ako na Sklade)
+    document.addEventListener('click', function(e) {
+        const header = e.target.closest('.isas-drawer > h2');
+        if (header) {
+            e.preventDefault(); 
+            e.stopPropagation();
+            const drawer = header.closest('.isas-drawer');
+            if (drawer) {
+                drawer.classList.toggle('isas-opened');
+            }
+        }
+    });
+
+    function createBackButton(text, url) {
+        let topBar = document.createElement("div");
+        topBar.style.cssText = "width: 100%; display: flex; justify-content: flex-start; margin-bottom: 25px;";
+        let backBtn = document.createElement("a");
+        backBtn.innerHTML = `<span style="margin-right: 8px; font-size: 16px;">⬅️</span> ${text}`;
+        backBtn.href = url;
+        backBtn.style.cssText = "background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: #ffffff; padding: 12px 24px; border-radius: 12px; text-decoration: none; font-weight: 900; font-size: 12px; text-transform: uppercase; display: inline-flex; align-items: center; box-shadow: 0 6px 15px rgba(15, 23, 42, 0.3); transition: all 0.3s;";
+        backBtn.addEventListener("mouseover", () => { backBtn.style.transform = "translateY(-3px)"; });
+        backBtn.addEventListener("mouseout", () => { backBtn.style.transform = "translateY(0)"; });
+        topBar.appendChild(backBtn);
+        return topBar;
+    }
+
+    // LEVEL 1: VEĽKÉ KARTY
+    if (!kat) {
+        let cardsWrapper = document.createElement("div");
+        cardsWrapper.style.cssText = "display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; width: 100%;";
+
+        Object.keys(config).forEach((mainKatName, idx) => {
+            let catData = config[mainKatName] || {};
+            let theme = colorThemes[idx % colorThemes.length];
+            let a = document.createElement("a");
+            
+            let rawTitle = catData.nazov || catData.verbose_name || catData.label || mainKatName;
+            let displayIcon = catData.ikona || "";
+            let displayTitle = rawTitle;
+
+            // Dynamické oddelenie emoji z CATEGORY_CHOICES do hlavnej veľkej ikony karty
+            const emojiMatch = rawTitle.match(/^(\p{Extended_Pictographic}+)\s+(.*)$/u);
+            if (emojiMatch) {
+                if (!displayIcon) displayIcon = emojiMatch[1];
+                displayTitle = emojiMatch[2];
+            } else if (!displayIcon) {
+                displayIcon = "📦";
+            }
+            
+            a.href = "?kat=" + encodeURIComponent(mainKatName);
+            a.innerHTML = `
+                <div style="font-size: 50px; margin-bottom: 12px; filter: drop-shadow(0 6px 10px rgba(0,0,0,0.15));">${displayIcon}</div>
+                <div style="font-size: 16px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px;">${displayTitle}</div>
+            `;
+            
+            a.style.cssText = `background: ${theme.bg}; color: ${theme.text}; padding: 40px 20px; border-radius: 24px; cursor: pointer; text-decoration: none; text-align: center; box-shadow: 0 15px 30px ${theme.shadow}; border: 1px solid rgba(255,255,255,0.6); transition: all 0.3s; flex: 1; min-width: 280px; max-width: 380px; display: flex; flex-direction: column; align-items: center; justify-content: center;`;
+            
+            let shadowHover = theme.shadow.replace('0.2)', '0.4)');
+            a.addEventListener("mouseover", () => { a.style.transform = "translateY(-8px) scale(1.02)"; a.style.boxShadow = `0 20px 40px ${shadowHover}`; });
+            a.addEventListener("mouseout", () => { a.style.transform = "translateY(0) scale(1)"; a.style.boxShadow = `0 15px 30px ${theme.shadow}`; });
+            
+            cardsWrapper.appendChild(a);
+        });
+        container.appendChild(cardsWrapper);
+
+    // LEVEL 2: PODKATEGÓRIE
+    } else if (kat && !sub) {
+        container.appendChild(createBackButton("Späť na hlavný výber kategórií", "?"));
+
+        let grid = document.createElement("div");
+        grid.style.cssText = "display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 15px; width: 100%;";
+
+        if (config[kat] && config[kat].podkategorie) {
+            config[kat].podkategorie.forEach(item => {
+                let card = document.createElement("a");
+                card.href = `?kat=${encodeURIComponent(kat)}&sub=${item.kod}`;
+                const itemBg = item.bg_color || '#eff6ff';
+                const itemColor = item.text_color || '#1e40af';
+                const itemIcon = item.ikona || '📦';
+                card.innerHTML = `<span style="font-size: 26px; margin-right: 14px; display: flex; align-items: center; justify-content: center; background: ${itemBg}; width: 45px; height: 45px; border-radius: 10px; color: ${itemColor}; border: 1px solid rgba(0,0,0,0.05); box-shadow: inset 0 2px 4px rgba(255,255,255,0.5);">${itemIcon}</span> <span style="font-size: 14px; font-weight: 800; line-height: 1.3;">${item.nazov}</span>`;
+                card.style.cssText = "background: #ffffff; color: #1e293b; padding: 16px 20px; border-radius: 16px; border: 1px solid #e2e8f0; display: flex; align-items: center; text-decoration: none; box-shadow: 0 4px 6px rgba(0,0,0,0.02); transition: all 0.2s;";
+                card.addEventListener("mouseover", () => { card.style.borderColor = "#3b82f6"; card.style.transform = "translateY(-4px)"; });
+                card.addEventListener("mouseout", () => { card.style.borderColor = "#e2e8f0"; card.style.transform = "translateY(0)"; });
+                grid.appendChild(card);
+            });
+        }
+        container.appendChild(grid);
+
+    // LEVEL 3: TABUĽKA POBOČKY
+    } else {
+        // 🟢 ISAS FIX: Zapnutie detektíva výlučne pre úroveň 3 pomocou setProperty
+        if (detektiv) {
+            detektiv.style.setProperty('display', 'flex', 'important');
+        }
+
+        container.appendChild(createBackButton("Späť na výber podkategórií", `?kat=${encodeURIComponent(kat)}`));
+
+        let titleName = "Zásoby";
+        let subIcon = "📦";
+        let headerBg = "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)"; 
+        let headerText = "#ffffff";
+
+        if (config[kat]) {
+            let catIndex = Object.keys(config).indexOf(kat);
+            if (catIndex !== -1) {
+                let theme = colorThemes[catIndex % colorThemes.length];
+                headerBg = theme.bg;
+                headerText = theme.text;
+            }
+
+            let subData = (config[kat].podkategorie || []).find(p => p.kod === sub);
+            if (subData) {
+                titleName = subData.nazov;
+                subIcon = subData.ikona;
+            }
+        }
+
+        let drawerHeader = document.getElementById('drawer-header-title');
+        if (drawerHeader) {
+            drawerHeader.innerHTML = `<span style="margin-right: 12px; font-size: 22px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));">${subIcon}</span> ${titleName}`;
+            drawerHeader.style.background = headerBg;
+            drawerHeader.style.color = headerText;
+            drawerHeader.style.border = "1px solid rgba(255,255,255,0.4)";
+        }
+
+        if (rawTable) {
+            rawTable.style.display = "block";
+            container.appendChild(rawTable);
+            
+            // Explicitná poistka, že pri prvom vstupe bude šuplík zatvorený
+            document.querySelectorAll('.isas-drawer').forEach(d => {
+                d.classList.remove('isas-opened');
+            });
+        }
+    }
+
+    // --- LOGIKA DETEKTÍVA ---
+    const trigger = document.getElementById('floating-search-trigger');
+    const searchWrapper = document.getElementById('sn-search-input-wrapper');
+    const input = document.getElementById('floating-sn-input');
+    const resultsDiv = document.getElementById('sn-search-results-floating');
+    const rows = document.querySelectorAll('.item-row');
+
+    if (trigger && searchWrapper && input && resultsDiv) {
+        trigger.addEventListener('click', (e) => {
+            e.stopPropagation();
+            searchWrapper.classList.toggle('active');
+            if (searchWrapper.classList.contains('active')) input.focus();
+        });
+
+        input.addEventListener('input', function() {
+            const term = this.value.trim().toLowerCase();
+            resultsDiv.innerHTML = ''; // Vymazať predošlé výsledky
+            
+            if (term.length < 2) { 
+                resultsDiv.style.display = 'none'; 
+                return; 
+            }
+
+            // Automaticky otvoríme šuplík, ak sa niečo hľadá
+            const drawer = document.querySelector('.isas-drawer');
+            if(drawer && !drawer.classList.contains('isas-opened')) {
+                drawer.classList.add('isas-opened');
+            }
+
+            let foundItems = [];
+
+            // Prehľadávame riadky
+            rows.forEach(row => {
+                const searchTarget = row.querySelector('.search-target');
+                if (searchTarget) {
+                    const text = searchTarget.textContent; // Zachováme originálny text pre zobrazenie
+                    if (text.toLowerCase().includes(term)) {
+                        foundItems.push({
+                            val: text,
+                            rowElement: row
+                        });
+                    }
+                }
+            });
+
+            // Vykreslenie výsledkov do dropdownu
+            if (foundItems.length > 0) {
+                foundItems.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = 'sn-floating-item';
+                    
+                    const strongEl = document.createElement('strong');
+                    strongEl.textContent = item.val;
+                    const spanEl = document.createElement('span');
+                    spanEl.textContent = 'Nájdené na pobočke 📍';
+                    
+                    div.appendChild(strongEl);
+                    div.appendChild(spanEl);
+                    
+                    // Akčné scrollovanie a bliknutie po kliknutí
+                    div.onclick = () => {
+                        setTimeout(() => {
+                            // MAGICKÝ SCROLL (Identické s tvojou funkčnou šablónou)
+                            item.rowElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            
+                            // ORANŽOVÉ ZVÝRAZNENIE
+                            item.rowElement.classList.add('vivid-row-flash');
+                            setTimeout(() => item.rowElement.classList.remove('vivid-row-flash'), 3000);
+                        }, 200);
+
+                        // Zavretie okna a vymazanie inputu
+                        resultsDiv.style.display = 'none';
+                        searchWrapper.classList.remove('active');
+                        input.value = '';
+                    };
+                    resultsDiv.appendChild(div);
+                });
+                resultsDiv.style.display = 'block'; // Zobraziť okno s výsledkami
+            } else {
+                resultsDiv.style.display = 'none';
+            }
+        });
+
+        // Zatvorenie pri kliknutí mimo detektíva
+        document.addEventListener('click', (e) => {
+            const containerEl = document.getElementById('floating-sn-search-container');
+            if (containerEl && !containerEl.contains(e.target)) {
+                searchWrapper.classList.remove('active');
+                resultsDiv.style.display = 'none';
+            }
+        });
+    }
+
+});
+</script>
+{% endblock %}

@@ -1,0 +1,400 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block extrastyle %}{{ block.super }}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+    html, body {
+        height: 100% !important;
+        min-height: 100vh !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        box-sizing: border-box !important;
+    }
+
+    body {
+        width: 100% !important;
+        display: flex !important; 
+        align-items: center !important; 
+        justify-content: center !important;
+        background-color: #f1f5f9 !important;
+        background-image: 
+            radial-gradient(circle at 15% 50%, rgba(219, 234, 254, 0.9), transparent 25%),
+            radial-gradient(circle at 85% 30%, rgba(209, 250, 229, 0.8), transparent 25%),
+            radial-gradient(circle at 50% 100%, rgba(238, 242, 255, 1), transparent 40%) !important;
+        font-family: 'Poppins', system-ui, -apple-system, sans-serif !important;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+    }
+
+    /* --- 🛡️ LIKVIDÁCIA A NORMALIZÁCIA DJANGO WRAPPEROV --- */
+    #header, .header, #branding, #user-tools, .breadcrumbs, 
+    h1, h2, .content-title, #content-main h1, 
+    #sidebar, .sidebar, #nav-sidebar, .toggle-nav-sidebar, .sidebar-toggle { 
+        display: none !important; visibility: hidden !important; opacity: 0 !important;
+    }
+
+    #main, #content, #container, #content-main { 
+        margin: 0 !important; 
+        padding: 0 !important; 
+        border: none !important; 
+        background: transparent !important; 
+        width: 100% !important; 
+        min-height: 100vh !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        box-sizing: border-box !important;
+    }
+
+    /* --- ⚙️ JEMNÁ PLÁVAJÚCA ARMÁDA --- */
+    .bg-animation {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        z-index: 1; pointer-events: none;
+    }
+    .ambient-icon {
+        position: absolute; 
+        opacity: 0.25;
+        filter: drop-shadow(0 10px 15px rgba(0,0,0,0.05));
+        animation: floatAround infinite ease-in-out alternate;
+        will-change: transform;
+    }
+    @keyframes floatAround {
+        0% { transform: translateY(0px) rotate(0deg) scale(1); }
+        100% { transform: translateY(-30px) rotate(10deg) scale(1.05); }
+    }
+
+    /* --- 💎 PREMIUM GLASSMORPHISM CARD (PROPORCIONÁLNE UPRAVENÁ PRE PC) --- */
+    .login {
+        position: relative !important;
+        top: auto !important;
+        left: auto !important;
+        transform: none !important;
+        margin: 40px auto !important;
+        width: 90% !important;
+        max-width: 530px !important; /* Rozšírené pre PC obrazovky */
+        box-sizing: border-box !important;
+        background: rgba(255, 255, 255, 0.92) !important; 
+        backdrop-filter: blur(28px) saturate(190%) !important;
+        -webkit-backdrop-filter: blur(28px) saturate(190%) !important;
+        border: 1px solid rgba(255, 255, 255, 0.8) !important;
+        border-radius: 32px !important;
+        padding: 48px 45px !important;
+        box-shadow: 
+            0 30px 60px -15px rgba(15, 23, 42, 0.12),
+            0 0 0 1px rgba(255,255,255,0.9) inset !important;
+        z-index: 100;
+    }
+
+    @media (max-width: 560px) {
+        .login {
+            padding: 32px 22px !important;
+            margin: 20px auto !important;
+            max-width: calc(100vw - 32px) !important;
+            border-radius: 24px !important;
+        }
+    }
+
+    /* --- 💻 ISAS CORE ANIMÁCIA --- */
+    .isas-core-workshop {
+        background: #000000 !important; 
+        border-radius: 12px !important; 
+        padding: 0 24px !important;
+        display: flex !important; 
+        align-items: center !important; 
+        justify-content: center !important; 
+        gap: 18px !important;
+        height: 52px !important; 
+        border: 1px solid #1f2937 !important; 
+        width: 100% !important; 
+        box-sizing: border-box !important;
+        box-shadow: inset 0 0 15px rgba(52, 211, 153, 0.18), 0 6px 12px rgba(0,0,0,0.08) !important;
+        margin-bottom: 20px !important;
+    }
+    .workshop-title { 
+        color: #34D399 !important; 
+        font-weight: 900 !important; 
+        letter-spacing: 3px !important; 
+        font-size: 16px !important; 
+        text-shadow: 0 0 10px rgba(52, 211, 153, 0.6) !important; 
+    }
+    
+    .core-deco {
+        width: 9px !important;
+        height: 9px !important;
+        background-color: #34D399 !important;
+        border-radius: 50% !important;
+        box-shadow: 0 0 10px rgba(52, 211, 153, 0.8), 0 0 20px rgba(52, 211, 153, 0.4) !important;
+        animation: corePulse 2s infinite alternate ease-in-out !important;
+    }
+    
+    @keyframes corePulse {
+        0% { transform: scale(0.8); opacity: 0.5; box-shadow: 0 0 5px rgba(52, 211, 153, 0.5); }
+        100% { transform: scale(1.25); opacity: 1; box-shadow: 0 0 15px rgba(52, 211, 153, 1), 0 0 30px rgba(52, 211, 153, 0.6); }
+    }
+
+    /* --- 🕺 TANCUJÚCA FLOTILA --- */
+    .dancing-fleet {
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        gap: 16px !important;
+        margin-bottom: 34px !important;
+        font-size: 28px !important;
+    }
+    
+    .dance-icon {
+        display: inline-block;
+        will-change: transform;
+        filter: drop-shadow(0 4px 6px rgba(0,0,0,0.06));
+    }
+
+    .dance-bounce { animation: danceBounce 1.2s infinite alternate ease-in-out; }
+    .dance-spin { animation: danceSpin 4s infinite linear; }
+    .dance-wiggle { animation: danceWiggle 1.5s infinite ease-in-out; }
+    .dance-pulse { animation: dancePulse 1.5s infinite alternate ease-in-out; }
+    .dance-drive { animation: danceDrive 2s infinite alternate ease-in-out; }
+
+    @keyframes danceBounce {
+        0% { transform: translateY(0) scale(1); }
+        100% { transform: translateY(-7px) scale(1.1); }
+    }
+    @keyframes danceSpin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    @keyframes danceWiggle {
+        0%, 100% { transform: rotate(-12deg); }
+        50% { transform: rotate(12deg); }
+    }
+    @keyframes dancePulse {
+        0% { transform: scale(0.9); opacity: 0.8; }
+        100% { transform: scale(1.15); opacity: 1; filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.4)); }
+    }
+    @keyframes danceDrive {
+        0% { transform: translateX(-4px) translateY(0); }
+        100% { transform: translateX(4px) translateY(-2px); }
+    }
+
+    /* --- ⌨️ VSTUPNÉ POLIA --- */
+    .form-row { 
+        padding: 0 !important; 
+        margin-bottom: 24px !important; 
+        border: none !important; 
+    }
+    .login label {
+        display: block; 
+        color: #475569 !important; 
+        font-size: 14px !important;
+        font-weight: 700 !important; 
+        margin-bottom: 10px !important; 
+        padding-left: 4px;
+    }
+
+    .login input[type="text"], 
+    .login input[type="password"] {
+        width: 100% !important; 
+        height: 56px !important; 
+        background: #f8fafc !important; 
+        border: 2px solid #e2e8f0 !important;
+        border-radius: 16px !important;
+        padding: 0 20px !important; 
+        color: #0f172a !important;
+        font-size: 15px !important; 
+        font-weight: 500 !important;
+        box-sizing: border-box !important; 
+        transition: all 0.3s ease !important;
+        font-family: 'Poppins', sans-serif !important;
+    }
+
+    .password-wrapper {
+        position: relative !important;
+        width: 100% !important;
+        display: block !important;
+    }
+    .password-wrapper input {
+        padding-right: 52px !important;
+    }
+    .toggle-password-btn {
+        position: absolute !important;
+        right: 16px !important;
+        top: 50% !important;
+        transform: translateY(-50%) !important;
+        background: transparent !important;
+        border: none !important;
+        cursor: pointer !important;
+        font-size: 20px !important;
+        color: #94a3b8 !important;
+        padding: 4px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        transition: all 0.2s ease !important;
+        z-index: 5 !important;
+        user-select: none !important;
+    }
+    .toggle-password-btn:hover {
+        color: #10b981 !important;
+        transform: translateY(-50%) scale(1.15) !important;
+    }
+
+    .login input[type="text"]::placeholder,
+    .login input[type="password"]::placeholder {
+        color: #94a3b8 !important;
+        font-weight: 400 !important;
+    }
+
+    .login input[type="text"]:focus,
+    .login input[type="password"]:focus {
+        background: #ffffff !important;
+        border-color: #10b981 !important;
+        box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15) !important;
+        outline: none !important;
+    }
+
+    /* --- 🚀 HLAVNÉ TLAČIDLO --- */
+    .submit-row { 
+        padding: 12px 0 0 0 !important; 
+        margin: 0 !important; 
+        background: transparent !important; 
+        border: none !important; 
+    }
+    
+    .submit-row input {
+        width: 100% !important; 
+        height: 58px !important; 
+        background: #10b981 !important;
+        color: white !important; 
+        border: none !important; 
+        border-radius: 16px !important;
+        font-size: 16px !important; 
+        font-weight: 700 !important; 
+        letter-spacing: 1px; 
+        cursor: pointer !important; 
+        transition: all 0.3s ease !important;
+        box-shadow: 0 10px 20px -5px rgba(16, 185, 129, 0.4) !important;
+        outline: none !important;
+        font-family: 'Poppins', sans-serif !important;
+    }
+
+    .submit-row input:hover {
+        background: #059669 !important;
+        transform: translateY(-2px);
+        box-shadow: 0 15px 25px -5px rgba(16, 185, 129, 0.5) !important;
+    }
+
+    .submit-row input:active {
+        transform: translateY(1px);
+        box-shadow: 0 5px 10px -5px rgba(16, 185, 129, 0.4) !important;
+    }
+
+    .submit-row input.loading {
+        background: #94a3b8 !important;
+        box-shadow: none !important;
+        cursor: not-allowed !important;
+        transform: none !important;
+    }
+
+    /* --- ⚠️ CHYBOVÉ HLÁŠKY --- */
+    .errornote { 
+        background: #fef2f2 !important; 
+        border-left: 4px solid #ef4444 !important;
+        color: #b91c1c !important; 
+        border-radius: 12px; 
+        padding: 14px 16px; 
+        margin-bottom: 24px; 
+        font-weight: 600; 
+        font-size: 13px !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="bg-animation" aria-hidden="true">
+    <span class="ambient-icon" style="top: 10%; left: 10%; font-size: 80px; animation-duration: 6s;">⚙️</span>
+    <span class="ambient-icon" style="top: 70%; left: 15%; font-size: 90px; animation-duration: 8s;">🛡️</span>
+    <span class="ambient-icon" style="top: 15%; left: 80%; font-size: 75px; animation-duration: 7s;">📊</span>
+    <span class="ambient-icon" style="top: 80%; left: 85%; font-size: 85px; animation-duration: 9s;">🌐</span>
+    <span class="ambient-icon" style="top: 45%; left: 5%; font-size: 60px; animation-duration: 7.5s;">💼</span>
+    <span class="ambient-icon" style="top: 35%; left: 88%; font-size: 65px; animation-duration: 6.5s;">🔐</span>
+    <span class="ambient-icon" style="top: 60%; left: 75%; font-size: 70px; animation-duration: 8.5s;">⚡</span>
+</div>
+
+<div class="login" id="login-card">
+    <!-- 💻 ISAS CORE HLAVNÝ PANEL -->
+    <div class="isas-core-workshop" title="Jadro digitálneho ekosystému ISAS 🧠✨">
+        <span class="core-deco" title="Ľavý aktívny uzol 🟢"></span>
+        <span class="workshop-title" title="ISAS Command Center 🚀">ISAS CORE</span>
+        <span class="core-deco" title="Pravý aktívny uzol 🟢"></span>
+    </div>
+
+    <!-- 🕺 TANCUJÚCE IKONY JADRA -->
+    <div class="dancing-fleet" title="Ekosystém ISAS CORE je pripravený 🚀✨">
+        <span class="dance-icon dance-bounce" title="Systémová bezpečnosť 🛡️">🛡️</span>
+        <span class="dance-icon dance-spin" title="Motor systému ⚙️">⚙️</span>
+        <span class="dance-icon dance-wiggle" title="Analytika a prehľady 📊">📊</span>
+        <span class="dance-icon dance-pulse" title="Výkon a energia ⚡">⚡</span>
+        <span class="dance-icon dance-bounce" title="Tím a správa 👥" style="animation-delay: 0.3s;">👥</span>
+        <span class="dance-icon dance-spin" title="Sieťová synchronizácia 🌐" style="animation-direction: reverse; animation-duration: 3s;">🌐</span>
+        <span class="dance-icon dance-drive" title="Rýchly štart a workflow 🚀">🚀</span>
+    </div>
+
+    {% if form.errors and not form.non_field_errors %}
+    <p class="errornote">⚠️ Prístup zamietnutý. Skontrolujte prosím zadané údaje.</p>
+    {% endif %}
+
+    {% if form.non_field_errors %}
+    {% for error in form.non_field_errors %}
+    <p class="errornote">🚫 {{ error }}</p>
+    {% endfor %}
+    {% endif %}
+
+    <form action="{{ app_path }}" method="post" id="login-form">{% csrf_token %}
+        <div class="form-row">
+            <label for="id_username">👤 Užívateľské meno</label>
+            <input type="text" name="username" autofocus required id="id_username" placeholder="Zadajte prihlasovacie meno" autocomplete="username" autocapitalize="none" spellcheck="false">
+        </div>
+        <div class="form-row">
+            <label for="id_password">🔒 Prístupové heslo</label>
+            <div class="password-wrapper">
+                <input type="password" name="password" required id="id_password" placeholder="••••••••••••" autocomplete="current-password">
+                <button type="button" id="toggle-password-btn" class="toggle-password-btn" title="Zobraziť / Skryť heslo" aria-label="Zobraziť heslo" tabindex="-1">👁️</button>
+            </div>
+            <input type="hidden" name="next" value="{{ next }}">
+        </div>
+        
+        <div class="submit-row">
+            <input type="submit" id="submit-btn" value="🚀 OVERIŤ IDENTITU A VSTÚPIŤ">
+        </div>
+    </form>
+</div>
+
+<script>
+    const togglePassBtn = document.getElementById('toggle-password-btn');
+    const passInput = document.getElementById('id_password');
+    if (togglePassBtn && passInput) {
+        togglePassBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const isPass = passInput.type === 'password';
+            passInput.type = isPass ? 'text' : 'password';
+            togglePassBtn.textContent = isPass ? '🙈' : '👁️';
+            togglePassBtn.setAttribute('aria-label', isPass ? 'Skryť heslo' : 'Zobraziť heslo');
+            passInput.focus();
+        });
+    }
+
+    document.getElementById('login-form').addEventListener('submit', function(e) {
+        if (this.checkValidity()) {
+            const btn = document.getElementById('submit-btn');
+            btn.classList.add('loading');
+            btn.value = '⏳ OVERUJEM ÚDAJE...';
+            btn.style.pointerEvents = 'none';
+        }
+    });
+</script>
+{% endblock %}

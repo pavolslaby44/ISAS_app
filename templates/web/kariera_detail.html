@@ -1,0 +1,419 @@
+{% extends 'web/base.html' %}
+
+{% block title %}{{ pozicia.nazov }} | Kariéra | {{ nastavenia.titulok_webu|default:identita.nazov_spolocnosti }}{% endblock %}
+{% block description %}Hľadáme špecialistu na pozíciu {{ pozicia.nazov|striptags|escape }}.{% if pozicia.lokalita or identita.sidlo_mesto or identita.sidlo_stat %} Lokalita: {{ pozicia.lokalita|default:identita.sidlo_mesto|default:identita.sidlo_stat|striptags|escape }}.{% endif %} Mzda: {{ pozicia.mzda|default:"Dohodou"|striptags|escape }}. Pridajte sa k nám!{% endblock %}
+
+{% block og_type %}article{% endblock %}
+{% block og_url %}{{ request.scheme }}://{{ request.get_host }}{% url 'webbuilder:kariera_detail' pozicia.slug %}{% endblock %}
+{% block og_title %}Kariéra: {{ pozicia.nazov|striptags|escape }}{% endblock %}
+{% block og_description %}{{ pozicia.poziadavky_skratka|default:pozicia.popis_naplne|default:nastavenia.meta_popis|striptags|truncatechars:150|escape }}{% endblock %}
+
+{% block extra_head %}
+    <link rel="canonical" href="{{ request.scheme }}://{{ request.get_host }}{% url 'webbuilder:kariera_detail' pozicia.slug %}">
+    {% if not je_aktualna and not is_preview %}
+    <meta name="robots" content="noindex, follow">
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+<nav aria-label="Omrvinková navigácia" class="bg-gray-100 py-4 border-b border-gray-200 print:hidden">
+    <div class="max-w-7xl mx-auto px-6 text-sm text-gray-500 font-medium">
+        <ol class="flex items-center flex-wrap gap-2">
+            <li>
+                <a href="{% url 'webbuilder:home' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="hover:text-brand transition">Domov</a>
+            </li>
+            <li aria-hidden="true" class="text-gray-400">/</li>
+            <li>
+                <a href="{% url 'webbuilder:kariera_list' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="hover:text-brand transition">Kariéra</a>
+            </li>
+            <li aria-hidden="true" class="text-gray-400">/</li>
+            <li aria-current="page" class="text-gray-900 font-bold line-clamp-1 max-w-xs md:max-w-md">{{ pozicia.nazov }}</li>
+        </ol>
+    </div>
+</nav>
+
+<section class="py-16 bg-white px-6">
+    <div class="max-w-5xl mx-auto">
+        
+        {% if not je_aktualna %}
+        <div class="mb-8 p-4 bg-amber-50 border border-amber-200 rounded-2xl text-amber-800 text-sm font-bold flex items-center gap-3">
+            <span class="text-2xl">⚠️</span>
+            <div>
+                {% if not pozicia.je_aktivna %}
+                Tento inzerát je v ERP označený ako neaktívny. Zobrazuje sa vám administrátorský náhľad.
+                {% elif je_expirovana %}
+                Platnosť tohto inzerátu vypršala dňa {{ pozicia.platnost_do|date:"d. m. Y" }}. Výberové konanie je uzavreté.
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Hlavička inzerátu -->
+        <div class="bg-gray-50 rounded-3xl p-8 md:p-12 border border-gray-200 mb-12 relative overflow-hidden shadow-sm">
+            <div class="flex flex-wrap items-center gap-3 mb-4">
+                {% if pozicia.typ_uvazku %}
+                <span class="bg-brand/10 text-brand text-xs font-extrabold px-3 py-1.5 rounded-full uppercase tracking-wider">
+                    {{ pozicia.get_typ_uvazku_display }}
+                </span>
+                {% endif %}
+                {% if pozicia.lokalita or identita.sidlo_mesto or identita.sidlo_stat %}
+                <span class="bg-gray-200 text-gray-700 text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1">
+                    📍 {{ pozicia.lokalita|default:identita.sidlo_mesto|default:identita.sidlo_stat }}
+                </span>
+                {% endif %}
+                {% if pozicia.nastup %}
+                <span class="bg-emerald-50 text-emerald-700 text-xs font-bold px-3 py-1.5 rounded-full border border-emerald-200 flex items-center gap-1">
+                    📅 Nástup: {{ pozicia.nastup }}
+                </span>
+                {% endif %}
+                {% if pozicia.platnost_do %}
+                <span class="bg-amber-50 text-amber-800 text-xs font-bold px-3 py-1.5 rounded-full border border-amber-200 flex items-center gap-1">
+                    ⏳ Žiadosti do: {{ pozicia.platnost_do|date:"d. m. Y" }}
+                </span>
+                {% endif %}
+            </div>
+
+            <h1 class="text-3xl md:text-5xl font-black text-gray-900 mb-6 leading-tight">{{ pozicia.nazov }}</h1>
+
+            {% if pozicia.mzda %}
+            <div class="inline-flex items-baseline gap-2 bg-white px-5 py-3 rounded-2xl border border-gray-200 shadow-sm mb-6">
+                <span class="text-xs font-extrabold uppercase text-gray-400 tracking-wider">Mzdové ohodnotenie:</span>
+                <span class="text-2xl md:text-3xl font-black text-brand">{{ pozicia.mzda }}</span>
+            </div>
+            {% endif %}
+
+            <div class="flex flex-wrap gap-4 pt-6 border-t border-gray-200">
+                {% if je_aktualna or is_preview %}
+                <a href="#formular-reakcia" class="bg-brand hover-bg-brand text-white font-bold py-3.5 px-8 rounded-xl shadow-lg transition duration-200">
+                    Mám záujem o pozíciu &darr;
+                </a>
+                {% else %}
+                <a href="{% url 'webbuilder:kariera_list' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="bg-brand hover-bg-brand text-white font-bold py-3.5 px-8 rounded-xl shadow-lg transition duration-200">
+                    Všetky otvorené pozície &rarr;
+                </a>
+                {% endif %}
+                <button type="button" onclick="shareCareerPosition()" class="bg-white hover:bg-gray-100 text-gray-700 font-bold py-3.5 px-6 rounded-xl border border-gray-200 transition duration-200 flex items-center gap-2 shadow-sm">
+                    <svg class="w-4 h-4 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
+                    <span>Zdieľať inzerát</span>
+                    <span id="copyToastCareer" class="hidden text-xs text-emerald-600 font-bold">Skopírované do schránky!</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-12">
+            <!-- Ľavý stĺpec: Popis a požiadavky -->
+            <div class="lg:col-span-2 space-y-10">
+                {% if pozicia.popis_naplne %}
+                <section>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                        <span>📝</span> Náplň práce a zodpovednosti
+                    </h2>
+                    <div class="prose max-w-none text-gray-700 leading-relaxed whitespace-pre-line break-words bg-gray-50/50 p-6 rounded-2xl border border-gray-100">
+                        {{ pozicia.popis_naplne }}
+                    </div>
+                </section>
+                {% endif %}
+
+                {% if pozicia.poziadavky_detail or pozicia.poziadavky_skratka %}
+                <section>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                        <span>🎓</span> Požiadavky na kandidáta
+                    </h2>
+                    {% if pozicia.poziadavky_skratka %}
+                    <div class="p-4 bg-blue-50 border border-blue-200 rounded-xl text-blue-900 text-sm font-semibold mb-4">
+                        ⚡ {{ pozicia.poziadavky_skratka }}
+                    </div>
+                    {% endif %}
+                    {% if pozicia.poziadavky_detail %}
+                    <div class="prose max-w-none text-gray-700 leading-relaxed whitespace-pre-line break-words bg-gray-50/50 p-6 rounded-2xl border border-gray-100">
+                        {{ pozicia.poziadavky_detail }}
+                    </div>
+                    {% endif %}
+                </section>
+                {% endif %}
+
+                {% if pozicia.ponukame_detail or pozicia.benefity_skratka %}
+                <section>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                        <span>✨</span> Čo všetko ti ponúkame (Benefity)
+                    </h2>
+                    {% if pozicia.benefity_skratka %}
+                    <div class="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-900 text-sm font-semibold mb-4">
+                        🎁 {{ pozicia.benefity_skratka }}
+                    </div>
+                    {% endif %}
+                    {% if pozicia.ponukame_detail %}
+                    <div class="prose max-w-none text-gray-700 leading-relaxed whitespace-pre-line break-words bg-gray-50/50 p-6 rounded-2xl border border-gray-100">
+                        {{ pozicia.ponukame_detail }}
+                    </div>
+                    {% endif %}
+                </section>
+                {% endif %}
+            </div>
+
+            <!-- Pravý stĺpec: Kontaktný formulár pre odoslanie CV -->
+            <div class="lg:col-span-1">
+                <div id="formular-reakcia" class="bg-gray-900 text-white rounded-3xl p-6 md:p-8 shadow-2xl sticky top-8">
+                    <h3 class="text-xl font-bold mb-2 flex items-center gap-2">
+                        <span>🚀</span> Pošli nám životopis
+                    </h3>
+                    <p class="text-xs text-gray-400 mb-6">Všetky doručené životopisy starostlivo posudzujeme a vybraných kandidátov budeme kontaktovať.</p>
+
+                    {% if not je_aktualna and not is_preview %}
+                    <div class="p-6 bg-gray-800 rounded-2xl border border-gray-700 text-center">
+                        <span class="text-3xl block mb-2">🔒</span>
+                        <p class="text-sm font-bold text-gray-200 mb-1">Nábor na túto pozíciu bol ukončený</p>
+                        <p class="text-xs text-gray-400 mb-4">Aktuálne nie je možné odoslať žiadosť na tento inzerát.</p>
+                        <a href="{% url 'webbuilder:kariera_list' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="inline-block bg-brand hover-bg-brand text-white text-xs font-bold py-2.5 px-5 rounded-xl transition">
+                            Prezrieť voľné pozície &rarr;
+                        </a>
+                    </div>
+                    {% else %}
+                    <form id="careerApplicationForm" action="{% url 'webbuilder:submit_career' %}" method="POST" enctype="multipart/form-data" class="space-y-4">
+                        {% csrf_token %}
+                        <input type="hidden" name="pozicia_id" value="{{ pozicia.id }}">
+                        {% if is_preview %}<input type="hidden" name="preview" value="ai_draft">{% endif %}
+                        
+                        <!-- Honeypot -->
+                        <div class="hidden" style="display:none !important;" aria-hidden="true">
+                            <input type="text" name="website_url" tabindex="-1" autocomplete="off">
+                        </div>
+
+                        <div>
+                            <label for="id_meno" class="block text-xs font-bold text-gray-300 uppercase mb-1">Meno a priezvisko *</label>
+                            <input type="text" id="id_meno" name="meno" required maxlength="150" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand">
+                        </div>
+
+                        <div>
+                            <label for="id_email" class="block text-xs font-bold text-gray-300 uppercase mb-1">E-mailová adresa *</label>
+                            <input type="email" id="id_email" name="email" required maxlength="254" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand">
+                        </div>
+
+                        <div>
+                            <label for="id_telefon" class="block text-xs font-bold text-gray-300 uppercase mb-1">Telefónne číslo *</label>
+                            <input type="tel" id="id_telefon" name="telefon" required maxlength="50" placeholder="Telefón *" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand">
+                        </div>
+
+                        <div>
+                            <label for="id_zivotopis" class="block text-xs font-bold text-gray-300 uppercase mb-1">Životopis (PDF, Word) *</label>
+                            <input type="file" id="id_zivotopis" name="zivotopis" required accept=".pdf,.doc,.docx,.odt" class="w-full bg-gray-800 border border-gray-700 rounded-xl p-2 text-xs text-gray-300 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-brand file:text-white hover:file:bg-brand/80">
+                        </div>
+
+                        <div>
+                            <label for="id_motivacna_sprava" class="block text-xs font-bold text-gray-300 uppercase mb-1">Pár slov o tebe (voliteľné)</label>
+                            <textarea id="id_motivacna_sprava" name="motivacna_sprava" rows="3" maxlength="3000" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand"></textarea>
+                        </div>
+
+                        <div class="flex items-start gap-2 pt-2">
+                            <input type="checkbox" id="id_gdpr_suhlas" name="gdpr_suhlas" required class="mt-1 rounded bg-gray-800 border-gray-700 text-brand focus:ring-brand">
+                            <label for="id_gdpr_suhlas" class="text-[11px] text-gray-400 leading-tight">
+                                Súhlasím so spracovaním osobných údajov za účelom výberového konania. *
+                            </label>
+                        </div>
+
+                        <div id="careerFormFeedback" class="hidden text-xs p-3 rounded-xl font-bold"></div>
+
+                        <button type="submit" id="careerSubmitBtn" class="w-full bg-brand hover-bg-brand text-white font-bold py-3.5 rounded-xl shadow-lg transition duration-200 flex items-center justify-center gap-2">
+                            <span>Odoslať žiadosť</span>
+                        </button>
+                    </form>
+                    {% endif %}
+
+                    {% if identita.email_vseobecny or identita.telefon %}
+                    <div class="mt-4 pt-4 border-t border-gray-800 text-[11px] text-gray-400 text-center">
+                        Máš otázky k výberovému konaniu? Kontaktuj nás na 
+                        {% if identita.email_vseobecny %}<a href="mailto:{{ identita.email_vseobecny }}" class="text-white hover:underline">{{ identita.email_vseobecny }}</a>{% endif %}
+                        {% if identita.telefon %}{% if identita.email_vseobecny %} alebo {% endif %}<a href="tel:{{ identita.telefon|cut:' ' }}" class="text-white hover:underline">{{ identita.telefon }}</a>{% endif %}.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Ďalšie voľné pracovné miesta -->
+        {% if dalsie_pozicie %}
+        <div class="mt-20 pt-12 border-t border-gray-200">
+            <h3 class="text-2xl font-bold text-gray-900 mb-8">Ďalšie otvorené pozície</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {% for d_poz in dalsie_pozicie %}
+                <a href="{% url 'webbuilder:kariera_detail' d_poz.slug %}{% if is_preview %}?preview=ai_draft{% endif %}" class="block bg-gray-50 hover:bg-gray-100 p-6 rounded-2xl border border-gray-200 transition duration-200">
+                    {% if d_poz.typ_uvazku %}
+                    <span class="text-[11px] font-extrabold uppercase text-brand mb-2 block">{{ d_poz.get_typ_uvazku_display }}</span>
+                    {% endif %}
+                    <h4 class="text-lg font-bold text-gray-900 mb-2">{{ d_poz.nazov }}</h4>
+                    {% if d_poz.mzda %}
+                    <p class="text-sm font-extrabold text-gray-600 mb-1">{{ d_poz.mzda }}</p>
+                    {% endif %}
+                    {% if d_poz.lokalita or identita.sidlo_mesto or identita.sidlo_stat %}
+                    <p class="text-xs text-gray-400">📍 {{ d_poz.lokalita|default:identita.sidlo_mesto|default:identita.sidlo_stat }}</p>
+                    {% endif %}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+<!-- 🚀 GOOGLE FOR JOBS (JobPosting Schema podľa schema.org) -->
+{% if je_aktualna and not is_preview %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org/",
+  "@type": "JobPosting",
+  "title": "{{ pozicia.nazov|escapejs }}",
+  "description": "{{ pozicia.popis_naplne|default:pozicia.poziadavky_skratka|default:pozicia.nazov|striptags|escapejs }}",
+  "datePosted": "{% if pozicia.vytvorene %}{{ pozicia.vytvorene|date:'Y-m-d' }}{% else %}{{ dnes|date:'Y-m-d' }}{% endif %}",
+  {% if pozicia.platnost_do %}
+  "validThrough": "{{ pozicia.platnost_do|date:'Y-m-d' }}T23:59:59",
+  {% endif %}
+  "employmentType": "{% if pozicia.typ_uvazku == 'TPP' %}FULL_TIME{% elif pozicia.typ_uvazku == 'ZIVNOST' %}CONTRACTOR{% elif pozicia.typ_uvazku == 'DOHODA' %}PART_TIME{% else %}OTHER{% endif %}",
+  "url": "{{ request.scheme }}://{{ request.get_host }}{% url 'webbuilder:kariera_detail' pozicia.slug %}",
+  {# 🛡️ ARCHITEKTÚRA: baseSalary pre Google for Jobs (Schema.org) striktne vyžaduje číselnú hodnotu (float/int). Pri voľnom texte (napr. '1 800 - 2 500 / mesiac' či 'Dohodou') blok nevytvárame kvôli prevencii chýb v Google Search Console. Text mzdy pre ľudí sa korektne zobrazuje v HTML. NEUPRAVOVAŤ na textový fallback! #}
+  {% if pozicia.mzda and pozicia.mzda.strip.isdigit and mena %}
+  "baseSalary": {
+    "@type": "MonetaryAmount",
+    "currency": "{{ mena|escapejs }}",
+    "value": {
+      "@type": "QuantitativeValue",
+      "value": {{ pozicia.mzda.strip }},
+      "unitText": "MONTH"
+    }
+  },
+  {% endif %}
+  "hiringOrganization": {
+    "@type": "Organization",
+    "name": "{{ identita.nazov_spolocnosti|default:nastavenia.titulok_webu|escapejs }}",
+    "sameAs": "{{ request.scheme }}://{{ request.get_host }}"{% if nastavenia.logo and nastavenia.logo.name %},
+    "logo": "{% if '://' in nastavenia.logo.url %}{{ nastavenia.logo.url }}{% else %}{{ request.scheme }}://{{ request.get_host }}{{ nastavenia.logo.url }}{% endif %}"
+    {% endif %}
+  },
+  "jobLocation": {
+    "@type": "Place",
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "{{ pozicia.lokalita|default:identita.sidlo_mesto|default:identita.sidlo_stat|escapejs }}"{% if identita.sidlo_stat %},
+      "addressCountry": "{{ identita.sidlo_stat|escapejs }}"{% endif %}
+    }
+  }
+}
+</script>
+{% endif %}
+
+<script>
+function shareCareerPosition() {
+    const canonicalJobUrl = '{{ request.scheme }}://{{ request.get_host }}{% url "webbuilder:kariera_detail" pozicia.slug %}';
+    const shareData = {
+        title: '{{ pozicia.nazov|escapejs }}',
+        text: 'Pracovná ponuka: {{ pozicia.nazov|escapejs }} – {{ identita.nazov_spolocnosti|escapejs }}',
+        url: canonicalJobUrl
+    };
+    const copyToClipboard = () => {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(canonicalJobUrl).then(() => {
+                const toast = document.getElementById('copyToastCareer');
+                if (toast) {
+                    toast.classList.remove('hidden');
+                    setTimeout(() => toast.classList.add('hidden'), 2500);
+                }
+            }).catch(() => {});
+        } else {
+            const tempInput = document.createElement('input');
+            tempInput.value = canonicalJobUrl;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            try {
+                document.execCommand('copy');
+                const toast = document.getElementById('copyToastCareer');
+                if (toast) {
+                    toast.classList.remove('hidden');
+                    setTimeout(() => toast.classList.add('hidden'), 2500);
+                }
+            } catch (err) {}
+            document.body.removeChild(tempInput);
+        }
+    };
+
+    if (navigator.share) {
+        navigator.share(shareData).catch((err) => {
+            if (err && err.name !== 'AbortError') {
+                copyToClipboard();
+            }
+        });
+    } else {
+        copyToClipboard();
+    }
+}
+
+document.getElementById('careerApplicationForm')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const form = this;
+    const btn = document.getElementById('careerSubmitBtn');
+    const feedback = document.getElementById('careerFormFeedback');
+    
+    feedback.className = 'hidden text-xs p-3 rounded-xl font-bold';
+
+    const fileInput = form.querySelector('input[type="file"][name="zivotopis"]');
+    if (!fileInput || !fileInput.files || !fileInput.files[0]) {
+        feedback.classList.remove('hidden');
+        feedback.classList.add('bg-red-950', 'text-red-300', 'border', 'border-red-700');
+        feedback.textContent = 'Priložte prosím svoj životopis (PDF alebo Word dokument).';
+        return;
+    }
+    const fileName = (fileInput.files[0].name || '').toLowerCase();
+    const allowedExts = ['.pdf', '.doc', '.docx', '.odt'];
+    if (!allowedExts.some(ext => fileName.endsWith(ext))) {
+        feedback.classList.remove('hidden');
+        feedback.classList.add('bg-red-950', 'text-red-300', 'border', 'border-red-700');
+        feedback.textContent = 'Nepovolený formát súboru. Nahrajte PDF alebo Word (.pdf, .doc, .docx, .odt).';
+        return;
+    }
+    if (fileInput.files[0].size > 10 * 1024 * 1024) {
+        feedback.classList.remove('hidden');
+        feedback.classList.add('bg-red-950', 'text-red-300', 'border', 'border-red-700');
+        feedback.textContent = 'Súbor so životopisom je príliš veľký (maximálne 10 MB).';
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<span>Odosielam...</span>';
+
+    const formData = new FormData(form);
+
+    try {
+        const res = await fetch("{% url 'webbuilder:submit_career' %}", {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': formData.get('csrfmiddlewaretoken') || ''
+            }
+        });
+
+        const data = await res.json().catch(() => null);
+
+        btn.disabled = false;
+        btn.innerHTML = '<span>Odoslať žiadosť</span>';
+        feedback.classList.remove('hidden');
+
+        if (res.ok && data && data.status === 'success') {
+            feedback.classList.add('bg-emerald-950', 'text-emerald-300', 'border', 'border-emerald-700');
+            feedback.textContent = data.message || 'Životopis bol úspešne odoslaný!';
+            form.reset();
+            btn.disabled = true;
+            btn.innerHTML = '<span>Odoslané ✓</span>';
+        } else {
+            feedback.classList.add('bg-red-950', 'text-red-300', 'border', 'border-red-700');
+            const fallbackMsg = res.status === 413 ? 'Súbor je príliš veľký (max 10 MB).' : 'Chyba pri odosielaní. Skontrolujte formulár.';
+            feedback.textContent = (data && data.message) ? data.message : fallbackMsg;
+        }
+    } catch (err) {
+        btn.disabled = false;
+        btn.innerHTML = '<span>Odoslať žiadosť</span>';
+        feedback.classList.remove('hidden');
+        feedback.classList.add('bg-red-950', 'text-red-300', 'border', 'border-red-700');
+        feedback.textContent = 'Nastala chyba spojenia so serverom. Skúste to prosím znova.';
+    }
+});
+</script>
+{% endblock %}

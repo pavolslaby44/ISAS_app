@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <title>Servisný Protokol #{{ poradove_cislo|default:zaznam.id }}</title>
+    {% include "documents/document_design_system.html" %}
+</head>
+<body>
+<div class="document-wrapper">
+
+    <!-- HLAVIČKA -->
+    <div class="header">
+        <div class="header-left">
+            <div class="logo-text">{{ identita.nazov_spolocnosti|default:"ISAS CORE" }}</div>
+            {% if identita.podtitul %}
+            <div style="font-size: 11.5px; color: var(--primary); font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; padding-bottom: 6px; border-bottom: 1px solid #cbd5e1; margin-bottom: 6px; display: inline-block;">
+                {{ identita.podtitul }}
+            </div>
+            {% endif %}
+            <div class="company-meta">
+                {% if identita.sidlo_ulica %}{{ identita.sidlo_ulica }} {{ identita.sidlo_cislo }},{% endif %}
+                {% if identita.sidlo_psc %}{{ identita.sidlo_psc }} {% endif %}{{ identita.sidlo_mesto|default:"" }}<br>
+                IČO: {{ identita.ico|default:"-" }} | DIČ: {{ identita.dic|default:"-" }} | {% if identita.je_platca_dph %}IČ DPH: {{ identita.ic_dph|default:"-" }}{% else %}Neplatca DPH{% endif %}
+                {% if identita.telefon or identita.email_vseobecny or identita.web %}<br>{% endif %}
+                {% if identita.telefon %}Tel: {{ identita.telefon }}{% endif %}
+                {% if identita.email_vseobecny %}{% if identita.telefon %} | {% endif %}Email: {{ identita.email_vseobecny }}{% endif %}
+                {% if identita.web %}{% if identita.telefon or identita.email_vseobecny %} | {% endif %}Web: {{ identita.web }}{% endif %}
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="doc-type">Servisný Výkaz</div>
+            <div class="doc-number">#{{ poradove_cislo|default:zaznam.id }}</div>
+            <div style="font-size: 12px; color: var(--slate-500); font-weight: 700; margin-top: 6px;">Dátum: {{ zaznam.vytvorene|date:"d.m.Y" }}</div>
+            <div class="badge-secure">
+                <svg width="10" height="10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                ELEKTRONICKY UZAMKNUTÉ
+            </div>
+        </div>
+    </div>
+
+    <!-- INFORMAČNÉ KARTY -->
+    <div class="info-grid">
+        <!-- ZÁKAZNÍK -->
+        <div class="info-card">
+            <div class="info-card-header">
+                🏢 Objednávateľ (Zákazník)
+            </div>
+            <div class="info-value">{{ zaznam.zakaznik.Nazov_spolocnosti|default:"Neuvedený zákazník" }}</div>
+            
+            <!-- Adresa -->
+            <div class="info-meta">
+                Adresa: {% if zaznam.zakaznik.ulica_a_cislo %}{{ zaznam.zakaznik.ulica_a_cislo }}, {% endif %}
+                {% if zaznam.zakaznik.psc %}{{ zaznam.zakaznik.psc }} {% endif %}{{ zaznam.zakaznik.mesto|default:"Adresa neuvedená" }}
+            </div>
+            
+            <!-- Fakturačné údaje -->
+            <div class="info-meta">
+                IČO: <b>{{ zaznam.zakaznik.ico|default:"-" }}</b>
+                {% if zaznam.zakaznik.dic %} | DIČ: <b>{{ zaznam.zakaznik.dic }}</b>{% endif %}
+                {% if zaznam.zakaznik.ic_dph %} | IČ DPH: <b>{{ zaznam.zakaznik.ic_dph }}</b>{% endif %}
+            </div>
+            
+            <!-- Kontaktná osoba (Oddelená jemnou čiarou pre prehľadnosť) -->
+            <div class="info-meta" style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e2e8f0;">
+                Kontakt: <b>{{ zaznam.zakaznik.kontaktna_osoba|default:"Kontaktná osoba neuvedená" }}</b><br>
+                Tel.: {{ zaznam.zakaznik.telefon|default:"-" }} | E-mail: {{ zaznam.zakaznik.email|default:"-" }}
+            </div>
+        </div>
+        
+        <!-- ZARIADENIE -->
+        <div class="info-card">
+            <div class="info-card-header">
+                ⚙️ Predmet Servisu
+            </div>
+            <div class="info-value">{{ zaznam.zariadenie.model_zariadenia|default:zaznam.zariadenie.kategoria|upper|default:"Neznáme zariadenie" }}</div>
+            
+            <!-- Identifikácia stroja a Lokácia -->
+            <div class="info-meta">
+                Výrobca: <b>{{ zaznam.zariadenie.vyrobca.nazov_vyrobcu|default:"-" }}</b> | S/N: <b>{{ zaznam.zariadenie.vyrobne_cislo|default:"-" }}</b><br>
+                {% if zaznam.zariadenie.nazov or zaznam.zariadenie.umiestnenie %}
+                Pozícia: <b>{{ zaznam.zariadenie.nazov|default:"" }}</b> {% if zaznam.zariadenie.umiestnenie %}({{ zaznam.zariadenie.umiestnenie }}){% endif %}
+                {% endif %}
+            </div>
+            
+            <!-- Prevádzkový stav počítadla -->
+            <div class="info-meta" style="color: var(--primary); font-weight: 700; margin-top: 4px;">
+                {{ zaznam.meter_label }}: <b>{{ zaznam.meter_display }}</b>
+                {% if zaznam.motohodiny_v_zatazi is not None and zaznam.motohodiny_v_zatazi > 0 %}
+                | {{ zaznam.meter_load_label }}: <b>{{ zaznam.meter_load_display }}</b>
+                {% endif %}
+            </div>
+
+            {% if zaznam.namerane_hodnoty or zaznam.zmena_hardveru %}
+            <div class="info-meta" style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e2e8f0;">
+                {% if zaznam.namerane_hodnoty %}
+                    Namerané hodnoty: <i>{{ zaznam.namerane_hodnoty }}</i><br>
+                {% endif %}
+                {% if zaznam.zmena_hardveru %}
+                    <span style="display: inline-block; margin-top: 4px; color: #ef4444; font-weight: 800; font-size: 10px; background: #fef2f2; padding: 2px 6px; border-radius: 4px; border: 1px solid #fca5a5; text-transform: uppercase; letter-spacing: 0.5px;">
+                        Evidovaná zmena parametrov zariadenia
+                    </span>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- VIZUÁLNA INŠPEKCIA (FOTKY) -->
+    {% if zaznam.foto_pred or zaznam.foto_po %}
+    <div class="section-title avoid-break">Vizuálna inšpekcia</div>
+    <div class="photo-grid avoid-break">
+        {% if zaznam.foto_pred %}
+        <div class="photo-box">
+            <img src="{{ zaznam.foto_pred.url }}" alt="Pred">
+            <span class="photo-label">STAV PRED</span>
+        </div>
+        {% endif %}
+        {% if zaznam.foto_po %}
+        <div class="photo-box">
+            <img src="{{ zaznam.foto_po.url }}" alt="Po">
+            <span class="photo-label">STAV PO ZÁSAHU</span>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+    
+    {% if zaznam.video %}
+    <div class="avoid-break" style="margin-bottom: 30px; padding: 10px 15px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 18px;">🎥</span>
+        <span style="font-size: 11px; color: var(--primary-dark); font-weight: 600;">K tomuto protokolu je v systéme ISAS CORE priložený aj videozáznam z vykonaného servisu.</span>
+    </div>
+    {% endif %}
+
+    <!-- AI TEXT A TYP SERVISU -->
+    <div class="section-title avoid-break">Záznam o výkone prác</div>
+    
+    {% if typy_prac or zaznam.koren_problemu and zaznam.koren_problemu != 'NEHODNOTENE' %}
+    <div style="margin-bottom: 15px; font-size: 11px; color: var(--slate-700);">
+        {% if typy_prac %}
+            <b>Typ zásahu:</b> {% for t in typy_prac %}{{ t.nazov }}{% if not forloop.last %}, {% endif %}{% endfor %}<br>
+        {% endif %}
+        {% if zaznam.koren_problemu and zaznam.koren_problemu != 'NEHODNOTENE' %}
+            <span style="color: #b45309; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Výsledok diagnostiky (Reklamácia): {{ zaznam.verejny_koren_problemu_display }}</span>
+        {% endif %}
+    </div>
+    {% endif %}
+    <div class="ai-insight avoid-break">
+        <div class="ai-label">ISAS CORE - Zhodnotenie</div>
+        <div class="ai-content">
+            {{ zaznam.formalne_zhodnotenie_ai|default:zaznam.poruchy|default:"Servisné práce a diagnostika boli vykonané v plnom rozsahu podľa dohodnutých technických a prevádzkových štandardov."|linebreaksbr }}
+        </div>
+    </div>
+
+    <!-- POLOŽKY A KOMPONENTY -->
+    {% if materialy %}
+    <div class="section-title avoid-break">Použité položky a komponenty</div>
+    <table class="modern-table">
+        <thead>
+            <tr>
+                <th style="width: 80%;">Názov</th>
+                <th style="width: 20%; text-align: right;">Množstvo</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for mat in materialy %}
+            <tr>
+                <td>
+                    <span class="mat-cat">{{ mat.kategoria_zobrazenie }}</span>
+                    
+                    <!-- 🧠 ISAS SMART FALLBACK: Názov -->
+                    <span class="mat-name">{% if mat.obchodny_nazov %}{{ mat.obchodny_nazov }}{% else %}{{ mat.cisty_nazov }}{% endif %}</span>
+                    
+                    <!-- 🕵️ ISAS SMART FALLBACK: Výrobca -->
+                    {% if not mat.skryt_vyrobcu %}
+                        {% if mat.vyrobca_nazov %}
+                            <span class="item-manufacturer">Výrobca: <strong>{{ mat.vyrobca_nazov }}</strong></span>
+                        {% elif mat.content_object.vyrobca %}
+                            <span class="item-manufacturer">Výrobca: <strong>{{ mat.content_object.vyrobca }}</strong></span>
+                        {% endif %}
+                    {% endif %}
+                </td>
+                <td style="text-align: right; vertical-align: middle;">
+                    <span class="mat-qty">{{ mat.pocet }}</span>
+                    <span class="mat-unit">{{ mat.merna_jednotka_zobrazenie }}</span>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    <!-- PREHLÁSENIE -->
+    <div class="avoid-break">
+        <div class="legal-box">
+            <strong style="color: var(--slate-900);">Odovzdanie diela a Záväzok úhrady:</strong> Zákazník (objednávateľ) svojím podpisom potvrdzuje, že predmetné servisné úkony boli riadne vykonané a predmet servisu prevzal <b>v stave zodpovedajúcom rozsahu vykonaných prác, bez zjavných vád a nedorobkov</b>. Zákazník bez výhrad súhlasí so súpisom použitých položiek a vykonaných prác a <b>zaväzuje sa uhradiť</b> na ich základe vystavenú faktúru. Prípadné demontované alebo vymenené pôvodné súčasti zostávajú v dispozícii zákazníka (ak nebolo dohodnuté inak).<br><br>
+            <strong style="color: var(--slate-900);">Spracovanie dát (GDPR):</strong> Zákazník berie na vedomie, že pre účely preukázateľnosti a oprávneného záujmu zhotoviteľa je tento dokument zabezpečený digitálnou pečaťou, časovou stopou a GPS súradnicami miesta podpisu.
+        </div>
+
+        <!-- PODPISY -->
+        <div class="signature-grid">
+            <!-- TECHNIK -->
+            <div class="sign-block">
+                <div class="sign-pad">
+                    {% if zaznam.podpis_technika %}
+                        <img src="{{ zaznam.podpis_technika.url|default:zaznam.podpis_technika }}" alt="Podpis technika" class="sign-img">
+                    {% endif %}
+                </div>
+                <div class="sign-line">
+                    {% if zaznam.technici.all %}
+                        {% for t in zaznam.technici.all %}{{ t.meno }} {{ t.priezvisko }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                    {% else %}
+                        {{ technik_meno|default:identita.vystavuje_servis_vykazy|default:"Servisný technik" }}
+                    {% endif %}
+                </div>
+                <div class="sign-detail">Vykonávajúci technik (Zhotoviteľ)</div>
+                <div class="sign-detail" style="margin-top: 4px;">
+                    {% if zaznam.technici.all %}
+                        Tel: {{ zaznam.technici.first.telefon|default:identita.telefon|default:"-" }}<br>
+                        E-mail: {{ zaznam.technici.first.email|default:identita.email_vseobecny|default:"-" }}
+                    {% else %}
+                        Tel: {{ technik_telefon|default:identita.telefon|default:"-" }}<br>
+                        E-mail: {{ technik_email|default:identita.email_vseobecny|default:"-" }}
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- ZÁKAZNÍK -->
+            <div class="sign-block">
+                <div class="sign-pad">
+                    {% if zaznam.podpis_zakaznika %}
+                        <img src="{{ zaznam.podpis_zakaznika.url|default:zaznam.podpis_zakaznika }}" alt="Podpis zákazníka" class="sign-img">
+                    {% else %}
+                        <!-- ISAS SMART LOCK: Zobrazenie dôvodu namiesto podpisu -->
+                        <div style="width: 100%; padding: 15px 10px; border: 1.5px dashed #cbd5e1; border-radius: 8px; background: #f8fafc; display: flex; align-items: center; justify-content: center; box-sizing: border-box; min-height: 80px;">
+                            <span style="font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.4;">
+                                {{ zaznam.meno_podpisujuceho|default:"Čaká na prevzatie a podpis" }}
+                            </span>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="sign-line">Objednávateľ (Zákazník)</div>
+                {% if zaznam.podpis_zakaznika %}
+                    <div class="sign-detail">{{ zaznam.meno_podpisujuceho }}</div>
+                {% endif %}
+                <div class="sign-detail">Dátum podpisu: {{ zaznam.cas_podpisu|date:"d.m.Y H:i"|default:"Čaká na podpis" }}</div>
+                <div class="sign-detail">Spokojnosť: {% if zaznam.hodnotenie_zakaznika %}⭐ {{ zaznam.hodnotenie_zakaznika }} / 5{% else %}Nehodnotené{% endif %}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KRYPTOGRAFICKÁ PEČAŤ -->
+    <div class="crypto-seal avoid-break">
+        <div class="seal-title">🔐 Digitálna pečať dokumentu (SHA-256)</div>
+        <div class="seal-hash">{{ zaznam.bezpecnostny_hash|default:"KRYPTOGRAFICKY_PODPÍSANÉ_ISAS_CORE" }}</div>
+        <div class="seal-desc">
+            Tento dokument, poloha podpisu ({{ zaznam.gps_suradnice|default:"GPS nezaznamenaná" }}) a časová stopa sú kryptograficky zabezpečené<br>proti dodatočnej manipulácii v systéme ISAS CORE.
+        </div>
+    </div>
+
+</div>
+</body>
+</html>

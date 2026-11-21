@@ -1,0 +1,1751 @@
+{% extends "admin/change_form.html" %}
+{% load static %}
+
+{% block extrastyle %}
+    {{ block.super }}
+    <style>
+        /* ==========================================================================
+           1. PRELOADER A ZÁKLADNÉ NASTAVENIA
+           ========================================================================== */
+        /* SENIOR FIX: Do skrývania pridávame aj prvky, ktoré sú v HTML mimo tagu <form> */
+        #content-main form,
+        #floating-sn-search-container,
+        .isas-warehouse-header { 
+            opacity: 0 !important; 
+            visibility: hidden !important; 
+            pointer-events: none !important; 
+        }
+        
+        #isas-preloader-wrapper { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; z-index: 9999999; pointer-events: none; }
+        .isas-loader-box { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); padding: 20px 40px; border-radius: 50px; border: 2px solid #bae6fd; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15); display: flex; align-items: center; gap: 15px; font-size: 16px; font-weight: 800; color: #0f172a; transition: all 0.5s ease; }
+        .isas-spinner { width: 24px; height: 24px; border: 4px solid #e0f2fe; border-top: 4px solid #0284c7; border-radius: 50%; animation: isas-spin 0.8s linear infinite; }
+        @keyframes isas-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* SENIOR FIX: Všetky prvky sa plynule zjavujú naraz až po pridaní triedy isas-ready */
+        body.isas-ready #content-main form,
+        body.isas-ready #floating-sn-search-container,
+        body.isas-ready .isas-warehouse-header { 
+            opacity: 1 !important; 
+            visibility: visible !important; 
+            pointer-events: auto !important; 
+            transition: opacity 0.6s ease-in-out !important; 
+        }
+        
+        body.isas-ready #content-main form { padding-bottom: 160px !important; }
+        body.isas-ready .isas-loader-box { opacity: 0 !important; transform: scale(0.9) translateY(-20px) !important; }
+
+        /* ==========================================================================
+           2. ÚPRAVY VIZUÁLU PC (Špecifické pre Sklad)
+           ========================================================================== */
+        .related-widget-wrapper-links, .add-related, .change-related, .delete-related { display: none !important; }
+
+        /* 🛑 LIKVIDÁCIA HLAVIČIEK TECHNICKÉHO MEDZISTUPŇA RODIČOVSKÉHO INLINU */
+        .djn-group-root > h2,
+        .djn-group-root > fieldset > h2,
+        .djn-group-root > .djn-fieldset > h2,
+        .inline-group:not(.isas-drawer) > h2,
+        .djn-item:not(.isas-drawer) > h3,
+        .djn-item > h3.djn-drag-handler,
+        .djn-drag-handler,
+        .djn-no-drag,
+        .djn-item-nested > h3,
+        .djn-module > h3.djn-drag-handler,
+        .inline-related:not(.isas-drawer) > h3,
+        a.djn-level-1,
+        a.djn-level-1.djn-add-handler,
+        .djn-level-1.djn-add-handler,
+        .djn-group-root > fieldset > .djn-add-item,
+        .djn-group-root > .djn-add-item,
+        .djn-group-root > fieldset > .djn-add-item a,
+        .djn-group-root .djn-add-item.add-row,
+        .djn-group-root .djn-add-item.add-row a {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            height: 0 !important;
+            min-height: 0 !important;
+            max-height: 0 !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            border: none !important;
+            overflow: hidden !important;
+            pointer-events: none !important;
+        }
+
+        /* ISAS LIVE DRAWER */
+        .isas-drawer { position: relative; }
+        .isas-drawer:not(.isas-opened) .djn-items, .isas-drawer:not(.isas-opened) .djn-table, .isas-drawer:not(.isas-opened) .djn-add-item { display: none !important; }
+        .isas-drawer:not(.isas-opened) .djn-module, .isas-drawer:not(.isas-opened) .inline-related, .isas-drawer:not(.isas-opened) fieldset { margin: 0 !important; padding: 0 !important; border: none !important; min-height: 0 !important; box-shadow: none !important; }
+        .isas-drawer > h2, .isas-drawer > h3, .isas-drawer > .djn-module > h2 { cursor: pointer !important; position: relative; user-select: none; -webkit-tap-highlight-color: transparent; }
+        .isas-drawer > h2::before, .isas-drawer > h3::before, .isas-drawer > .djn-module > h2::before { content: '▶'; display: inline-block; margin-right: 12px; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); font-size: 11px; color: inherit; opacity: 0.7; }
+        .isas-drawer.isas-opened > h2::before, .isas-drawer.isas-opened > h3::before, .isas-drawer.isas-opened > .djn-module > h2::before { transform: rotate(90deg); opacity: 1; }
+
+        /* Hlavička Skladu */
+        .isas-warehouse-header { position: relative; overflow: hidden; display: flex; justify-content: space-between; align-items: center; gap: 30px; padding: 40px !important; background-color: #ffffff; border-radius: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.03); margin-bottom: 25px; margin-top: 5px; }
+        .isas-warehouse-header::before { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle at 30% 50%, rgba(59, 130, 246, 0.08) 0%, transparent 40%), radial-gradient(circle at 70% 30%, rgba(34, 197, 94, 0.05) 0%, transparent 40%); animation: animateBg 25s infinite linear; z-index: 0; pointer-events: none; }
+        @keyframes animateBg { 0% { transform: rotate(0deg) scale(1); } 50% { transform: rotate(180deg) scale(1.05); } 100% { transform: rotate(360deg) scale(1); } }
+        .header-main-info { width: auto !important; flex: 1; display: flex; flex-direction: column; justify-content: center; position: relative; z-index: 1; }
+        .header-actions-container { display: flex; flex-direction: column; gap: 15px; min-width: 340px; position: relative; z-index: 1; }
+        .action-cards-row { display: flex; gap: 15px; justify-content: space-between; }
+        
+        .action-card { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px 10px; border-radius: 18px; text-decoration: none !important; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 10px 25px -5px rgba(0,0,0,0.15); position: relative; overflow: hidden; }
+        .action-card::before { content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%; background: linear-gradient(to right, transparent, rgba(255,255,255,0.25), transparent); transform: skewX(-25deg); transition: 0.6s ease; }
+        .action-card:hover { transform: translateY(-6px) scale(1.02); text-decoration: none !important; }
+        .action-card:hover::before { left: 150%; }
+        .action-card.green-card { background: linear-gradient(135deg, #22c55e 0%, #15803d 100%); border: 1px solid rgba(255,255,255,0.2); }
+        .action-card.green-card:hover { box-shadow: 0 18px 35px rgba(34, 197, 94, 0.4); }
+        .action-card.red-card { background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); border: 1px solid rgba(255,255,255,0.2); }
+        .action-card.red-card:hover { box-shadow: 0 18px 35px rgba(239, 68, 68, 0.4); }
+        .card-icon-circle { background: #ffffff; width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 14px; box-shadow: 0 6px 15px rgba(0,0,0,0.2); font-size: 34px; font-weight: 900; line-height: 0; }
+        .green-card .card-icon-circle { color: #16a34a; }
+        .red-card .card-icon-circle { color: #dc2626; padding-bottom: 4px; }
+        .action-card .card-text { color: #ffffff; font-size: 13px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; text-align: center; line-height: 1.3; text-decoration: none !important; }
+        
+        .action-btn-back { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 14px 20px; background: linear-gradient(135deg, #64748b 0%, #334155 100%); color: #ffffff !important; text-decoration: none !important; border-radius: 14px; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 6px 15px rgba(71, 85, 105, 0.25); border: 1px solid rgba(255,255,255,0.1); }
+        .action-btn-back:hover { transform: translateY(-4px); box-shadow: 0 12px 25px rgba(71, 85, 105, 0.4); background: linear-gradient(135deg, #475569 0%, #1e293b 100%); text-decoration: none !important; }
+        .action-btn-back .arrow-icon { font-size: 18px; font-weight: bold; }
+
+        .breadcrumbs, #content > h1, #content > h2, .pretitle, #content-main > h2, .object-tools { display: none !important; }
+        .field-nazov, .module.aligned { display: none !important; }
+        .global-search-wrapper { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; gap: 15px !important; margin: 20px 0 30px 0 !important; }
+
+        .premium-btn { position: relative; overflow: hidden; padding: 12px 24px; border-radius: 14px; text-decoration: none !important; font-weight: 900; font-size: 12px; text-transform: uppercase; display: flex; align-items: center; gap: 10px; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); letter-spacing: 0.5px; border: none !important; }
+        .premium-btn:hover { transform: translateY(-4px); text-decoration: none !important; }
+        .premium-btn.green { background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important; color: white !important; box-shadow: 0 6px 20px rgba(16, 185, 129, 0.35) !important; }
+        .premium-btn.green:hover { box-shadow: 0 12px 25px rgba(16, 185, 129, 0.5) !important; }
+        .premium-btn.red { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important; color: white !important; box-shadow: 0 6px 20px rgba(239, 68, 68, 0.35) !important; }
+        .premium-btn.red:hover { box-shadow: 0 12px 25px rgba(239, 68, 68, 0.5) !important; }
+        .premium-btn.slate { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%) !important; color: white !important; box-shadow: 0 6px 20px rgba(15, 23, 42, 0.3) !important; }
+        .btn-shine { position: absolute; top: 0; left: -100%; width: 50%; height: 100%; background: linear-gradient(to right, transparent, rgba(255,255,255,0.4), transparent); transform: skewX(-25deg); transition: 0.7s; }
+        .premium-btn:hover .btn-shine { left: 150%; }
+
+        /* ==========================================================================
+           1. ŠTRUKTÚRA TABUĽKY - REVOLÚCIA (Skryté polia + Modal)
+           ========================================================================== */
+        
+        /* 🛑 LIKVIDÁCIA SKRYTÉHO STĹPCA (Zarovnanie vľavo) */
+        .djn-table th.original, .djn-table td.original {
+            display: none !important;
+            width: 0 !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            border: none !important;
+        }
+
+        .djn-items, .tabular.inline-related .module table {
+            padding-left: 0 !important;
+            margin-left: 0 !important;
+        }
+
+        .djn-table { 
+            width: 100% !important; 
+            table-layout: auto !important; 
+            border-collapse: separate !important; 
+            border-spacing: 0 10px !important; 
+        }
+
+        /* 🛑 Zamedzíme zalamovaniu hlavičiek */
+        .djn-table th {
+            white-space: nowrap !important;
+            padding: 12px 8px !important;
+        }
+
+        /* 🟢 1. ROZLOŽENIE STĹPCOV (Percentuálne pre viditeľné polia = 100%) */
+        
+        /* 🛑 AGRESÍVNE SKRYTIE VŠETKÝCH MODÁLOVÝCH STĹPCOV V HLAVIČKE AJ V RIADKOCH V TABUĽKE */
+        .djn-table th[class*="dodavatel"], .djn-table td[class*="field-dodavatel"],
+        .djn-table th[class*="vyrobca"], .djn-table td[class*="field-vyrobca"],
+        .djn-table th[class*="typ_zasoby"], .djn-table td[class*="field-typ_zasoby"],
+        .djn-table th[class*="katalogove_cislo"], .djn-table td[class*="field-katalogove_cislo"],
+        .djn-table th[class*="ean"], .djn-table td[class*="field-ean"],
+        .djn-table th[class*="sadzba_dph"], .djn-table td[class*="field-sadzba_dph"],
+        .djn-table th[class*="obchodny_nazov"], .djn-table td[class*="field-obchodny_nazov"],
+        .djn-table th[class*="skryt_vyrobcu"], .djn-table td[class*="field-skryt_vyrobcu"],
+        .djn-table th[class*="kto_som"], .djn-table td[class*="field-kto_som"],
+        .djn-table th[class*="zobrazit_na_webe"], .djn-table td[class*="field-zobrazit_na_webe"],
+        .djn-table th[class*="popis_na_webe"], .djn-table td[class*="field-popis_na_webe"],
+        .djn-table th[class*="obrazok_na_webe"], .djn-table td[class*="field-obrazok_na_webe"],
+        .djn-table th[class*="slug"], .djn-table td[class*="field-slug"],
+        .tabular table th[class*="dodavatel"], .tabular table td[class*="field-dodavatel"],
+        .tabular table th[class*="vyrobca"], .tabular table td[class*="field-vyrobca"],
+        .tabular table th[class*="typ_zasoby"], .tabular table td[class*="field-typ_zasoby"],
+        .tabular table th[class*="katalogove_cislo"], .tabular table td[class*="field-katalogove_cislo"],
+        .tabular table th[class*="ean"], .tabular table td[class*="field-ean"],
+        .tabular table th[class*="sadzba_dph"], .tabular table td[class*="field-sadzba_dph"],
+        .tabular table th[class*="obchodny_nazov"], .tabular table td[class*="field-obchodny_nazov"],
+        .tabular table th[class*="skryt_vyrobcu"], .tabular table td[class*="field-skryt_vyrobcu"],
+        .tabular table th[class*="kto_som"], .tabular table td[class*="field-kto_som"],
+        .tabular table th[class*="zobrazit_na_webe"], .tabular table td[class*="field-zobrazit_na_webe"],
+        .tabular table th[class*="popis_na_webe"], .tabular table td[class*="field-popis_na_webe"],
+        .tabular table th[class*="obrazok_na_webe"], .tabular table td[class*="field-obrazok_na_webe"],
+        .tabular table th[class*="slug"], .tabular table td[class*="field-slug"],
+        th.isas-hidden-header, td.isas-placeholder {
+            display: none !important;
+            width: 0 !important;
+            min-width: 0 !important;
+            max-width: 0 !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            border: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+        }
+        
+        /* Viditeľné polia rozdelené na 100% */
+        .djn-table th[class*="seriove_cislo"], .djn-table td[class*="seriove_cislo"] { width: 45% !important; }
+        .djn-table th[class*="pocet_na_sklade"], .djn-table td[class*="pocet_na_sklade"] { width: 8% !important; }
+        .djn-table th.djn-th-typ, .djn-table th.column-typ, .djn-table td.field-typ { width: 15% !important; }
+        .djn-table th[class*="merna_jednotka"], .djn-table td[class*="merna_jednotka"] { width: 16% !important; } /* Roztiahnuté na úkor sériového čísla */
+        
+        /* Tlačidlá na konci */
+        .djn-table th.th-more-info, .djn-table td.td-more-info,
+        .djn-table th[class*="viac_btn"], .djn-table td[class*="viac_btn"] { width: 6% !important; padding-right: 15px !important; }
+        .djn-table td[class*="viac_btn"] p { margin: 0 !important; padding: 0 !important; display: flex !important; align-items: center !important; justify-content: center !important; }
+        .djn-table th.delete, .djn-table td.delete { width: 10% !important; min-width: 110px !important; }
+
+        /* 🟢 2. Poistky pre inputy (Zrušené tvrdé limity, aby fungovali percentá) */
+        .djn-table td[class*="pocet_na_sklade"] input { width: 100% !important; min-width: 50px !important; max-width: none !important; }
+        .djn-table td[class*="merna_jednotka"] select { width: 100% !important; min-width: 0 !important; }
+        .djn-table td.field-typ select { width: 100% !important; min-width: 0 !important; max-width: none !important; }
+
+        /* 🎛️ TLAČIDLO "VIAC INFO" */
+        .btn-more-info {
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%) !important; color: #1e40af !important; border: 1px solid #bfdbfe !important; border-radius: 10px !important;
+            padding: 8px 12px !important; font-size: 11px !important; font-weight: 900 !important; text-transform: uppercase !important; cursor: pointer !important;
+            box-shadow: 0 2px 6px rgba(59, 130, 246, 0.15) !important; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important; width: 100% !important; display: flex !important; align-items: center !important; justify-content: center !important; gap: 6px !important; letter-spacing: 0.5px !important;
+        }
+        .btn-more-info:hover { transform: translateY(-2px) !important; box-shadow: 0 6px 12px rgba(59, 130, 246, 0.25) !important; background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%) !important; border-color: #93c5fd !important; color: #1d4ed8 !important; }
+
+        /* 🖼️ MODÁLNE OKNO (KARTA) A 100% ZÁMOK SCROLLOVANIA POZADIA */
+        html.isas-modal-open,
+        body.isas-modal-open,
+        html:has(body.isas-modal-open) {
+            overflow: hidden !important;
+            height: 100vh !important;
+            max-height: 100vh !important;
+            touch-action: none !important;
+        }
+        #isas-detail-modal {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(8px); z-index: 999999; display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+            overscroll-behavior: contain !important;
+            touch-action: none !important;
+        }
+        #isas-detail-modal.active { opacity: 1; pointer-events: auto; }
+        .isas-modal-card {
+            background: white; width: 780px; max-width: 95%; max-height: 90vh; border-radius: 24px; box-shadow: 0 25px 50px rgba(0,0,0,0.25);
+            transform: translateY(30px) scale(0.95); transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            overflow: hidden; display: flex; flex-direction: column; border: 1px solid rgba(255,255,255,0.2);
+            overscroll-behavior: contain !important;
+        }
+        #isas-detail-modal.active .isas-modal-card { transform: translateY(0) scale(1); }
+        .isas-modal-header {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: white; padding: 20px 30px;
+            display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;
+        }
+        .isas-modal-header h3 { margin: 0 !important; font-size: 18px !important; font-weight: 900 !important; text-transform: uppercase; letter-spacing: 1px; color: white !important; border: none !important; background: transparent !important; }
+        .isas-modal-close { background: rgba(255,255,255,0.1); border: none; color: white; width: 36px; height: 36px; border-radius: 50%; font-size: 18px; cursor: pointer; transition: background 0.2s; display: flex; align-items: center; justify-content: center; }
+        .isas-modal-close:hover { background: #ef4444; }
+        .isas-modal-body { 
+            padding: 30px 40px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 20px; 
+            background: #f8fafc; 
+            overflow-y: auto; 
+            flex-grow: 1; 
+            box-sizing: border-box; 
+            overscroll-behavior: contain !important;
+            touch-action: pan-y !important;
+            -webkit-overflow-scrolling: touch !important;
+        }
+        
+        /* Úprava polí vnútri modalu */
+        .isas-modal-body td,
+        .isas-modal-body td[class*="field-"] { 
+            display: block !important; 
+            visibility: visible !important; 
+            opacity: 1 !important; 
+            width: 100% !important; 
+            min-width: 100% !important; 
+            max-width: 100% !important; 
+            box-sizing: border-box !important; 
+            text-align: left !important; 
+            padding: 0 !important; 
+            margin: 0 !important; 
+            border: none !important; 
+        }
+        .isas-modal-body td::before {
+            content: attr(data-label); display: block; font-size: 11px; font-weight: 900; color: #475569;
+            text-transform: uppercase; margin-bottom: 8px; margin-top: 5px; letter-spacing: 0.5px;
+        }
+        .isas-modal-body select, .isas-modal-body input:not([type="checkbox"]), .isas-modal-body textarea { width: 100% !important; box-shadow: 0 2px 4px rgba(0,0,0,0.02) !important; }
+        .isas-modal-body input[type="checkbox"] { width: 20px !important; height: 20px !important; cursor: pointer; accent-color: #2563eb; margin-top: 5px; }
+        .isas-modal-body textarea { min-height: 100px !important; }
+
+        /* 🟢 ISAS: Zobrazenie a štýlovanie HelpTextov (Nápovedy) v tabuľke aj v modale */
+        .djn-table td .help, .djn-table td .helptext, .djn-table td p.help {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            font-size: 10px !important;
+            color: #64748b !important;
+            margin-top: 4px !important;
+            margin-bottom: 8px !important;
+            line-height: 1.3 !important;
+            font-weight: 600 !important;
+            white-space: normal !important;
+            text-transform: none !important;
+            text-align: left !important;
+        }
+        .isas-modal-body td .help, .isas-modal-body td .helptext, .isas-modal-body td p.help {
+            display: flex !important;
+            align-items: center !important;
+            gap: 6px !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            font-size: 11px !important;
+            color: #0284c7 !important;
+            background: #f0f9ff !important;
+            border: 1px solid #bae6fd !important;
+            border-radius: 8px !important;
+            padding: 6px 10px !important;
+            margin-top: 6px !important;
+            margin-bottom: 6px !important;
+            line-height: 1.3 !important;
+            font-weight: 700 !important;
+            white-space: normal !important;
+            text-transform: none !important;
+            text-align: left !important;
+        }
+        .isas-modal-body td .help::before, .isas-modal-body td .helptext::before, .isas-modal-body td p.help::before {
+            content: '❓';
+            font-size: 12px !important;
+            flex-shrink: 0 !important;
+        }
+
+        /* 🪄 MAGICKÝ TRIK PRE DLHÉ TEXTY V ROLETKÁCH A INPUTOCH */
+        .djn-table td select {
+            text-overflow: ellipsis !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            padding: 0 4px !important; /* Zmenšený vnútorný okraj pre viac miesta na text */
+            font-size: 12px !important; /* Mierne menší font pre lepšie vtesnanie */
+        }
+        .djn-table td input[type="text"], .djn-table td input[type="number"] {
+            padding: 0 6px !important;
+            font-size: 12px !important;
+        }
+
+        /* Hlavička a bunky */
+        .djn-table th { 
+            background-color: #f8fafc !important; 
+            color: #64748b !important; 
+            font-size: 11px !important; 
+            font-weight: 800 !important; 
+            text-transform: uppercase !important; 
+            padding: 12px 2px !important; 
+            border-bottom: 2px solid #e2e8f0 !important; 
+            letter-spacing: 0.5px !important; 
+            text-align: center !important;
+        }
+
+        .djn-table td { 
+            text-align: center !important; 
+            vertical-align: middle !important; 
+            overflow: visible !important; 
+            padding: 0 2px !important; 
+        }
+
+        /* ==========================================================================
+           2. DOKONALÉ ZJEDNOTENIE VSTUPNÝCH POLÍ (Inputs, Selects, Textarea, Select2)
+           ========================================================================== */
+
+        /* Spoločný základ pre všetko */
+        .djn-table td input[type="text"], 
+        .djn-table td input[type="number"],
+        .djn-table td select,
+        .select2-container--admin-autocomplete .select2-selection--single { 
+            border: 1px solid #cbd5e1 !important; 
+            border-radius: 8px !important; 
+            padding: 0 10px !important; 
+            font-size: 13px !important; 
+            font-weight: 600 !important; 
+            color: #1e293b !important; 
+            background-color: #ffffff !important; 
+            height: 40px !important; 
+            line-height: 38px !important; 
+            width: 100% !important; 
+            box-sizing: border-box !important; 
+            display: block !important; 
+            transition: all 0.2s ease !important;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.02) !important;
+        }
+
+        /* Centrovanie textu pre čísla, zatvorené selecty aj všetky rozbalené položky (option) */
+        .djn-table td input[type="text"], 
+        .djn-table td input[type="number"],
+        .djn-table td select,
+        .djn-table td select option,
+        .djn-table td select optgroup {
+            text-align: center !important;
+            text-align-last: center !important; /* 🎯 Garancia pre Chrome, Edge aj Firefox */
+            padding-left: 2px !important;
+            padding-right: 2px !important;
+        }
+
+        /* 💎 Exkluzívne centrovanie pre roletky Merná jednotka a Typ */
+        .djn-table td[class*="merna_jednotka"] select option,
+        .djn-table td.field-typ select option {
+            text-align: center !important;
+            text-align-last: center !important;
+            padding: 8px 12px !important;
+        }
+
+        /* 🟢 LIKVIDÁCIA SYSTÉMOVÝCH ŠÍPOK (Spinners) pre dokonalé vycentrovanie čísla "Počet" */
+        .djn-table td input[type="number"] {
+            -moz-appearance: textfield !important; /* Vypnutie vo Firefoxe */
+        }
+        .djn-table td input[type="number"]::-webkit-outer-spin-button,
+        .djn-table td input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none !important; /* Vypnutie v Chrome/Edge - text sa konečne posunie presne do stredu! */
+            margin: 0 !important;
+        }
+
+        /* Úprava textu v Select2, aby lícoval s inputmi */
+        .select2-container--admin-autocomplete .select2-selection__rendered {
+            color: #1e293b !important; 
+            font-size: 13px !important; 
+            font-weight: 600 !important; 
+            text-align: center !important; 
+            width: 100% !important; 
+            padding: 0 !important; 
+            line-height: 38px !important; 
+        }
+
+        /* Zabezpečenie, že Select2 drží 100% šírku bunky */
+        .field-vyrobca .select2-container, 
+        .field-dodavatel .select2-container,
+        .djn-table td.field-dodavatel .select2-container { 
+            width: 100% !important; 
+            display: block !important; 
+        }
+
+        /* Textarea - špecifická výška a ťahanie */
+        .djn-table td textarea { 
+            border: 1px solid #cbd5e1 !important; 
+            border-radius: 8px !important; 
+            padding: 10px !important; 
+            font-size: 13px !important; 
+            font-weight: 500 !important; 
+            color: #1e293b !important; 
+            background-color: #ffffff !important; 
+            width: 100% !important; 
+            min-height: 40px !important; 
+            height: 40px; /* BEZ !important, aby user mohol ťahať rožtek */
+            box-sizing: border-box !important; 
+            display: block !important; 
+            resize: vertical !important; 
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.02) !important;
+        }
+
+        /* Focus efekty pre celú rodinu prvkov */
+        .djn-table td input:focus, 
+        .djn-table td select:focus,
+        .djn-table td textarea:focus,
+        .select2-container--admin-autocomplete.select2-container--open .select2-selection--single { 
+            border-color: #0284c7 !important; 
+            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15) !important; 
+            outline: none !important; 
+        }
+        
+        /* --------------------------------------------------------
+           A) ZÁCHRANA DIZAJNU TLAČIDLA "PRIDAŤ ĎALŠÍ"
+           -------------------------------------------------------- */
+        .djn-table tr.add-row td.djn-add-item a.djn-add-handler,
+        .djn-add-item a {
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            background: #f1f5f9 !important;
+            color: #475569 !important;
+            border: 1px solid #cbd5e1 !important;
+            padding: 10px 24px !important;
+            border-radius: 12px !important;
+            font-size: 11px !important;
+            font-weight: 900 !important;
+            text-transform: uppercase !important;
+            text-decoration: none !important;
+            transition: all 0.3s ease !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02) !important;
+            margin: 10px auto !important; /* Krásne to odsadí od tabuľky */
+        }
+
+        .djn-table tr.add-row td.djn-add-item a.djn-add-handler:hover,
+        .djn-add-item a:hover {
+            background: #e2e8f0 !important;
+            color: #0f172a !important;
+            transform: translateY(-2px) !important;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08) !important;
+        }
+
+        /* --------------------------------------------------------
+           B) UNIVERZÁLNE A VYCENTROVANÉ TLAČIDLO "ODSTRÁNIŤ"
+           -------------------------------------------------------- */
+        .djn-table td.delete {
+            vertical-align: middle !important;
+            text-align: center !important;
+            padding: 0 6px !important;
+        }
+
+        /* Chytáme existujúce aj NOVO PRIDANÉ riadky (.djn-remove-handler) */
+        .djn-table td.delete .custom-delete-btn, 
+        .djn-table td.delete a.inline-deletelink,
+        .djn-table td.delete a.djn-remove-handler {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            width: 100% !important;
+            height: 40px !important;
+            margin: 0 auto !important;
+            background: #fff1f2 !important;
+            border: 1px solid #fecaca !important;
+            border-radius: 8px !important;
+            text-decoration: none !important;
+            transition: all 0.2s ease !important;
+            box-sizing: border-box !important;
+            cursor: pointer !important;
+            
+            /* Trik: Skryjeme originálny text od Djanga zneviditeľnením farby, 
+               aby nám nerozbil štruktúru bunky, ale zostal tam */
+            color: transparent !important; 
+            position: relative !important;
+            overflow: hidden !important;
+        }
+
+        /* Vpíšeme náš vlastný, tvrdý text "ODSTRÁNIŤ" a položíme ho presne do stredu */
+        .djn-table td.delete .custom-delete-btn::after, 
+        .djn-table td.delete a.inline-deletelink::after,
+        .djn-table td.delete a.djn-remove-handler::after {
+            content: "ODSTRÁNIŤ" !important;
+            position: absolute !important;
+            left: 0 !important;
+            right: 0 !important;
+            text-align: center !important;
+            font-size: 11px !important;
+            font-weight: 900 !important;
+            letter-spacing: 0.5px !important;
+            color: #dc2626 !important; /* Naša pekná červená farba */
+            visibility: visible !important;
+        }
+
+        /* Hover efekty - farba sa mení na červenú a text na bielo */
+        .djn-table td.delete .custom-delete-btn:hover, 
+        .djn-table td.delete a.inline-deletelink:hover,
+        .djn-table td.delete a.djn-remove-handler:hover {
+            background: #dc2626 !important;
+            border-color: #dc2626 !important;
+            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25) !important;
+            transform: translateY(-2px) !important;
+        }
+        
+        .djn-table td.delete .custom-delete-btn:hover::after, 
+        .djn-table td.delete a.inline-deletelink:hover::after,
+        .djn-table td.delete a.djn-remove-handler:hover::after {
+            color: #ffffff !important;
+        }
+
+        /* ==========================================================================
+           4. SYSTÉMOVÉ NASTAVENIA
+           ========================================================================== */
+        .djn-table td.delete input[type="checkbox"], 
+        .djn-table td.delete label, 
+        .djn-table td.delete .djn-delete-handler { display: none !important; }
+
+        #content-main .module, .inline-group, .inline-related, .djn-module, .djn-item { 
+            overflow: visible !important; 
+        }
+
+        .inline-group, .inline-related, .djn-item { position: relative !important; z-index: 1 !important; }
+        .inline-group:focus-within, .inline-related:focus-within { z-index: 99 !important; }
+        .select2-container--open, .select2-container--open .select2-dropdown { z-index: 1000005 !important; }
+        .isas-modal-body .select2-container { width: 100% !important; display: block !important; }
+
+        /* DETEKTIV - PC VIZUÁL */
+        #floating-sn-search-container { position: fixed; bottom: 21px; right: 126px; z-index: 999998 !important; display: flex; align-items: center; gap: 15px; pointer-events: none; }
+        #sn-search-input-wrapper { background: white; border-radius: 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.2); padding: 0; display: flex; align-items: center; width: 0; overflow: hidden; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); border: 2px solid #ff9800; pointer-events: auto; }
+        #sn-search-input-wrapper.active { width: 350px; padding: 10px 18px; }
+        #floating-sn-input { border: none; outline: none; width: 100%; font-size: 15px; font-weight: 800; color: #0f172a; background: transparent; }
+        #floating-search-trigger { width: 85px; height: 85px; border-radius: 50%; background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%); color: white; border: 4px solid white; cursor: pointer; box-shadow: 0 15px 35px rgba(255, 152, 0, 0.5), inset 0 0 20px rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 38px; transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55); pointer-events: auto; animation: subtlePulseDetective 3s infinite ease-in-out; }
+        @keyframes subtlePulseDetective { 0% { transform: scale(1); box-shadow: 0 15px 35px rgba(255, 152, 0, 0.5); } 50% { transform: scale(1.06); box-shadow: 0 20px 45px rgba(255, 152, 0, 0.7); } 100% { transform: scale(1); box-shadow: 0 15px 35px rgba(255, 152, 0, 0.5); } }
+        
+        /* Na PC necháme hover, ale na mobile ho zrušíme a použijeme len :active (kliknutie) */
+        @media (min-width: 1025px) {
+            #floating-search-trigger:hover { transform: scale(1.15) rotate(15deg); animation: none; }
+        }
+        #floating-search-trigger:active { transform: scale(1.15) rotate(15deg); animation: none; transition: transform 0.1s; }
+        #sn-search-results-floating { position: absolute; bottom: 110px; right: 0; width: 350px; max-height: 450px; background: white; border-radius: 20px; box-shadow: 0 25px 60px rgba(0,0,0,0.3); overflow-y: auto; display: none; border: 1px solid #e2e8f0; pointer-events: auto; padding: 10px; }
+        .sn-floating-item { padding: 14px 18px; border-bottom: 1px solid #f1f5f9; cursor: pointer; border-radius: 12px; transition: all 0.2s; }
+        .sn-floating-item:hover { background: #fff3e0; }
+        .sn-floating-item strong { display: block; font-size: 14px; color: #0f172a; margin-bottom: 3px; }
+        .sn-floating-item span { font-size: 10px; font-weight: 900; color: #f57c00; text-transform: uppercase; }
+        .vivid-row-flash td { background-color: #ff9800 !important; transition: background-color 0.4s ease !important; border-top: none !important; border-bottom: none !important; color: #ffffff !important; }
+        .vivid-box-flash { background-color: #ff9800 !important; color: #ffffff !important; border: 4px solid #ffffff !important; transition: all 0.4s ease !important; box-shadow: 0 0 40px rgba(255, 152, 0, 0.8) !important; }
+
+        /* ==========================================================================
+           📱 MOBILNÝ PANCIER PRE SKLAD (FINÁLNA, BEZCHYBNÁ OPRAVA)
+           ========================================================================== */
+        @media (max-width: 1024px) {
+            
+            /* --- 0. ABSOLÚTNA LIKVIDÁCIA HORIZONTÁLNEHO SCROLLU CELEJ STRÁNKY --- */
+            html, body, #container, #content, #content-main, #content-main form { 
+                width: 100% !important; 
+                max-width: 100% !important; 
+                min-width: 0 !important;
+                overflow-x: hidden !important; 
+                box-sizing: border-box !important; 
+                margin-left: 0 !important; 
+                margin-right: 0 !important; 
+                padding-left: 0 !important;
+                padding-right: 0 !important;
+            }
+            *, *::before, *::after { box-sizing: border-box !important; }
+
+            /* 🛑 LIKVIDÁCIA PÔVODNÉHO POĽA "NÁZOV" NA MOBILE */
+            html body #content-main fieldset.module.aligned,
+            html body #content-main .form-row.field-nazov {
+                display: none !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
+                height: 0 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                border: none !important;
+                overflow: hidden !important;
+                pointer-events: none !important;
+            }
+
+            /* 1. HLAVIČKA A PREBITIE INLINE 4.5rem ŠTÝLOV */
+            .isas-warehouse-header { 
+                flex-direction: column !important; 
+                padding: 20px 15px !important; 
+                height: auto !important; 
+                width: 100% !important;
+                max-width: 100% !important;
+                min-width: 0 !important;
+                overflow: hidden !important;
+                box-sizing: border-box !important;
+            }
+            .header-main-info { width: 100% !important; max-width: 100% !important; min-width: 0 !important; text-align: center !important; }
+            
+            /* 🟢 ISAS FIX: Vycentrovanie oboch vnútorných flex kontajnerov */
+            .header-main-info > div:first-child { flex-direction: column !important; justify-content: center !important; align-items: center !important; gap: 10px !important; width: 100% !important; }
+            .header-main-info > div:first-child > div { flex-direction: column !important; justify-content: center !important; align-items: center !important; gap: 10px !important; width: 100% !important; }
+            
+            .header-main-info .header-icon { font-size: 3rem !important; margin-bottom: 5px !important; }
+            
+            /* 🟢 ISAS FIX: Flexbox pre samotný názov a ceruzku, aby boli pekne vedľa seba a centrované */
+            .header-main-title.isas-editable-title { 
+                display: flex !important; 
+                align-items: center !important; 
+                justify-content: center !important; 
+                flex-wrap: wrap !important; 
+                gap: 12px !important; 
+                font-size: 2.2rem !important; 
+                text-align: center !important; 
+                width: 100% !important; 
+                padding-bottom: 0 !important;
+                line-height: 1.2 !important;
+            }
+            
+            /* Ochrana ceruzky pred deformáciou */
+            .edit-title-btn { flex-shrink: 0 !important; }
+
+            .header-main-info h1 { font-size: 20px !important; text-align: center !important; }
+            .header-subtitle-wrapper { justify-content: center !important; width: 100% !important; }
+            .header-subtitle { border-left: none !important; border-top: 3px solid #3b82f6 !important; padding-top: 10px !important; margin-top: 15px !important; text-align: center !important; font-size: 11px !important; display: block !important; }
+            
+            /* 🚨 OPRAVA: Tlačidlá + a - dokonalé zarovnanie pod seba (Grid layout) */
+            .header-actions-container { width: 100% !important; min-width: 0 !important; max-width: 100% !important; margin-top: 20px !important; }
+            .action-cards-row { flex-direction: column !important; }
+            .action-card { 
+                width: 100% !important; 
+                min-height: 75px !important; 
+                padding: 15px 15% !important; /* Posunie obsah od kraja do stredu */
+                box-sizing: border-box !important; 
+                display: grid !important;
+                grid-template-columns: 45px 1fr !important; /* Pevná šírka ikony, text vyplní zvyšok */
+                gap: 20px !important;
+                align-items: center !important;
+                text-align: left !important;
+            }
+            .card-icon-circle { width: 45px !important; height: 45px !important; font-size: 24px !important; margin: 0 !important; flex-shrink: 0 !important; }
+
+            /* ==========================================================================
+               2. ZÁCHRANA INLINES (TABULIEK), TOUCH-SCROLL A ROZŠÍRENÉ POLIA
+               ========================================================================== */
+            /* 🛑 1. AGRESÍVNA LIKVIDÁCIA TLAČIDLA "Pridať ďalší Skladová Sekcia" (Až na úroveň <a> tagu) */
+            a.djn-level-1,
+            a.djn-level-1.djn-add-handler,
+            .djn-level-1.djn-add-handler,
+            .djn-group-root > fieldset > .djn-add-item,
+            .djn-group-root > .djn-add-item,
+            .djn-group-root > fieldset > .djn-add-item a,
+            .djn-group-root .djn-add-item.add-row,
+            .djn-group-root .djn-add-item.add-row a,
+            div#materialy-group > fieldset > div.djn-add-item,
+            div#materialy-group > fieldset > div.djn-add-item a {
+                display: none !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
+                height: 0 !important;
+                width: 0 !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                border: none !important;
+                overflow: hidden !important;
+                pointer-events: none !important;
+            }
+
+            /* 🛑 2. STRIKTNÁ KONTROLA ŠÍROK PRE VŠETKY ÚROVNE NESTED ADMINA */
+            html body.change-form fieldset.module,
+            body .inline-group,
+            body .djn-group,
+            body .djn-group-root,
+            body .djn-group-root > fieldset,
+            body .djn-module,
+            body .djn-fieldset,
+            body .inline-related fieldset,
+            body .djn-group-nested,
+            body .djn-item,
+            body .djn-items { 
+                width: 100% !important; 
+                max-width: 100% !important; 
+                min-width: 0 !important;
+                box-sizing: border-box !important; 
+                margin: 0 0 10px 0 !important;
+                padding: 0 !important;
+                border: none !important;
+                background: transparent !important;
+                box-shadow: none !important;
+                display: block !important; 
+                overflow: hidden !important; /* 🛡️ Zamedzí pretečeniu dieťaťa do tela stránky */
+            }
+
+            /* 🛑 ÚPLNÁ LIKVIDÁCIA MEDZISTUPŇA DJN-DRAG-HANDLER NA MOBILE */
+            body .djn-item > h3.djn-drag-handler,
+            body .djn-drag-handler,
+            body .djn-item-nested > h3,
+            body .djn-module > h3.djn-drag-handler,
+            body .inline-related > h3.djn-drag-handler,
+            body .djn-no-drag {
+                display: none !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
+                height: 0 !important;
+                min-height: 0 !important;
+                max-height: 0 !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                border: none !important;
+                overflow: hidden !important;
+                pointer-events: none !important;
+            }
+            
+            /* 📱 Hlavička draweru – optimalizovaná pre mobil */
+            .isas-drawer > h2, .isas-drawer > h3, .isas-drawer > .djn-module > h2 {
+                font-size: 13px !important;
+                padding: 12px 14px !important;
+                border-radius: 12px !important;
+                letter-spacing: 0.5px !important;
+                box-sizing: border-box !important;
+                width: 100% !important;
+            }
+            .isas-drawer.isas-opened > h2, .isas-drawer.isas-opened > h3, .isas-drawer.isas-opened > .djn-module > h2 {
+                border-radius: 12px 12px 0 0 !important;
+            }
+
+            /* 🌊 3. JEDINÝ IZOLOVANÝ TOUCH-SCROLL WRAPPER PRE TABUĽKU */
+            body .djn-items,
+            body .isas-drawer {
+                overflow: hidden !important;
+                width: 100% !important;
+                max-width: 100% !important;
+            }
+
+            body .tabular.inline-related,
+            body .isas-drawer .tabular,
+            body .djn-group-nested .tabular,
+            body .djn-group-nested .tabular.inline-related,
+            body .djn-item .tabular { 
+                display: block !important; 
+                width: 100% !important; 
+                max-width: 100% !important; 
+                min-width: 0 !important;
+                overflow: hidden !important; 
+                padding: 0 !important;
+                margin: 0 !important;
+                box-sizing: border-box !important;
+                position: relative !important;
+            }
+
+            body .djn-table .form-row > div, body .tabular table .form-row > div { display: block !important; width: 100% !important; }
+            body .djn-table .form-row label, body .tabular table .form-row label { display: none !important; }
+
+            /* 📐 4. GEOMETRIA TABUĽKY – Pevná šírka 680px zaručuje, že sa žiadne tlačidlo ani stĺpec nestlačí */
+            body .djn-table, body .tabular table {
+                display: block !important; 
+                width: 100% !important; 
+                max-width: 100% !important;
+                overflow-x: auto !important; 
+                overflow-y: hidden !important;
+                -webkit-overflow-scrolling: touch !important;
+                scrollbar-width: thin !important;
+                scrollbar-color: #94a3b8 #f1f5f9 !important;
+                border-collapse: separate !important;
+                border-spacing: 0 6px !important;
+                margin: 0 0 10px 0 !important;
+                padding: 0 0 10px 0 !important;
+                box-sizing: border-box !important;
+            }
+            
+            body .djn-table::-webkit-scrollbar, body .tabular table::-webkit-scrollbar {
+                height: 6px !important;
+            }
+            body .djn-table::-webkit-scrollbar-thumb, body .tabular table::-webkit-scrollbar-thumb {
+                background: #cbd5e1 !important;
+                border-radius: 10px !important;
+            }
+
+            body .djn-table thead, body .tabular table thead { display: table-header-group !important; }
+            body .djn-table tbody, body .tabular table tbody { display: table-row-group !important; }
+
+            body .djn-table tr:not(.empty-form):not(.djn-empty-form):not(.add-row), 
+            body .tabular table tr:not(.empty-form):not(.djn-empty-form):not(.add-row) { 
+                display: table-row !important; 
+            }
+
+            /* 🔤 HLAVIČKY STĹPCOV – Fixné, prehľadné, s ochranou proti prekrývaniu */
+            body .djn-table th, body .tabular table th { 
+                display: table-cell !important; 
+                text-align: center !important; 
+                vertical-align: middle !important;
+                font-size: 10px !important;
+                font-weight: 900 !important;
+                letter-spacing: 0.5px !important;
+                padding: 8px 4px !important; 
+                white-space: nowrap !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+            }
+            
+            body .djn-table td, body .tabular table td { 
+                display: table-cell !important; 
+                text-align: center !important; 
+                padding: 0 3px !important; 
+                vertical-align: middle !important; 
+                border: none !important; 
+            }
+
+            /* 🎯 5. VEĽKORYSÉ ROZLOŽENIE ŠÍROK STĹPCOV (Spolu = 680px) */
+            /* 1. Sériové číslo / Názov položky – 200px */
+            body .djn-table th[class*="seriove_cislo"], 
+            body .djn-table td[class*="seriove_cislo"] { width: 200px !important; min-width: 200px !important; max-width: 200px !important; }
+            
+            /* 2. Počet na sklade – 70px */
+            body .djn-table th[class*="pocet_na_sklade"], 
+            body .djn-table td[class*="pocet_na_sklade"] { width: 70px !important; min-width: 70px !important; max-width: 70px !important; }
+            
+            /* 3. Merná jednotka – 95px */
+            body .djn-table th[class*="merna_jednotka"], 
+            body .djn-table td[class*="merna_jednotka"] { width: 95px !important; min-width: 95px !important; max-width: 95px !important; } 
+            
+            /* 4. Typ položky (Originál / Náhrada) – 125px */
+            body .djn-table th.djn-th-typ, 
+            body .djn-table th.column-typ, 
+            body .djn-table td.field-typ { width: 125px !important; min-width: 125px !important; max-width: 125px !important; } 
+            
+            /* 5. Tlačidlo Viac – 90px (Pohodlné, nestiesnené) */
+            body .djn-table th.th-more-info, 
+            body .djn-table td.td-more-info,
+            body .djn-table th[class*="viac_btn"], 
+            body .djn-table td[class*="viac_btn"] { width: 90px !important; min-width: 90px !important; max-width: 90px !important; }
+            
+            /* 6. Tlačidlo Odstrániť – 100px (Pohodlné, nestiesnené) */
+            body .djn-table th.delete, 
+            body .djn-table td.delete { width: 100px !important; min-width: 100px !important; max-width: 100px !important; }
+
+            /* 📱 FORMULÁROVÉ PRVKY – PREBITIE GLOBÁLNEHO min-width: 120px */
+            html body.change-form .djn-table td input[type="text"],
+            html body.change-form .djn-table td input[type="number"],
+            html body.change-form .djn-table td select,
+            html body.change-form .tabular table td input[type="text"],
+            html body.change-form .tabular table td input[type="number"],
+            html body.change-form .tabular table td select {
+                display: block !important;
+                visibility: visible !important;
+                opacity: 1 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                min-width: 0 !important; /* 🛡️ Prebije globálny 120px limit z custom_admin.css a base.html */
+                height: 38px !important;
+                min-height: 38px !important;
+                line-height: 36px !important;
+                padding: 0 4px !important;
+                font-size: 12px !important;
+                font-weight: 700 !important;
+                border-radius: 8px !important;
+                box-sizing: border-box !important;
+                margin: 0 auto !important;
+                text-align: center !important;
+                text-align-last: center !important;
+            }
+
+            /* 🎯 Špecifická garancia pre stĺpec Počet na sklade (70px) */
+            html body.change-form .djn-table td[class*="pocet_na_sklade"] input,
+            html body.change-form .djn-table td.field-pocet_na_sklade input,
+            html body.change-form .tabular table td[class*="pocet_na_sklade"] input {
+                width: 100% !important;
+                min-width: 0 !important;
+                max-width: 100% !important;
+                padding: 0 2px !important;
+            }
+
+            /* 🎯 Špecifická poistka pre bunku a input Počet na sklade (70px) */
+            body .djn-table td[class*="pocet_na_sklade"] input,
+            body .djn-table td.field-pocet_na_sklade input,
+            body .tabular table td[class*="pocet_na_sklade"] input {
+                width: 100% !important;
+                min-width: 0 !important;
+                max-width: 100% !important;
+                padding: 0 2px !important;
+            }
+
+            body .djn-table td textarea {
+                display: block !important; 
+                visibility: visible !important; 
+                opacity: 1 !important; 
+                width: 100% !important; 
+                margin: 0 auto !important; 
+                box-sizing: border-box !important; 
+                min-height: 70px !important;
+                resize: vertical !important;
+                padding: 8px !important;
+            }
+
+            body .djn-table td.td-more-info .btn-more-info,
+            body .djn-table td[class*="viac_btn"] .btn-more-info {
+                width: 100% !important;
+                height: 38px !important;
+                padding: 0 4px !important;
+                font-size: 10px !important;
+                font-weight: 900 !important;
+                letter-spacing: 0.5px !important;
+                border-radius: 8px !important;
+                gap: 4px !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+            }
+
+            body .djn-table td.delete .custom-delete-btn,
+            body .djn-table td.delete a.inline-deletelink,
+            body .djn-table td.delete a.djn-remove-handler {
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                width: 100% !important;
+                height: 38px !important;
+                padding: 0 4px !important;
+                border-radius: 8px !important;
+                box-sizing: border-box !important;
+                margin: 0 !important;
+            }
+
+            body .djn-table td.delete .custom-delete-btn::after,
+            body .djn-table td.delete a.inline-deletelink::after,
+            body .djn-table td.delete a.djn-remove-handler::after {
+                font-size: 9px !important;
+                letter-spacing: 0.5px !important;
+                font-weight: 900 !important;
+            }
+
+            /* 🚨 Skrytie prázdnych vzorových riadkov */
+            body .djn-table tr.empty-form,
+            body .tabular table tr.empty-form,
+            body .djn-table tr.djn-empty-form,
+            body .tabular table tr.djn-empty-form,
+            .empty-form, .djn-empty-form {
+                display: none !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
+                position: absolute !important;
+                height: 0 !important;
+                width: 0 !important;
+                overflow: hidden !important;
+                pointer-events: none !important;
+            }
+
+            /* 🚨 Tlačidlo "+ Pridať položku" vnútri tabuľky */
+            body .djn-table tr.add-row, 
+            body .tabular table tr.add-row {
+                display: table-row !important; 
+                background: transparent !important;
+            }
+            
+            body .djn-table tr.add-row td, 
+            body .tabular table tr.add-row td {
+                display: table-cell !important; 
+                text-align: center !important; 
+                padding: 15px 0 !important;
+                border: none !important;
+            }
+            
+            body .djn-add-item a {
+                margin: 0 auto !important; 
+                display: inline-flex !important; 
+            }
+
+            /* 🛑 Skrytie nepoužívaných modálových polí a pomocného Django stĺpca "original" */
+            body .djn-table th.isas-hidden-header,
+            body .djn-table th[class*="dodavatel"], body .djn-table td[class*="field-dodavatel"], body .djn-table td[class*="dodavatel"],
+            body .djn-table th[class*="vyrobca"], body .djn-table td[class*="field-vyrobca"], body .djn-table td[class*="vyrobca"],
+            body .djn-table th[class*="typ_zasoby"], body .djn-table td[class*="field-typ_zasoby"], body .djn-table td[class*="typ_zasoby"],
+            body .djn-table th[class*="katalogove_cislo"], body .djn-table td[class*="field-katalogove_cislo"], body .djn-table td[class*="katalogove_cislo"],
+            body .djn-table th[class*="ean"], body .djn-table td[class*="field-ean"], body .djn-table td[class*="ean"],
+            body .djn-table th[class*="sadzba_dph"], body .djn-table td[class*="field-sadzba_dph"], body .djn-table td[class*="sadzba_dph"],
+            body .djn-table th[class*="obchodny_nazov"], body .djn-table td[class*="field-obchodny_nazov"], body .djn-table td[class*="obchodny_nazov"],
+            body .djn-table th[class*="skryt_vyrobcu"], body .djn-table td[class*="field-skryt_vyrobcu"], body .djn-table td[class*="skryt_vyrobcu"],
+            body .djn-table th[class*="kto_som"], body .djn-table td[class*="field-kto_som"], body .djn-table td[class*="kto_som"],
+            body .djn-table th[class*="zobrazit_na_webe"], body .djn-table td[class*="field-zobrazit_na_webe"], body .djn-table td[class*="zobrazit_na_webe"],
+            body .djn-table th[class*="popis_na_webe"], body .djn-table td[class*="field-popis_na_webe"], body .djn-table td[class*="popis_na_webe"],
+            body .djn-table th[class*="obrazok_na_webe"], body .djn-table td[class*="field-obrazok_na_webe"], body .djn-table td[class*="obrazok_na_webe"],
+            body .djn-table th[class*="slug"], body .djn-table td[class*="field-slug"], body .djn-table td[class*="slug"],
+            body .djn-table td.isas-placeholder,
+            body .djn-table td.original, 
+            body .tabular table td.original,
+            body .djn-table th.original, 
+            body .tabular table th.original {
+                display: none !important;
+                width: 0 !important;
+                min-width: 0 !important;
+                max-width: 0 !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                border: none !important;
+                overflow: hidden !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
+            }
+
+            /* 🧭 Globálna navigácia (Level 1 a 2 kategórie) */
+            .global-search-wrapper, fieldset .global-search-wrapper { display: flex !important; flex-direction: column !important; align-items: center !important; margin: 15px auto !important; width: 100% !important; box-sizing: border-box !important; }
+            .global-search-wrapper .premium-btn { width: 100% !important; justify-content: center !important; }
+
+            /* 🕵️ DETEKTÍV NA MOBILE */
+            #floating-sn-search-container { 
+                right: 95px !important; 
+                bottom: 20px !important; 
+                left: auto !important; 
+                flex-direction: row !important;
+                justify-content: flex-end !important;
+                z-index: 999998 !important; 
+            }
+            
+            #floating-search-trigger { 
+                width: 65px !important; height: 65px !important; font-size: 26px !important; margin: 0 !important; padding: 0 !important;
+                position: relative !important; z-index: 2 !important;
+            }
+            
+            #sn-search-input-wrapper {
+                position: absolute !important;
+                bottom: 80px !important;
+                right: -65px !important;
+                width: 0 !important;
+                opacity: 0 !important;
+                transform: translateY(10px) !important;
+                transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+                z-index: 1 !important;
+                margin: 0 !important;
+            }
+            
+            #sn-search-input-wrapper.active { 
+                width: calc(100vw - 40px) !important;
+                opacity: 1 !important;
+                transform: translateY(0) !important;
+            }
+            
+            #sn-search-results-floating { 
+                position: absolute !important;
+                bottom: 135px !important;
+                right: -65px !important; 
+                width: calc(100vw - 40px) !important; 
+            }
+            
+            #sn-search-input-wrapper:not(.active) + #floating-search-trigger ~ #sn-search-results-floating,
+            #floating-sn-search-container:has(#sn-search-input-wrapper:not(.active)) #sn-search-results-floating {
+                display: none !important;
+            }
+            
+            #content { padding: 15px 10px !important; overflow-x: hidden !important; }
+            #content-main { margin-top: 10px !important; overflow-x: hidden !important; }
+        }
+    </style>
+{% endblock %}
+
+{% block extrahead %}
+    {{ block.super }}
+    <!-- 🟢 ISAS PRELOADER JS -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            var failsafe = setTimeout(function() { document.body.classList.add('isas-ready'); }, 2500);
+            window.addEventListener('load', function() {
+                setTimeout(function() {
+                    clearTimeout(failsafe);
+                    document.body.classList.add('isas-ready');
+                }, 150); 
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block content_title %}{% endblock %}
+
+{% block content %}
+<div id="isas-preloader-wrapper">
+    <div class="isas-loader-box">
+        <div class="isas-spinner"></div>
+        <span>⏳ Vstupujete do databázy hlavného skladu...</span>
+    </div>
+</div>
+
+    <div id="floating-sn-search-container">
+        <div id="sn-search-results-floating"></div>
+        <div id="sn-search-input-wrapper">
+            <input type="text" id="floating-sn-input" placeholder="🕵️ Detektív hľadá sériové číslo položky...🔍" autocomplete="off">
+        </div>
+        <button id="floating-search-trigger" title="🔍 Otvoriť vyhľadávanie položky v hlavnom sklade">🕵️</button>
+    </div>
+
+    <div class="isas-warehouse-header">
+        <div class="header-main-info">
+            <div style="display: flex; align-items: center; gap: 30px; justify-content: flex-start;">
+                <style>
+                    @keyframes dance-icon {
+                        0% { transform: translateY(0) rotate(0deg); }
+                        25% { transform: translateY(-5px) rotate(-6deg); }
+                        50% { transform: translateY(0) rotate(0deg); }
+                        75% { transform: translateY(-5px) rotate(6deg); }
+                        100% { transform: translateY(0) rotate(0deg); }
+                    }
+                    .dancing-icon {
+                        animation: dance-icon 2.5s ease-in-out infinite;
+                        transform-origin: bottom center;
+                    }
+                    /* 🟢 ISAS: Štýly pre editovateľný nadpis a ceruzku */
+                    .isas-title-wrapper {
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 15px;
+                    }
+                    .edit-title-btn {
+                        background: #ffffff !important;
+                        border: 1.5px solid #bfdbfe !important;
+                        color: #2563eb !important;
+                        -webkit-text-fill-color: initial !important; /* 🛡️ LIKVIDÁCIA DEDIČNOSTI TRANSPARENTNOSTI */
+                        border-radius: 50% !important;
+                        width: 40px !important;
+                        height: 40px !important;
+                        font-size: 18px !important;
+                        cursor: pointer !important;
+                        display: inline-flex !important;
+                        align-items: center !important;
+                        justify-content: center !important;
+                        opacity: 0.85 !important;
+                        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+                        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15) !important;
+                        padding: 0 !important;
+                        line-height: 1 !important;
+                    }
+                    .edit-title-btn:hover {
+                        opacity: 1 !important;
+                        transform: scale(1.15) rotate(15deg) !important;
+                        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%) !important;
+                        color: #ffffff !important;
+                        border-color: #2563eb !important;
+                        box-shadow: 0 6px 20px rgba(37, 99, 235, 0.35) !important;
+                    }
+                    @keyframes isas-shake {
+                        0%, 100% { transform: translateX(0); }
+                        25% { transform: translateX(-6px); }
+                        75% { transform: translateX(6px); }
+                    }
+                </style>
+
+                <div style="display: flex; align-items: center; justify-content: flex-start; gap: 20px;">
+                    <span class="header-icon dancing-icon" style="font-size: 4.5rem; line-height: 1; display: inline-block; filter: drop-shadow(0 10px 15px rgba(0,0,0,0.15));">🏬</span>
+                    <span class="header-main-title isas-editable-title" title="Kliknite pre zmenu názvu skladu" style="font-size: 4.5rem; font-family: 'Montserrat', 'Inter', 'Segoe UI', sans-serif; font-weight: 850; background: linear-gradient(135deg, #1e293b 0%, #3b82f6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1)); letter-spacing: -2px; padding-bottom: 5px; margin: 0;">
+                        {{ original.nazov|default:sklad_nazov|default:"Hlavný Sklad" }}
+                        <button type="button" id="edit-sklad-name-btn" class="edit-title-btn">✏️</button>
+                    </span>
+                </div>
+            </div>
+            <div style="display: flex; flex-direction: column; width: 100%; align-items: flex-start; margin-top: 5px;">
+                <h1 style="margin:0 !important; font-size: 32px !important; font-weight: 900 !important; color: #1e293b !important; border:none !important; background:none !important; letter-spacing: -0.5px;">
+                    Sklad: {{ original.nazov|default:"Nový záznam" }}
+                </h1>
+                <div class="header-subtitle-wrapper" style="display: flex; justify-content: flex-start; margin-top: 10px;">
+                    <span class="header-subtitle" style="font-size: 14px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 1.5px; border-left: 4px solid #3b82f6; padding-left: 14px;">
+                        Správa databázy položiek a zásob v sklade
+                    </span>
+                </div>
+            </div>
+        </div>
+        <div class="header-actions-container">
+            <a href="#" id="smart-back-list" class="action-btn-back">
+                <span class="arrow-icon">←</span> Naspäť do zoznamu skladov
+            </a>
+            
+            <div class="action-cards-row">
+                <a href="{% url 'admin:add-stock' %}" class="action-card green-card">
+                    <div class="card-icon-circle">+</div><span class="card-text">Pridať do<br>skladu</span>
+                </a>
+                <a href="{% url 'admin:remove-stock' %}" class="action-card red-card">
+                    <div class="card-icon-circle">−</div><span class="card-text">Odobrať zo<br>skladu</span>
+                </a>
+            </div>
+
+            <!-- 🟢 ISAS FIX: Tlačidlo je POD kartami a smeruje priamo do šablóny logistiky (ID 0) -->
+            <a href="{% url 'admin:filialka_logistika' 0 %}" class="action-btn-back" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border: none; box-shadow: 0 6px 15px rgba(59, 130, 246, 0.3);">
+                <span class="arrow-icon">🚛</span> Vykonať Presun (Logistika)
+            </a>
+        </div>
+    </div>
+
+    
+    {# VYKRESLENIE SAMOTNÉHO OBSAHU SKLADU #}
+    {{ block.super }}
+
+
+    {{ original.nazov|default:""|json_script:"isas-original-nazov" }}
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+
+            // --- 🔙 SMART BACK BUTTON LOGIKA PRE ZOZNAM SKLADOV ---
+            const backBtnList = document.getElementById("smart-back-list");
+            if (backBtnList) {
+                backBtnList.addEventListener("click", function(e) {
+                    e.preventDefault();
+                
+                    const prevUrl = document.referrer;
+                    // 1. Ak sme prišli z tabuľky a nie je to reload tej istej stránky po uložení
+                    if (window.history.length > 1 && prevUrl && prevUrl.includes('/admin/Evidencia/') && !prevUrl.includes(window.location.pathname)) {
+                        window.history.back();
+                    } else {
+                        // 2. Záchrana: Ak bola stránka otvorená na priamo, dynamicky prečítame URL
+                        // URL je napr: /admin/Evidencia/aktualnenasklade/1/change/
+                        // My z nej odrežeme koniec a poskladáme presne: /admin/Evidencia/aktualnenasklade/
+                        const pathParts = window.location.pathname.split('/');
+                        if (pathParts.length >= 4) {
+                            window.location.href = '/' + pathParts[1] + '/' + pathParts[2] + '/' + pathParts[3] + '/';
+                        } else {
+                            window.location.href = '/admin/Evidencia/sklad/'; // Absolútna poistka
+                        }
+                    }
+                });
+            }
+            // --- KONIEC SMART BACK LOGIKY ---
+
+            // 🟢 SENIOR FIX: Odstránený duplicitný kód a 3. MutationObserver (funkcionalita je plne v sklad_master.js)
+
+            document.addEventListener('click', function(e) {
+                const header = e.target.closest('.isas-drawer > h2, .isas-drawer > h3, .isas-drawer > .djn-module > h2');
+                if (header) {
+                    e.preventDefault(); 
+                    e.stopPropagation();
+                    const drawer = header.closest('.isas-drawer');
+                    if (drawer) {
+                        drawer.classList.toggle('isas-opened');
+                        initDeleteButtons();
+                        setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
+                    }
+                }
+            });
+
+            const trigger = document.getElementById('floating-search-trigger');
+            const wrapper = document.getElementById('sn-search-input-wrapper');
+            const input = document.getElementById('floating-sn-input');
+            const resultsDiv = document.getElementById('sn-search-results-floating');
+
+            trigger.addEventListener('click', (e) => {
+                e.stopPropagation();
+                wrapper.classList.toggle('active');
+                if (wrapper.classList.contains('active')) input.focus();
+            });
+
+            input.addEventListener('input', function() {
+                const term = this.value.trim().toLowerCase();
+                resultsDiv.innerHTML = '';
+                if (term.length < 2) { resultsDiv.style.display = 'none'; return; }
+
+                const snInputs = document.querySelectorAll("input[name$='-seriove_cislo']");
+                let foundItems = [];
+
+                snInputs.forEach(snInput => {
+                    if (snInput.id.includes('__prefix__')) return;
+                    if (snInput.value.toLowerCase().includes(term)) {
+                        const related = snInput.closest('.inline-related');
+                        const group = snInput.closest('.inline-group');
+                        
+                        const catTitle = group ? (group.querySelector('h2')?.textContent || "Položka").replace('▶', '').trim() : "Položka";
+                        let mainCatTitle = "";
+                        let parentGroup = group ? group.parentElement.closest('.inline-group') : null;
+                        
+                        if (parentGroup) {
+                            mainCatTitle = parentGroup.querySelector('h2')?.textContent.replace('▶', '').trim() || "";
+                        }
+
+                        foundItems.push({
+                            val: snInput.value,
+                            cat: catTitle,
+                            mainCat: mainCatTitle,
+                            element: snInput,
+                            parent: related
+                        });
+                    }
+                });
+
+                if (foundItems.length > 0) {
+                    foundItems.forEach(item => {
+                        const div = document.createElement('div');
+                        div.className = 'sn-floating-item';
+                        
+                        const strongEl = document.createElement('strong');
+                        strongEl.textContent = item.val;
+                        const spanEl = document.createElement('span');
+                        spanEl.textContent = (item.mainCat ? item.mainCat + ' → ' : '') + item.cat;
+                        
+                        div.appendChild(strongEl);
+                        div.appendChild(spanEl);
+                        
+                        div.onclick = () => {
+
+                            document.querySelectorAll('.isas-drawer.isas-opened').forEach(drawer => {
+                                drawer.classList.remove('isas-opened');
+                            });
+
+                            let node = item.element;
+                            while (node && node !== document.body) {
+                                if (node.classList.contains('isas-drawer')) {
+                                    node.classList.add('isas-opened');
+                                }
+                                node = node.parentElement;
+                            }
+
+                            window.dispatchEvent(new Event('resize'));
+
+                            setTimeout(() => {
+                                item.element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                
+                                const targetRow = item.element.closest('tr');
+                                const targetBox = item.parent;
+
+                                if (targetRow) {
+                                    targetRow.classList.add('vivid-row-flash');
+                                    setTimeout(() => targetRow.classList.remove('vivid-row-flash'), 3000);
+                                } else if (targetBox) {
+                                    targetBox.classList.add('vivid-box-flash');
+                                    setTimeout(() => targetBox.classList.remove('vivid-box-flash'), 3000);
+                                }
+                            }, 300);
+
+                            resultsDiv.style.display = 'none';
+                            wrapper.classList.remove('active');
+                            input.value = '';
+                        };
+                        resultsDiv.appendChild(div);
+                    });
+                    resultsDiv.style.display = 'block';
+                } else {
+                    resultsDiv.style.display = 'none';
+                }
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!document.getElementById('floating-sn-search-container').contains(e.target)) {
+                    resultsDiv.style.display = 'none';
+                    wrapper.classList.remove('active');
+                }
+            });
+
+        // =========================================================================
+        // ISAS ENGINE: MAGICKÝ PLACEHOLDER PRE SELECTY (Aj pre nové riadky)
+        // =========================================================================
+        function fixSelectPlaceholders() {
+            document.querySelectorAll('select').forEach(sel => {
+                if (sel.options.length > 0) {
+                    const firstOpt = sel.options[0];
+                    // Ak je prvá možnosť prázdna a obsahuje slovo 'Vyberte'
+                    if (firstOpt.value === '' && firstOpt.text.toLowerCase().includes('vyberte')) {
+                        firstOpt.disabled = true;
+                        firstOpt.hidden = true;
+                    }
+                }
+            });
+        }
+        
+        // Spustenie pri načítaní stránky
+        fixSelectPlaceholders();
+
+        // 🟢 SENIOR FIX: Event-driven placeholder fix pre novopridané riadky bez zaťaženia DOM observerom
+        document.addEventListener('djnesting:added', fixSelectPlaceholders);
+        document.addEventListener('formset:added', fixSelectPlaceholders);
+
+        // =========================================================================
+        // 🚀 ISAS MODAL ENGINE: Dynamické detaily položky (Placeholder Fix)
+        // =========================================================================
+        const modalHtml = `
+        <div id="isas-detail-modal">
+            <div class="isas-modal-card">
+                <div class="isas-modal-header">
+                    <h3>⚙️ Detaily položky</h3>
+                    <button class="isas-modal-close" title="Zavrieť">✖</button>
+                </div>
+                <div class="isas-modal-body" id="isas-modal-body"></div>
+                <div style="padding: 20px 30px; background: #ffffff; display: flex; flex-direction: column; align-items: center; gap: 14px; border-top: 1px solid #e2e8f0; flex-shrink: 0;">
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #0284c7; padding: 12px 16px; border-radius: 10px; width: 100%; box-sizing: border-box; text-align: left;">
+                        <div style="font-size: 12px; font-weight: 800; color: #0f172a; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+                            💡 Info pre používatela
+                        </div>
+                        <div style="font-size: 11px; color: #475569; line-height: 1.4; font-weight: 500;">
+                            Toto modálne okno združuje doplňujúce parametre položky, aby hlavná tabuľka skladu zostala prehľadná a rýchla.
+                        </div>
+                        <div style="font-size: 11px; color: #dc2626; font-weight: 800; margin-top: 6px; display: flex; align-items: center; gap: 6px;">
+                            ⚠️ POZOR: Tlačidlo "Potvrdiť" len zatvorí toto okno. Údaje sa trvalo uložia až po kliknutí na hlavné tlačidlo "ULOŽIŤ" alebo "BLESKOVÉ ULOŽENIE" v dolnej časti obrazovky!
+                        </div>
+                    </div>
+                    <button type="button" class="premium-btn green isas-modal-save" style="display: inline-flex; font-size: 13px; padding: 12px 32px; cursor: pointer !important; width: auto !important; margin: 0 auto !important;">✔ Potvrdiť detaily a zavrieť okno</button>
+                </div>
+            </div>
+        </div>`;
+        
+        const mainForm = document.querySelector('#content-main form');
+        if (mainForm) mainForm.insertAdjacentHTML('beforeend', modalHtml);
+
+        const modal = document.getElementById('isas-detail-modal');
+        const modalBody = document.getElementById('isas-modal-body');
+        let currentRow = null;
+
+        const targetFields = {
+            'dodavatel': '🚚 Dodávateľ',
+            'vyrobca': '🏭 Výrobca položky',
+            'typ_zasoby': '📦 Typ zásoby (ERP)',
+            'katalogove_cislo': '🏷️ Katalógové číslo (SKU)',
+            'ean': '🔣 EAN Čiarový kód',
+            'sadzba_dph': '💰 Sadzba DPH (%)',
+            'obchodny_nazov': '🛒 Obchodný názov (Do PDF)',
+            'skryt_vyrobcu': '🕵️ Skryť výrobcu v PDF',
+            'kto_som': '📝 V skratke o mne (Poznámky)',
+            'zobrazit_na_webe': '🌐 Zobraziť v E-shope na webe',
+            'popis_na_webe': '📝 Marketingový popis (Web)',
+            'obrazok_na_webe': '🖼️ Produktová fotka (Web)',
+            'slug': '🔗 URL Slug (Web)'
+        };
+
+        function closeModal() {
+            if (!currentRow) return;
+
+            // 1. Spustíme vizuálnu animáciu zatvárania a odomkneme scrollovanie na pozadí
+            modal.classList.remove('active');
+            document.documentElement.classList.remove('isas-modal-open');
+            document.body.classList.remove('isas-modal-open');
+
+            const rowToRestore = currentRow;
+            currentRow = null;
+
+            // 2. Počkáme 300ms na dokončenie fade-out animácie, kým ticho na pozadí vrátime prvky
+            setTimeout(() => {
+                Object.keys(targetFields).forEach(f => {
+                    const el = modalBody.querySelector(`[class*="field-${f}"]`);
+                    const placeholder = rowToRestore.querySelector(`.isas-placeholder[data-field="${f}"]`);
+                    
+                    if (el && placeholder) {
+                        el.removeAttribute('data-label');
+                        el.style.display = 'none'; // Skryjeme znova pre tabuľku
+
+                        // Reštartovanie Select2 po presune do pôvodného riadku
+                        let s2 = el.querySelector('.admin-autocomplete');
+                        if (s2 && typeof django !== 'undefined' && django.jQuery) {
+                            django.jQuery(s2).select2('destroy');
+                            rowToRestore.insertBefore(el, placeholder);
+                            django.jQuery(s2).djangoAdminSelect2();
+                        } else {
+                            rowToRestore.insertBefore(el, placeholder);
+                        }
+                        placeholder.remove();
+                    }
+                });
+                modalBody.innerHTML = '';
+            }, 300);
+        }
+
+        document.querySelector('.isas-modal-close').addEventListener('click', (e) => { e.preventDefault(); closeModal(); });
+        document.querySelector('.isas-modal-save').addEventListener('click', (e) => { e.preventDefault(); closeModal(); });
+
+        // 🟢 ISAS FAIL-SAFE: Zatvorenie kliknutím na tmavé pozadie alebo klávesom ESC
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                e.preventDefault();
+                closeModal();
+            }
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && modal.classList.contains('active')) {
+                closeModal();
+            }
+        });
+
+        // 🟢 SENIOR FIX: Bleskové skrytie modálových hlavičiek v <thead> (0.1 ms – prečíta len 1 vzorový riadok, žiadny cyklus cez 1000 položiek)
+        function hideModalHeaders() {
+            document.querySelectorAll('.djn-table, .tabular table').forEach(table => {
+                const theadTr = table.querySelector('thead tr');
+                const sampleRow = table.querySelector('tbody tr');
+                if (!theadTr || !sampleRow) return;
+
+                Object.keys(targetFields).forEach(fieldKey => {
+                    const td = sampleRow.querySelector(`td[class*="field-${fieldKey}"], td[class*="${fieldKey}"]`);
+                    if (td && td.cellIndex !== undefined && theadTr.cells[td.cellIndex]) {
+                        theadTr.cells[td.cellIndex].style.setProperty('display', 'none', 'important');
+                        theadTr.cells[td.cellIndex].classList.add('isas-hidden-header');
+                    }
+                });
+            });
+        }
+        hideModalHeaders();
+        document.addEventListener('djnesting:added', hideModalHeaders);
+        document.addEventListener('formset:added', hideModalHeaders);
+
+        // 🟢 SENIOR FIX: Globálny Event Delegation pre tlačidlo "Viac" (funguje 100% aj na novopridané riadky)
+        document.addEventListener('click', function(e) {
+            const btn = e.target.closest('.btn-more-info');
+            if (!btn) return;
+            e.preventDefault();
+            
+            const row = btn.closest('tr');
+            if (!row) return;
+
+            currentRow = row;
+            modalBody.innerHTML = ''; 
+            
+            // Presun polí do modalu so zanechaním zástupcu
+            Object.keys(targetFields).forEach(f => {
+                const el = row.querySelector(`[class*="field-${f}"]`);
+                if (el) {
+                    // 🟢 ISAS: Garancia načítania nápovedy (help_text) pre KAŽDÉ jedno pole
+                    if (!el.querySelector('.help, .helptext, .isas-auto-help')) {
+                        let helpTxt = '';
+
+                        // 1. Skúsime priamo vo vnútri <td>
+                        let inTdHelp = el.querySelector('.help, .helptext, p.help, span.help');
+                        if (inTdHelp && inTdHelp.textContent.trim()) {
+                            helpTxt = inTdHelp.textContent.trim();
+                        } else if (inTdHelp && inTdHelp.getAttribute('title')) {
+                            helpTxt = inTdHelp.getAttribute('title').trim();
+                        }
+
+                        // 2. Skúsime z hlavičky <th> podľa presného indexu stĺpca (cellIndex) alebo triedy
+                        if (!helpTxt && row.closest('table')) {
+                            let table = row.closest('table');
+                            let colIndex = el.cellIndex;
+                            let th = (colIndex !== undefined && colIndex >= 0) ? table.querySelector('thead tr')?.cells[colIndex] : null;
+                            if (!th) th = table.querySelector(`thead th[class*="${f}"]`);
+
+                            if (th) {
+                                let helpNode = th.querySelector('.help, .helptext, .help-tooltip, [title], img') || th;
+                                helpTxt = helpNode.getAttribute('title') || 
+                                          helpNode.getAttribute('data-help-text') || 
+                                          helpNode.getAttribute('alt') || 
+                                          th.querySelector('.help, .helptext')?.textContent;
+                            }
+                        }
+
+                        // 3. Skúsime z atributu title na samotnom inpute/selecte
+                        if (!helpTxt) {
+                            let inputNode = el.querySelector('input, select, textarea');
+                            if (inputNode && inputNode.getAttribute('title')) {
+                                helpTxt = inputNode.getAttribute('title').trim();
+                            }
+                        }
+
+                        // Vytvoríme box nápovedy s otazníkom
+                        if (helpTxt && helpTxt.trim()) {
+                            let helpP = document.createElement('p');
+                            helpP.className = 'help isas-auto-help';
+                            helpP.textContent = helpTxt.trim();
+                            el.appendChild(helpP);
+                        }
+                    }
+
+                    // Vytvoríme neviditeľného zástupcu, aby sa nerozbilo poradie buniek v tabuľke
+                    let placeholder = document.createElement('td');
+                    placeholder.className = 'isas-placeholder';
+                    placeholder.dataset.field = f;
+                    placeholder.style.display = 'none';
+                    row.insertBefore(placeholder, el);
+
+                    // Presunieme originál do modalu
+                    el.setAttribute('data-label', targetFields[f]);
+                    el.style.display = 'block'; 
+
+                    // 🚀 ISAS FIX: Ak presúvame Select2 do modalu, musíme ho reštartovať
+                    let s2 = el.querySelector('.admin-autocomplete');
+                    if (s2 && typeof django !== 'undefined' && django.jQuery) {
+                        django.jQuery(s2).select2('destroy');
+                        modalBody.appendChild(el);
+                        django.jQuery(s2).djangoAdminSelect2();
+                    } else {
+                        modalBody.appendChild(el);
+                    }
+                }
+            });
+
+            modal.classList.add('active');
+            document.documentElement.classList.add('isas-modal-open');
+            document.body.classList.add('isas-modal-open'); // 🟢 100% Zámok scrollovania pozadia
+        });
+
+        // 🛡️ Poistka proti pretekaniu scrollovania (Wheel a Touch) mimo obsahu modalu
+        modal.addEventListener('wheel', function(e) {
+            if (!e.target.closest('.isas-modal-body')) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        modal.addEventListener('touchmove', function(e) {
+            if (!e.target.closest('.isas-modal-body')) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+        
+        // 🟢 SENIOR FIX: Novopridané riadky už majú tlačidlo priamo vo svojej Django HTML šablóne (empty-form).
+
+        // =========================================================================
+        // 🚀 ISAS NINJA DOM MANIPULATION: Zmena názvu skladu cez skrytý Django Form
+        // =========================================================================
+        const titleSpan = document.querySelector('.isas-editable-title');
+        
+        if (titleSpan) {
+            titleSpan.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // 1. Nájdeme skrytý Django input, ktorý už v DOMe existuje
+                const hiddenInput = document.querySelector('input[name="nazov"]');
+                if (!hiddenInput) {
+                    console.error("ISAS Error: Skrytý input pre názov sa nenašiel.");
+                    return;
+                }
+                
+                const originalNazov = JSON.parse(document.getElementById('isas-original-nazov').textContent);
+                const currentName = hiddenInput.value || originalNazov;
+                
+                if (window.ISASModalEngine) {
+                    window.ISASModalEngine({
+                        maxWidth: "500px",
+                        icon: "✏️",
+                        iconStyle: "background: #eff6ff; width: 70px; height: 70px; line-height: 70px; border-radius: 50%; margin: 0 auto 15px auto; font-size: 32px; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.2);",
+                        title: "Zmena názvu skladu",
+                        text: `
+                            <div style="margin-bottom: 18px; color: #475569; font-size: 13px; line-height: 1.4;">
+                                Zadajte nový oficiálny názov pre tento sklad. Zmena sa okamžite prejaví v celom systéme.
+                            </div>
+                            <input type="text" id="isas-modal-new-name" value="${currentName.replace(/"/g, '&quot;')}" 
+                                style="width: 100%; padding: 14px 18px; border: 2px solid #cbd5e1; border-radius: 12px; font-size: 16px; font-weight: 800; color: #0f172a; box-sizing: border-box; text-align: center; transition: all 0.3s; outline: none; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);"
+                                onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 4px rgba(59, 130, 246, 0.15)';" 
+                                onblur="this.style.borderColor='#cbd5e1'; this.style.boxShadow='inset 0 2px 4px rgba(0,0,0,0.02)';">
+                        `,
+                        showClose: true,
+                        buttons: [
+                            {
+                                id: "modal-name-cancel",
+                                text: "Zrušiť",
+                                style: "flex: 1; background: transparent; color: #64748b; border: 1px solid #cbd5e1; padding: 12px 20px; border-radius: 10px; font-size: 13px; font-weight: 800; cursor: pointer; transition: all 0.2s;",
+                                onClick: (e, m) => m.close()
+                            },
+                            {
+                                id: "modal-name-save",
+                                text: "💾 Uložiť nový názov",
+                                style: "flex: 1; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; padding: 12px 20px; border-radius: 10px; font-size: 13px; font-weight: 800; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);",
+                                onClick: (e, m) => {
+                                    const newNameInput = document.getElementById('isas-modal-new-name');
+                                    if (newNameInput && newNameInput.value.trim() !== "") {
+                                        // 2. Prepíšeme hodnotu v skrytom Django inpute
+                                        hiddenInput.value = newNameInput.value.trim();
+                                        
+                                        // 3. Nájdeme hlavný formulár
+                                        const mainForm = document.querySelector('#content-main form');
+                                        if (mainForm) {
+                                            m.close();
+                                            
+                                            // 4. Zobrazíme pôvodný preloader (bez zmeny textu, aby nepreblikoval pri reloade)
+                                            document.body.classList.remove('isas-ready');
+                                            
+                                            // 5. Vytvoríme neviditeľné tlačidlo
+                                            let fakeSubmitBtn = document.createElement('input');
+                                            fakeSubmitBtn.type = 'submit';
+                                            fakeSubmitBtn.name = '_continue';
+                                            fakeSubmitBtn.style.display = 'none';
+                                            mainForm.appendChild(fakeSubmitBtn);
+                                            
+                                            // 6. Odložíme submit o 350ms pre plynulú CSS animáciu
+                                            setTimeout(() => {
+                                                fakeSubmitBtn.click();
+                                            }, 350);
+                                        } else {
+                                            alert("Kritická chyba: Nenašiel sa hlavný formulár.");
+                                        }
+                                    } else {
+                                        // Validácia: Ak je pole prázdne, zatrepeme ním
+                                        newNameInput.style.borderColor = '#ef4444';
+                                        newNameInput.style.animation = 'isas-shake 0.4s';
+                                        setTimeout(() => newNameInput.style.animation = '', 400);
+                                    }
+                                }
+                            }
+                        ]
+                    });
+                    
+                    // Focus na input a označenie textu po otvorení modalu
+                    setTimeout(() => {
+                        const inp = document.getElementById('isas-modal-new-name');
+                        if(inp) { inp.focus(); inp.select(); }
+                    }, 100);
+                    
+                } else {
+                    // Fallback pre istotu
+                    let newName = prompt("Zadajte nový názov skladu:", currentName);
+                    if (newName !== null && newName.trim() !== "") {
+                        hiddenInput.value = newName.trim();
+                        const mainForm = document.querySelector('#content-main form');
+                        if (mainForm) {
+                            // Zobrazíme pôvodný preloader
+                            document.body.classList.remove('isas-ready');
+                            
+                            let fakeSubmitBtn = document.createElement('input');
+                            fakeSubmitBtn.type = 'submit';
+                            fakeSubmitBtn.name = '_continue';
+                            fakeSubmitBtn.style.display = 'none';
+                            mainForm.appendChild(fakeSubmitBtn);
+                            
+                            setTimeout(() => {
+                                fakeSubmitBtn.click();
+                            }, 350);
+                        }
+                    }
+                }
+            });
+        }
+
+        });
+    </script>
+{% endblock %}

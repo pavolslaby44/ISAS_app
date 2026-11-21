@@ -1,0 +1,1 @@
+default_app_config = 'odvetvia.software.apps.SoftwareConfig'

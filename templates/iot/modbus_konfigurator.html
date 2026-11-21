@@ -1,0 +1,1572 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}📖 Modbus / OPC UA Prekladový Slovník | ISAS CORE{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            var failsafe = setTimeout(function() { document.body.classList.add('isas-ready'); }, 2500);
+            window.addEventListener('load', function() {
+                setTimeout(function() {
+                    clearTimeout(failsafe);
+                    document.body.classList.add('isas-ready');
+                }, 700); 
+            });
+        });
+    </script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <!-- 📊 ISAS CORE: SheetJS pre natívny Excel export -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+
+<style>
+    :root {
+	--bg-gradient: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+	--glass-bg: rgba(255, 255, 255, 0.85);
+	--glass-border: rgba(255, 255, 255, 0.6);
+	--glass-shadow: 0 8px 32px rgba(30, 41, 59, 0.08);
+	--text-main: #0f172a;
+	--color-primary: #3b82f6;
+	--color-success: #10b981;
+	--color-danger: #ef4444;
+	--radius-md: 12px;
+    }
+
+    /* 🚀 OVERRIDE DJANGO ADMIN DEFAULTS (Zjednotené s HR Dashboardom) */
+    #container { width: 100% !important; min-width: 100% !important; }
+    #content { 
+        background: transparent !important; 
+        padding: 20px 30px !important; 
+        min-height: 90vh; 
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
+    .breadcrumbs, #content > h1 { display: none !important; }
+
+    /* Skrytie hlavného obsahu počas načítavania OKREM samotného preloaderu */
+    #content > *:not(#isas-preloader-wrapper), #content-main > *:not(#isas-preloader-wrapper) {
+        opacity: 0 !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+    }
+
+    /* Fixný neviditeľný obal pre vycentrovanie preloaderu */
+    #isas-preloader-wrapper {
+        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+        display: flex; align-items: center; justify-content: center;
+        z-index: 9999999; pointer-events: none;
+    }
+
+    /* Prémiová bublina s Blur efektom */
+    .isas-loader-box {
+        background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);
+        padding: 20px 40px; border-radius: 50px; border: 2px solid #bae6fd;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15); display: flex; align-items: center; gap: 15px;
+        font-size: 16px; font-weight: 800; color: #0f172a; transition: all 0.5s ease;
+    }
+
+    /* Animovaný točiaci sa spinner */
+    .isas-spinner {
+        width: 24px; height: 24px; border: 4px solid #e0f2fe; border-top: 4px solid #0284c7;
+        border-radius: 50%; animation: isas-spin 0.8s linear infinite;
+    }
+    @keyframes isas-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    /* Rozsvietenie tabuľky a dashboardu po načítaní */
+    body.isas-ready #content > *:not(#isas-preloader-wrapper), body.isas-ready #content-main > *:not(#isas-preloader-wrapper) {
+        opacity: 1 !important; visibility: visible !important; pointer-events: auto !important;
+        transition: opacity 0.6s ease-in-out !important;
+    }
+    body.isas-ready .isas-loader-box { opacity: 0 !important; transform: scale(0.9) translateY(-20px) !important; }
+
+    @media (max-width: 768px) {
+        .isas-loader-box {
+            flex-direction: column !important; text-align: center !important;
+            padding: 25px 20px !important; border-radius: 24px !important;
+            width: 85% !important; box-sizing: border-box !important; gap: 12px !important;
+        }
+        .isas-loader-box span { font-size: 14px !important; line-height: 1.4 !important; }
+        #isas-preloader-wrapper { height: 100vh !important; height: 100svh !important; }
+    }
+
+    body { background: var(--bg-gradient); color: var(--text-main); font-family: 'Segoe UI', system-ui, sans-serif; overflow-x: hidden; }
+    .glass-panel { background: var(--glass-bg); backdrop-filter: blur(12px); border: 1px solid var(--glass-border); box-shadow: var(--glass-shadow); border-radius: 16px; padding: 25px; margin-bottom: 25px; }
+
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+    .header h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; display: flex; align-items: center; gap: 10px; }
+    .filters-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
+	
+    /* 🎨 ISAS CORE: Select2 VIVID LIGHT Overrides (Krásny dropdown) */
+    .select2-container { width: 100% !important; }
+    .select2-container--default .select2-selection--single {
+	height: 48px; padding: 10px 15px; border-radius: var(--radius-md);
+	border: 1px solid #cbd5e1; background: rgba(255, 255, 255, 0.9);
+	font-size: 15px; font-weight: 600; color: var(--text-main);
+	display: flex; align-items: center; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+    }
+    .select2-container--default .select2-selection--single:focus,
+    .select2-container--default.select2-container--open .select2-selection--single {
+	border-color: var(--color-primary); outline: none; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    }
+    .select2-container--default .select2-selection--single .select2-selection__arrow { height: 46px; right: 15px; }
+    .select2-dropdown { border: 1px solid #cbd5e1; border-radius: var(--radius-md); box-shadow: 0 10px 25px rgba(30, 41, 59, 0.1); overflow: hidden; }
+    .select2-results__option { padding: 12px 15px; font-size: 14px; font-weight: 500; }
+    .select2-container--default .select2-results__option--highlighted[aria-selected] { background-color: #eef2ff; color: #4f46e5; border-color: #c7d2fe; transform: translateX(5px); }
+
+	/* 💎 VIVID BUTTONS (Z Buildera) */
+    .btn { padding: 10px 20px; border-radius: 10px; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; border: none; transition: 0.3s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; }
+    .btn-ghost { background: #f1f5f9; color: var(--slate-800); border: 1px solid #cbd5e1; }
+    .btn-ghost:hover { background: #e2e8f0; }
+    .btn-add { background: linear-gradient(135deg, #10b981, #059669); color: white; box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3); }
+    .btn-add:hover { transform: translateY(-2px); box-shadow: 0 15px 30px rgba(16, 185, 129, 0.4); }
+
+    /* 📱 Responzívna tabuľka a centrovanie */
+    .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 8px; }
+    table { width: 100%; min-width: 900px; border-collapse: separate; border-spacing: 10px 0; margin-top: 15px; table-layout: fixed; }
+    th { text-align: center; padding: 15px 5px; color: #64748b; font-size: 11px; font-weight: 800; text-transform: uppercase; border-bottom: 2px solid #e2e8f0; letter-spacing: 0.5px; }
+    td { padding: 10px 5px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+	
+    input, select { padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-weight: 600; font-size: 14px; width: 100%; text-align: center; background: #f8fafc; transition: all 0.2s; box-sizing: border-box; }
+    input:focus, select:focus { border-color: var(--color-primary); background: #ffffff; outline: none; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+	
+    /* Špecifické zarovnanie pre akčné tlačidlá v tabuľke */
+    .action-buttons { display: flex; gap: 8px; justify-content: center; align-items: center; }
+
+    /* 💎 ISAS CORE: Select2 vnútri tabuľky (Dokonalé splynutie s inputmi) */
+    .djn-table-select2 + .select2-container .select2-selection--single {
+	height: 42px !important;
+	border: 1px solid #cbd5e1 !important;
+	border-radius: 8px !important;
+	background: #f8fafc !important;
+	display: flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	box-shadow: none !important;
+    }
+    .djn-table-select2 + .select2-container--focus .select2-selection--single {
+	border-color: var(--color-primary) !important;
+	background: #ffffff !important;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+    }
+    .djn-table-select2 + .select2-container .select2-selection__rendered {
+	text-align: center !important;
+	font-weight: 600 !important;
+	font-size: 14px !important;
+	color: #1e293b !important;
+	padding-left: 0 !important;
+    }
+    .djn-table-select2 + .select2-container .select2-selection__arrow {
+	height: 40px !important;
+    }
+
+    /* 🔒 ISAS CORE: Štýly pre uzamknuté polia (Orezanie textu) */
+    .isas-locked-field {
+	opacity: 0.5 !important;
+	background-color: #f1f5f9 !important;
+	cursor: not-allowed !important;
+	color: #64748b !important;
+	text-overflow: ellipsis !important;
+	white-space: nowrap !important;
+	overflow: hidden !important;
+    }
+    /* Zabezpečenie orezania pre Select2 placeholder */
+    .select2-container--default .select2-selection--single .select2-selection__placeholder {
+	text-overflow: ellipsis;
+	overflow: hidden;
+	white-space: nowrap;
+	display: block;
+    }
+
+    /* 🌀 ISAS SPINNER PRE MODAL */
+    .isas-spinner {
+        border: 4px solid #e2e8f0;
+        border-top: 4px solid #3b82f6;
+        border-radius: 50%;
+        animation: isas-spin 0.8s linear infinite;
+    }
+    @keyframes isas-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    /* ==========================================================================
+       💎 PREMIUM DARK PANEL (Zjednotené s IoT Dashboardom)
+       ========================================================================== */
+    .premium-dark-panel {
+        background: linear-gradient(145deg, #0f172a 0%, #1e293b 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 16px;
+        margin-bottom: 20px;
+        box-shadow: 0 15px 35px rgba(15, 23, 42, 0.25), inset 0 1px 0 rgba(255,255,255,0.1);
+        border: 1px solid #334155;
+    }
+    .premium-info-wrapper {
+        display: flex; gap: 15px; flex-wrap: wrap; align-items: center;
+    }
+    .premium-info-card {
+        display: flex; flex-direction: column; justify-content: center;
+        padding: 10px 18px;
+        background: linear-gradient(180deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 14px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.2), inset 0 1px 1px rgba(255,255,255,0.1);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .premium-info-card:hover {
+        transform: translateY(-3px);
+        background: linear-gradient(180deg, rgba(51, 65, 85, 0.9) 0%, rgba(30, 41, 59, 1) 100%);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.2);
+        border-color: rgba(255,255,255,0.15);
+    }
+    .premium-info-label {
+        font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;
+    }
+    .premium-info-value {
+        font-size: 15px; font-weight: 900; color: #f8fafc; font-family: monospace; letter-spacing: -0.5px;
+    }
+    .premium-btn-glow {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        color: white; border: 1px solid #60a5fa; padding: 10px 20px; border-radius: 12px;
+        font-size: 12px; font-weight: 800; cursor: pointer; transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3), inset 0 1px 1px rgba(255,255,255,0.2);
+        display: inline-flex; align-items: center; gap: 8px; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .premium-btn-glow:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(59, 130, 246, 0.5), inset 0 1px 1px rgba(255,255,255,0.3);
+    }
+	
+    /* 📱 Úpravy pre mobilné zariadenia */
+    @media (max-width: 768px) {
+	body { padding: 15px; }
+	.glass-panel { padding: 15px; }
+	.header { flex-direction: column; gap: 15px; align-items: flex-start; }
+	.header h1 { font-size: 18px; }
+	.filters-grid { grid-template-columns: 1fr !important; }
+    }
+    .btn-action { padding: 6px 12px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; }
+    .btn-save { background: #3b82f6; color: white; }
+    .btn-del { background: #fee2e2; color: #991b1b; }
+
+    /* 🎛️ ISAS CORE: Logické rozloženie akčného panelu (Desktop vs Mobil) */
+    .action-bar-wrapper {
+        display: flex; justify-content: space-between; gap: 15px; flex-wrap: wrap; width: 100%; align-items: center;
+        background: #ffffff; padding: 12px 15px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+    .action-group { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    
+    @media (max-width: 1024px) {
+        .action-bar-wrapper { flex-direction: column; align-items: stretch; padding: 15px; }
+        .action-group { justify-content: center; width: 100%; border-bottom: 1px dashed #e2e8f0; padding-bottom: 10px; }
+        .action-group:last-child { border-bottom: none; padding-bottom: 0; }
+        .action-group > * { flex: 1; text-align: center; justify-content: center; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+    {{ zariadenia_map|json_script:"iot-zariadenia-map-data" }}
+    <div id="isas-preloader-wrapper">
+        <div class="isas-loader-box">
+            <div class="isas-spinner"></div>
+            <span>{{ preloader_text|default:"📖 Vstupujete do sekcie Modbus konfigurátora..." }}</span>
+        </div>
+    </div>
+
+    <div class="header">
+        <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+            <h1>📖 Modbus / OPC UA Prekladový Slovník</h1>
+            <!-- 🧠 Inteligentné tlačidlo Naspäť -->
+            <a href="javascript:void(0);" onclick="window.history.length > 1 ? window.history.back() : window.location.href='{% url 'admin:index' %}';" class="btn btn-ghost">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg> Naspäť
+            </a>
+        </div>
+        <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+            <!-- ⚙️ Nové tlačidlo pre Iframe Modal -->
+            <button id="btn-device-settings" class="btn btn-ghost" style="display: none; background: #ffffff; color: #0f172a; border: 1px solid #cbd5e1; box-shadow: 0 2px 5px rgba(0,0,0,0.05);" onclick="openDeviceSettingsModal()">
+                ⚙️ Karta vybraného zariadenia
+            </button>
+        </div>
+    </div>
+
+    <!-- Kaskádový Výber (Zákazník -> Kategória -> Zariadenie) -->
+    <div class="glass-panel filters-grid">
+        <div>
+            <label style="font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 8px;">🏢 Zákazník</label>
+            <select id="sel-zakaznik" class="form-select" data-placeholder="🏢 Vyberte zákazníka...">
+                <option></option>
+                {% for z in zakaznici %}
+                    <option value="{{ z.id }}">{{ z.Nazov_spolocnosti }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label style="font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 8px;">📑 Kategória</label>
+            <select id="sel-kategoria" class="form-select" data-placeholder="🔒 Najprv zvoľte zákazníka..." disabled>
+                <option></option>
+            </select>
+        </div>
+        <div>
+            <label style="font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 8px;">⚙️ IoT Zariadenie</label>
+            <select id="sel-zariadenie" class="form-select" data-placeholder="🔒 Najprv zvoľte kategóriu..." disabled>
+                <option></option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Tabuľka Registrov -->
+    <div id="registers-panel" class="glass-panel" style="display: none;">
+        
+        <!-- 🔌 ISAS CORE: Hardware Status & Payload Helper (Premium Redesign) -->
+        <div id="device-info-bar" class="premium-dark-panel" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
+                
+                <div class="premium-info-wrapper">
+                    <div class="premium-info-card">
+                        <div class="premium-info-label">🔑 IoT API Kľúč zariadenia</div>
+                        <div id="info-api-key" class="premium-info-value" style="color: #38bdf8;">--</div>
+                    </div>
+
+                    <div class="premium-info-card">
+                        <div class="premium-info-label">🔌 Komunikácia</div>
+                        <div id="info-hw-protokol" class="premium-info-value">--</div>
+                    </div>
+                    
+                    <div class="premium-info-card">
+                        <div class="premium-info-label">⏱️ Posledný zápis dát</div>
+                        <div id="info-last-seen" class="premium-info-value" style="color: #10b981;">--</div>
+                    </div>
+                </div>
+
+                <div>
+                    <button type="button" class="premium-btn-glow" onclick="togglePayloadModal()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+                        Ukážka JSON Payloadu
+                    </button>
+                </div>
+            </div>
+
+            <!-- Skrytý box s ukážkou JSONu -->
+            <div id="payload-preview-box" style="display: none; margin-top: 25px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+                <div style="font-size: 12px; font-weight: 600; color: #cbd5e1; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #38bdf8;"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+                    Tento JSON formát musíte nastaviť v Modbus/OPC UA bráne (napr. Teltonika / Siemens / Advantech):
+                </div>
+                <div style="position: relative; background: #020617; border-radius: 12px; border: 1px solid #1e293b; overflow: hidden; box-shadow: inset 0 5px 15px rgba(0,0,0,0.5);">
+                    <div style="background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%); padding: 10px 15px; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; gap: 8px;">
+                            <div style="width: 12px; height: 12px; border-radius: 50%; background: #ef4444; box-shadow: inset 0 1px 2px rgba(0,0,0,0.5);"></div>
+                            <div style="width: 12px; height: 12px; border-radius: 50%; background: #f59e0b; box-shadow: inset 0 1px 2px rgba(0,0,0,0.5);"></div>
+                            <div style="width: 12px; height: 12px; border-radius: 50%; background: #10b981; box-shadow: inset 0 1px 2px rgba(0,0,0,0.5);"></div>
+                        </div>
+                        <button type="button" onclick="copyJsonToClipboard()" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #cbd5e1; font-size: 11px; font-weight: 800; padding: 6px 12px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                            KOPÍROVAŤ
+                        </button>
+                    </div>
+                    <pre id="json-payload-text" style="color: #a7f3d0; padding: 20px; font-size: 13px; font-family: 'Courier New', Courier, monospace; overflow-x: auto; margin: 0; line-height: 1.6;"></pre>
+                </div>
+            </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; width: 100%;">
+                <h3 style="margin: 0; white-space: nowrap;">📍 Zoznam mapovaných registrov</h3>
+                <input type="text" id="search-registers" placeholder="🔍 Hľadať register alebo adresu..." style="width: 100%; max-width: 350px; padding: 10px 18px; border-radius: 20px; border: 1px solid #cbd5e1; font-size: 13px; display: none; box-shadow: inset 0 1px 3px rgba(0,0,0,0.05); transition: all 0.3s;">
+            </div>
+            
+            <div class="action-bar-wrapper">
+                <!-- SKUPINA 1: Live Dáta (Vľavo) -->
+                <div class="action-group">
+                    <!-- ⏱️ Indikátor času, z kedy dáta reálne pochádzajú -->
+                    <span id="live-data-timestamp" style="text-align: center; font-size: 11px; font-weight: 800; color: #64748b; background: #f1f5f9; padding: 8px 12px; border-radius: 8px; display: none; border: 1px solid #e2e8f0; white-space: nowrap;">⏱️ Dáta z: --:--:--</span>
+                    
+                    <!-- 🔴 Auto-refresh každých 5 sekúnd pre technika pri stroji -->
+                    <label id="label-auto-polling" style="display: none; align-items: center; gap: 6px; font-size: 12px; font-weight: 800; color: #0f172a; cursor: pointer; background: #f8fafc; padding: 6px 12px; border-radius: 8px; border: 1px solid #cbd5e1; white-space: nowrap;">
+                        <input type="checkbox" id="toggle-live-polling" onchange="toggleAutoPolling(this)" style="width: 16px; height: 16px; cursor: pointer;">
+                        🔴 Auto-refresh (5s)
+                    </label>
+
+                    <button id="btn-refresh-live" class="btn btn-ghost" onclick="refreshLiveValuesBtn(this)" style="display: none; background: #f8fafc; color: #0f172a; border-color: #cbd5e1; font-weight: 800; white-space: nowrap;" title="Načíta najnovší záznam z databázy">🔄 Načítať z DB</button>
+                </div>
+
+                <!-- SKUPINA 2: Nástroje (Stred) -->
+                <div class="action-group">
+                    <!-- Skrytý input pre výber Excel súboru -->
+                    <input type="file" id="file-import-excel" accept=".xlsx, .xls, .csv" style="display: none;" onchange="importFromExcel(event)">
+                    <button id="btn-import-excel" class="btn btn-ghost" onclick="document.getElementById('file-import-excel').click()" style="display: none; background: #fffbeb; color: #d97706; border-color: #fde68a; font-weight: 800; white-space: nowrap;">📤 Import</button>
+                    
+                    <button id="btn-export-excel" class="btn btn-ghost" onclick="exportToExcel()" style="display: none; background: #f0fdf4; color: #16a34a; border-color: #bbf7d0; font-weight: 800; white-space: nowrap;">📥 Export</button>
+                    <button id="btn-clone-registers" class="btn btn-ghost" style="display: none; background: #f8fafc; color: #3b82f6; border-color: #bfdbfe; white-space: nowrap;">📋 Klonovať</button>
+                </div>
+
+                <!-- SKUPINA 3: Hlavné akcie (Vpravo) -->
+                <div class="action-group">
+                    <button id="btn-save-all" class="btn btn-ghost" onclick="saveAllRows()" style="display: none; background: #eff6ff; color: #2563eb; border-color: #bfdbfe; font-weight: 800; white-space: nowrap;">💾 Uložiť</button>
+                    <button id="btn-add-register" class="btn btn-add" onclick="addNewRow()" style="display: none; white-space: nowrap;">➕ Pridať register</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                    <th style="width: 12%; min-width: 130px;">Adresa (Modbus/PLC)</th>
+                    <th style="width: 20%; min-width: 200px;">Názov Signálu (Na Dashboarde)</th>
+                    <th style="width: 14%; min-width: 140px;">Typ Signálu</th>
+                    <th style="width: 12%; min-width: 120px;">Práva</th>
+                    <th style="width: 12%; min-width: 140px;">Merná jednotka</th>
+                    <th style="width: 8%; min-width: 90px;">Násobič</th>
+                    <th style="width: 10%; min-width: 110px;">Live Hodnota</th>
+                    <th style="width: 12%; min-width: 130px;">Akcia</th>
+                </tr>
+                </thead>
+                <tbody id="registers-body">
+                    <!-- Riadky sa načítajú cez AJAX -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // 🛡️ ISAS SECURITY: Globálna funkcia pre získanie CSRF tokenu z cookies
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // 🧠 ISAS CORE: Blesková mapa IoT zariadení priamo z backendu (Žiadne čakanie na AJAX)
+        const IOT_ZARIADENIA_MAP = JSON.parse(document.getElementById('iot-zariadenia-map-data').textContent || '{}');
+
+        $(document).ready(function() {
+            // 🪄 MAGICKÝ FIX Z BUILDERA: Dynamické čítanie placeholdera
+            function formatKategoria(state) {
+                if (!state.id) return $('#sel-kategoria').attr('data-placeholder') || state.text;
+                return state.text;
+            }
+            function formatZariadenie(state) {
+                if (!state.id) return $('#sel-zariadenie').attr('data-placeholder') || state.text;
+                return state.text;
+            }
+
+            // 1. Inicializácia Select2 pre Zákazníka
+            $('#sel-zakaznik').select2({
+                width: '100%',
+                language: { noResults: function() { return "❌ Žiadne výsledky"; } }
+            }).on('change', function() {
+                let zak_id = $(this).val();
+                let $kategoria = $('#sel-kategoria');
+                let $zariadenia = $('#sel-zariadenie');
+                let $panel = $('#registers-panel');
+                let $tbody = $('#registers-body');
+                let $btnAdd = $('#btn-add-register');
+
+                if(zak_id) {
+                    $panel.show();
+                    $btnAdd.hide();
+                    $tbody.html('<tr><td colspan="8" style="text-align:center; color:#94a3b8; padding: 40px 20px; font-weight: 600;">👆 Vyberte konkrétne IoT zariadenie z roletky vyššie pre načítanie jeho registrov.</td></tr>');
+
+                    let devices = IOT_ZARIADENIA_MAP[zak_id] || [];
+                    
+                    // 🧠 ISAS CORE: Extrahovanie unikátnych kategórií pre daného zákazníka
+                    let kategorie = [...new Set(devices.map(d => d.kategoria))].filter(Boolean).sort();
+                    
+                    $kategoria.empty().append('<option></option>');
+                    if(kategorie.length > 0) {
+                        $kategoria.attr('data-placeholder', '📑 Vyberte kategóriu...');
+                        kategorie.forEach(k => {
+                            $kategoria.append(new Option(k, k));
+                        });
+                        $kategoria.prop('disabled', false).val(null).trigger('change.select2');
+                    } else {
+                        $kategoria.attr('data-placeholder', '❌ Žiadne kategórie');
+                        $kategoria.prop('disabled', true).val(null).trigger('change.select2');
+                    }
+                    
+                    // Zariadenie zatiaľ zamkneme, kým nevyberie kategóriu
+                    $zariadenia.attr('data-placeholder', '🔒 Najprv zvoľte kategóriu...');
+                    $zariadenia.empty().append('<option></option>').prop('disabled', true).val(null).trigger('change.select2');
+                } else {
+                    $panel.hide();
+                    $kategoria.attr('data-placeholder', '🔒 Najprv zvoľte zákazníka...');
+                    $kategoria.empty().append('<option></option>').prop('disabled', true).val(null).trigger('change.select2');
+                    $zariadenia.attr('data-placeholder', '🔒 Najprv zvoľte kategóriu...');
+                    $zariadenia.empty().append('<option></option>').prop('disabled', true).val(null).trigger('change.select2');
+                }
+            });
+
+            // 1.5 Inicializácia Select2 pre Kategóriu
+            $('#sel-kategoria').select2({
+                width: '100%',
+                language: { noResults: function() { return "❌ Žiadne výsledky"; } },
+                templateSelection: formatKategoria
+            }).on('change', function() {
+                let zak_id = $('#sel-zakaznik').val();
+                let kat_val = $(this).val();
+                let $zariadenia = $('#sel-zariadenie');
+                
+                if(zak_id && kat_val) {
+                    let devices = IOT_ZARIADENIA_MAP[zak_id] || [];
+                    // Vyfiltrujeme zariadenia len pre zvolenú kategóriu
+                    let filteredDevices = devices.filter(d => d.kategoria === kat_val);
+                    
+                    $zariadenia.empty().append('<option></option>');
+                    if(filteredDevices.length > 0) {
+                        $zariadenia.attr('data-placeholder', '⚙️ Vyberte zariadenie...');
+                        filteredDevices.forEach(z => {
+                            $zariadenia.append(new Option(z.text, z.id));
+                        });
+                        $zariadenia.prop('disabled', false).val(null).trigger('change.select2');
+                    } else {
+                        $zariadenia.attr('data-placeholder', '❌ Žiadne zariadenia v tejto kategórii');
+                        $zariadenia.prop('disabled', true).val(null).trigger('change.select2');
+                    }
+                } else {
+                    $zariadenia.attr('data-placeholder', '🔒 Najprv zvoľte kategóriu...');
+                    $zariadenia.empty().append('<option></option>').prop('disabled', true).val(null).trigger('change.select2');
+                }
+            });
+
+            // 2. Inicializácia Select2 pre Zariadenie (S aplikovaným magickým formátovaním)
+            $('#sel-zariadenie').select2({
+                width: '100%',
+                language: { noResults: function() { return "❌ Žiadne výsledky"; } },
+                templateSelection: formatZariadenie
+            }).on('change', function() {
+                const id = $(this).val();
+                if (id) {
+                    loadRegisters(id);
+                } else {
+                    $('#btn-add-register').hide();
+                    $('#registers-body').html('<tr><td colspan="8" style="text-align:center; color:#94a3b8; padding: 40px 20px; font-weight: 600;">👆 Vyberte konkrétne IoT zariadenie z roletky vyššie pre načítanie jeho registrov.</td></tr>');
+                }
+            });
+        });
+
+        // 🧠 ISAS CORE: Helper funkcia pre inicializáciu Select2 v tabuľke
+        function initTableSelect2($container) {
+            // 🛡️ ISAS FIX: Inicializujeme Select2 a viažeme 'change' iba na zatiaľ ne-inicializovaných riadkoch
+            const $scope = $container || $('#registers-body');
+            
+            $scope.find('.reg-prava:not(.select2-hidden-accessible)').select2({
+                width: '100%',
+                minimumResultsForSearch: Infinity
+            });
+            
+            $scope.find('.reg-typ:not(.select2-hidden-accessible)').select2({
+                width: '100%',
+                minimumResultsForSearch: Infinity
+            }).off('change').on('change', function() {
+                // 🚀 ISAS SMART LOGIC: Reakcia na zmenu Analóg / Digitál
+                let $row = $(this).closest('tr');
+                let isDigital = $(this).val() === 'DIGITAL';
+                
+                let $jednotka = $row.find('.reg-jednotka');
+                let $nasobic = $row.find('.reg-nasobic');
+
+                if (isDigital) {
+                    // 🔒 ZAMKNÚŤ: Priama manipulácia DOMu (Najbezpečnejšia metóda pre Select2)
+                    $jednotka.prop('disabled', true).val(null).trigger('change.select2');
+                    
+                    // Natvrdo prepíšeme zobrazený text v Select2 a pridáme sivú triedu
+                    let $s2Container = $jednotka.next('.select2-container');
+                    $s2Container.find('.select2-selection__rendered').text('🔒 Uzamknuté...');
+                    $s2Container.find('.select2-selection').addClass('isas-locked-field');
+                    
+                    $nasobic.attr('type', 'text').val('').attr('placeholder', '🔒 Uzamknuté...').prop('disabled', true).addClass('isas-locked-field');
+                } else {
+                    // 🔓 ODOMKNÚŤ: Vrátenie do pôvodného stavu
+                    $jednotka.prop('disabled', false).trigger('change.select2');
+                    
+                    let $s2Container = $jednotka.next('.select2-container');
+                    // Ak nie je nič vybraté, vrátime pôvodný placeholder
+                    if (!$jednotka.val()) {
+                        $s2Container.find('.select2-selection__rendered').text('Vyberte alebo napíšte...');
+                    }
+                    $s2Container.find('.select2-selection').removeClass('isas-locked-field');
+                    
+                    $nasobic.attr('type', 'number').val('1.0000').attr('placeholder', '').prop('disabled', false).removeClass('isas-locked-field');
+                }
+            });
+            
+            $scope.find('.reg-jednotka:not(.select2-hidden-accessible)').select2({
+                width: '100%',
+                placeholder: 'Vyberte alebo napíšte...',
+                tags: true,
+                language: { noResults: function() { return "Stlačte Enter pre pridanie vlastnej"; } }
+            });
+        }
+
+        async function loadRegisters(zariadenieId) {
+            $('#btn-add-register').show();
+
+            // 🆕 NOVÉ (PRIDANÉ): Zobrazenie čiernej lišty s API kľúčom
+            const zakId = $('#sel-zakaznik').val();
+            const devices = IOT_ZARIADENIA_MAP[zakId] || [];
+            const currentDev = devices.find(d => String(d.id) === String(zariadenieId));
+            
+            if (currentDev) {
+                $('#info-api-key').text(currentDev.api_kluc);
+                $('#info-hw-protokol').text(`${currentDev.protokol} (IP: ${currentDev.ip_adresa})`);
+                
+                // 🚀 ISAS CORE: Zobrazenie času poslednej komunikácie
+                const lastSeenEl = $('#info-last-seen');
+                lastSeenEl.text(currentDev.posledny_zapis);
+                if (currentDev.posledny_zapis === 'Nikdy') {
+                    lastSeenEl.css('color', '#ef4444');
+                } else {
+                    lastSeenEl.css('color', '#10b981');
+                }
+
+                $('#payload-preview-box').hide(); 
+                $('#device-info-bar').slideDown();
+                $('#btn-clone-registers').show(); 
+                $('#btn-save-all').show();
+                $('#btn-export-excel').show();
+                $('#btn-import-excel').show();
+                $('#btn-refresh-live').show();
+                $('#label-auto-polling').css('display', 'inline-flex');
+                $('#search-registers').show();
+                $('#btn-device-settings').fadeIn();
+            } else {
+                // Vypneme auto-polling, ak sa odznačí zariadenie
+                if (window.autoPollInterval) clearInterval(window.autoPollInterval);
+                $('#toggle-live-polling').prop('checked', false);
+                
+                $('#btn-clone-registers').hide();
+                $('#btn-save-all').hide();
+                $('#btn-export-excel').hide();
+                $('#btn-import-excel').hide();
+                $('#btn-refresh-live').hide();
+                $('#label-auto-polling').hide();
+                $('#live-data-timestamp').hide();
+                $('#search-registers').hide();
+                $('#device-info-bar').hide();
+                $('#btn-device-settings').hide();
+            }
+
+            try {
+                const url = `{% url 'evidencia:api_iot_get_registers' 0 %}`.replace('0', zariadenieId);
+                const res = await fetch(url);
+                if (!res.ok) throw new Error("Chyba servera");
+                const data = await res.json();
+                
+                const tbody = $('#registers-body').empty();
+                if (!data.registre || data.registre.length === 0) {
+                    tbody.append('<tr><td colspan="8" style="text-align:center; color:#94a3b8; padding: 40px 20px; font-weight: 600;">Zatiaľ nie sú namapované žiadne registre. Kliknite na "Pridať nový register".</td></tr>');
+                    return;
+                }
+
+                data.registre.forEach(reg => {
+                    tbody.append(createRowHtml(reg));
+                });
+                
+                // 🚀 Inicializujeme Select2 po načítaní dát
+                initTableSelect2();
+            } catch (err) {
+                console.error("Chyba pri načítaní registrov:", err);
+                showISASToast("Chyba spojenia so serverom. Skontrolujte pripojenie.", "🔌", "error");
+            }
+        }
+
+        function escapeHTML(str) {
+            if (typeof str !== 'string') return str;
+            return str.replace(/[&<>'"]/g, 
+                tag => ({
+                    '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+                }[tag])
+            );
+        }
+
+        function createRowHtml(reg = {}) {
+            const id = reg.id || '';
+            const adresa = escapeHTML(reg.register_adresa || '');
+            const nazov = escapeHTML(reg.nazov_signalu || '');
+            const typ = reg.typ_signalu || 'ANALOG';
+            const prava = reg.prava_pristupu || 'R';
+            const jednotka = escapeHTML(reg.merna_jednotka || '');
+            const nasobic = reg.nasobic || 1.0;
+
+            // 🧠 ISAS CORE: Logika pre uzamknutie polí, ak je to Digitál
+            const isDigital = (typ === 'DIGITAL');
+            const disabledAttr = isDigital ? 'disabled' : '';
+            const lockedClass = isDigital ? 'isas-locked-field' : '';
+            const nasobicType = isDigital ? 'text' : 'number';
+            const nasobicPlaceholder = isDigital ? '🔒 Uzamknuté...' : '';
+            const nasobicVal = isDigital ? '' : nasobic;
+
+            // Ochrana: Už existujúca hodnota z DB sa pridá dynamicky, ak nie je v predvolenom zozname
+            const standardUnits = [
+                '%', '°C', 'V', 'A', 'kW', 'W', 'kWh', 'Hz',
+                'ms', 's', 'min', 'h',
+                'bar', 'Pa', 'kPa', 'MPa', 'psi',
+                'm3/h', 'l/min', 'l', 'RPM', 'ot/min', 'mm/s',
+                'MB', 'GB', 'TB', 'IOPS',
+                'kg', 'ks'
+            ];
+            const customUnitHtml = (jednotka && !standardUnits.includes(jednotka)) 
+                                   ? `<option value="${jednotka}" selected>${jednotka}</option>` : '';
+
+            return `
+                <tr id="row-${id}" class="isas-register-row">
+                    <td><input type="text" class="reg-adresa" value="${adresa}" placeholder="napr. 40001"></td>
+                    <td><input type="text" class="reg-nazov" value="${nazov}" placeholder="Názov signálu..."></td>
+                    <td>
+                        <select class="reg-typ djn-table-select2">
+                            <option value="ANALOG" ${typ === 'ANALOG' ? 'selected' : ''}>📈 Analógový</option>
+                            <option value="DIGITAL" ${typ === 'DIGITAL' ? 'selected' : ''}>💡 Digitálny</option>
+                        </select>
+                    </td>
+                    <td>
+                        <select class="reg-prava djn-table-select2">
+                            <option value="R" ${prava === 'R' ? 'selected' : ''}>👁️ Čítanie</option>
+                            <option value="RW" ${prava === 'RW' ? 'selected' : ''}>✍️ Zápis</option>
+                        </select>
+                    </td>
+                    <td>
+                        <select class="reg-jednotka djn-table-select2" ${disabledAttr} data-placeholder="${isDigital ? '🔒 Uzamknuté...' : 'Vyberte alebo napíšte...'}">
+                            <option value=""></option>
+                            ${customUnitHtml}
+                            <optgroup label="⚡ Elektrina a Energia">
+                                <option value="V" ${jednotka === 'V' ? 'selected' : ''}>V (Napätie)</option>
+                                <option value="A" ${jednotka === 'A' ? 'selected' : ''}>A (Prúd)</option>
+                                <option value="kW" ${jednotka === 'kW' ? 'selected' : ''}>kW (Výkon)</option>
+                                <option value="W" ${jednotka === 'W' ? 'selected' : ''}>W</option>
+                                <option value="kWh" ${jednotka === 'kWh' ? 'selected' : ''}>kWh (Spotreba)</option>
+                                <option value="Hz" ${jednotka === 'Hz' ? 'selected' : ''}>Hz (Frekvencia)</option>
+                            </optgroup>
+                            <optgroup label="⏱️ Čas a Odozva">
+                                <option value="ms" ${jednotka === 'ms' ? 'selected' : ''}>ms (Latencia / Odozva)</option>
+                                <option value="s" ${jednotka === 's' ? 'selected' : ''}>s (Sekundy)</option>
+                                <option value="min" ${jednotka === 'min' ? 'selected' : ''}>min (Minúty)</option>
+                                <option value="h" ${jednotka === 'h' ? 'selected' : ''}>h (Hodiny)</option>
+                            </optgroup>
+                            <optgroup label="🌡️ Teplota a Vyťaženie">
+                                <option value="%" ${jednotka === '%' ? 'selected' : ''}>% (Percentá / Záťaž)</option>
+                                <option value="°C" ${jednotka === '°C' ? 'selected' : ''}>°C (Teplota)</option>
+                            </optgroup>
+                            <optgroup label="💨 Tlak a Prietok">
+                                <option value="bar" ${jednotka === 'bar' ? 'selected' : ''}>bar (Tlak)</option>
+                                <option value="Pa" ${jednotka === 'Pa' ? 'selected' : ''}>Pa</option>
+                                <option value="kPa" ${jednotka === 'kPa' ? 'selected' : ''}>kPa</option>
+                                <option value="MPa" ${jednotka === 'MPa' ? 'selected' : ''}>MPa</option>
+                                <option value="psi" ${jednotka === 'psi' ? 'selected' : ''}>psi</option>
+                                <option value="m3/h" ${jednotka === 'm3/h' ? 'selected' : ''}>m³/h (Prietok)</option>
+                                <option value="l/min" ${jednotka === 'l/min' ? 'selected' : ''}>l/min</option>
+                            </optgroup>
+                            <optgroup label="💻 IT, Dáta a Pamäť">
+                                <option value="MB" ${jednotka === 'MB' ? 'selected' : ''}>MB (Megabajty)</option>
+                                <option value="GB" ${jednotka === 'GB' ? 'selected' : ''}>GB (Gigabajty)</option>
+                                <option value="TB" ${jednotka === 'TB' ? 'selected' : ''}>TB (Terabajty)</option>
+                                <option value="IOPS" ${jednotka === 'IOPS' ? 'selected' : ''}>IOPS (Diskové operácie)</option>
+                            </optgroup>
+                            <optgroup label="⚙️ Mechanika a Ostatné">
+                                <option value="RPM" ${jednotka === 'RPM' ? 'selected' : ''}>RPM (Otáčky)</option>
+                                <option value="ot/min" ${jednotka === 'ot/min' ? 'selected' : ''}>ot/min</option>
+                                <option value="mm/s" ${jednotka === 'mm/s' ? 'selected' : ''}>mm/s (Vibrácie RMS)</option>
+                                <option value="l" ${jednotka === 'l' ? 'selected' : ''}>l (Litre)</option>
+                                <option value="kg" ${jednotka === 'kg' ? 'selected' : ''}>kg (Hmotnosť)</option>
+                                <option value="ks" ${jednotka === 'ks' ? 'selected' : ''}>ks (Kusy)</option>
+                            </optgroup>
+                        </select>
+                    </td>
+                    <td><input type="${nasobicType}" step="0.0001" class="reg-nasobic ${lockedClass}" value="${nasobicVal}" placeholder="${nasobicPlaceholder}" ${disabledAttr}></td>
+                    <td class="live-value-cell" style="text-align: center; font-weight: 800; font-size: 14px; color: #94a3b8; background: #f8fafc; border-radius: 8px;">
+                        <span class="live-val-text" style="font-size: 11px; font-weight: 600; color: #94a3b8;">⏳ Čakám...</span>
+                    </td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn-action btn-save" onclick="saveRow(this, '${id}')" style="padding: 8px 12px; font-size: 12px;">💾 Uložiť</button>
+                            ${id ? `<button class="btn-action btn-del" onclick="deleteRow('${id}')" style="padding: 8px 12px; font-size: 12px;" title="Zmazať">🗑️</button>` : ''}
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }
+
+        function addNewRow() {
+            // Ak tam bola hláška o prázdnej tabuľke, vymažeme ju
+            if ($('#registers-body tr td').length === 1) {
+                $('#registers-body').empty();
+            }
+            
+            $('#registers-body').prepend(createRowHtml());
+            
+            // 🚀 Inicializujeme Select2 pre nový riadok
+            initTableSelect2();
+        }
+
+        async function saveRow(btn, id) {
+            const $btn = $(btn);
+            if ($btn.prop('disabled')) return;
+
+            const row = $btn.closest('tr');
+            // 🚀 ISAS FIX: Správne ID roletky je teraz #sel-zariadenie
+            const zariadenieId = $('#sel-zariadenie').val(); 
+
+            // 🚀 ISAS FIX: Ak je to nový riadok, id je prázdny string, inak je to číslo
+            const payload = {
+                id: id === 'undefined' || id === 'null' || !id ? null : id,
+                zariadenie_id: zariadenieId,
+                register_adresa: row.find('.reg-adresa').val()?.trim(),
+                nazov_signalu: row.find('.reg-nazov').val()?.trim(),
+                typ_signalu: row.find('.reg-typ').val(),
+                prava_pristupu: row.find('.reg-prava').val(),
+                merna_jednotka: row.find('.reg-jednotka').val() || '',
+                nasobic: (Number(row.find('.reg-nasobic').val()) || 1.0)
+            };
+
+            if (!payload.register_adresa || !payload.nazov_signalu) {
+                showISASToast("Adresa aj Názov signálu sú povinné!", "⚠️", "warning");
+                return;
+            }
+
+            const origHtml = $btn.html();
+            $btn.prop('disabled', true).html('⏳...');
+
+            try {
+                const url = `{% url 'evidencia:api_iot_save_register' %}`;
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken') // 🛡️ Ochrana proti CSRF
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    showISASToast("Register bol úspešne uložený.", "✅", "success");
+                    
+                    // 🚀 ISAS FIX: Aktualizujeme iba tento konkrétny riadok. Ostatné rozpísané/neuložené riadky zostanú zachované!
+                    const newId = data.id;
+                    row.attr('id', `row-${newId}`);
+                    row.find('.btn-save').attr('onclick', `saveRow(this, '${newId}')`);
+                    
+                    const btnContainer = row.find('.action-buttons');
+                    if (btnContainer.find('.btn-del').length === 0) {
+                        btnContainer.append(`<button class="btn-action btn-del" onclick="deleteRow('${newId}')" style="padding: 8px 12px; font-size: 12px;" title="Zmazať">🗑️</button>`);
+                    } else {
+                        btnContainer.find('.btn-del').attr('onclick', `deleteRow('${newId}')`);
+                    }
+
+                    // Vizuálne potvrdenie: Riadok na 1.5 sekundy jemne zasvieti na zeleno
+                    row.css('transition', 'background 0.5s').css('background-color', '#dcfce7');
+                    setTimeout(() => { row.css('background-color', ''); }, 1500);
+                } else {
+                    const errorData = await res.json();
+                    showISASToast(errorData.error || "Uloženie zlyhalo. Skontrolujte či adresa už neexistuje.", "❌", "error");
+                }
+            } catch (err) {
+                console.error("Chyba pri ukladaní riadku:", err);
+                showISASToast("Chyba spojenia so serverom. Skontrolujte pripojenie.", "🔌", "error");
+            } finally {
+                $btn.prop('disabled', false).html(origHtml);
+            }
+        }
+
+        function deleteRow(id) {
+            window.showGlobalConfirmModal(
+                "Odstrániť register?",
+                "Naozaj chcete natrvalo odstrániť tento Modbus/OPC UA register? Táto akcia sa nedá vrátiť späť.",
+                async () => {
+                    try {
+                        const url = `{% url 'evidencia:api_iot_delete_register' 0 %}`.replace('0', id);
+                        const res = await fetch(url, { 
+                            method: 'POST',
+                            headers: { 'X-CSRFToken': getCookie('csrftoken') }
+                        });
+                        
+                        if (res.ok) {
+                            showISASToast("Register bol úspešne vymazaný.", "🗑️", "success");
+                            loadRegisters($('#sel-zariadenie').val());
+                        } else {
+                            showISASToast("Nepodarilo sa odstrániť register.", "❌", "error");
+                        }
+                    } catch (err) {
+                        console.error("Chyba pri mazaní:", err);
+                        showISASToast("Chyba spojenia so serverom. Skontrolujte pripojenie.", "🔌", "error");
+                    }
+                }
+            );
+        }
+
+        // 🚀 ISAS CORE: Funkcia pre zobrazenie ukážkového JSON Payloadu pre PLC
+        function togglePayloadModal() {
+            const box = $('#payload-preview-box');
+            if (box.is(':visible')) {
+                box.slideUp();
+            } else {
+                const zakId = $('#sel-zakaznik').val();
+                const zarId = $('#sel-zariadenie').val();
+                const devices = IOT_ZARIADENIA_MAP[zakId] || [];
+                const currentDev = devices.find(d => String(d.id) === String(zarId));
+                
+                const sampleData = {};
+                $('.isas-register-row').each(function() {
+                    const adresa = $(this).find('.reg-adresa').val();
+                    const typ = $(this).find('.reg-typ').val();
+                    if (adresa) {
+                        sampleData[adresa] = typ === 'ANALOG' ? 85.5 : 1;
+                    }
+                });
+
+                const payload = {
+                    "api_key": currentDev ? currentDev.api_kluc : "VAŠ_IOT_API_KLUC",
+                    "mode": "ROUTINE",
+                    "data": sampleData
+                };
+
+                $('#json-payload-text').text(JSON.stringify(payload, null, 4));
+                box.slideDown();
+            }
+        }
+
+        // 📋 ISAS CORE: Kopírovanie JSONu do schránky
+        function copyJsonToClipboard() {
+            const jsonText = $('#json-payload-text').text();
+            navigator.clipboard.writeText(jsonText).then(() => {
+                showISASToast("JSON payload bol skopírovaný do schránky.", "📋", "success");
+            }).catch(err => {
+                showISASToast("Nepodarilo sa skopírovať text.", "❌", "error");
+            });
+        }
+
+        // =========================================================
+        // 📡 ISAS CORE: LIVE TEST (Posledná hodnota zo senzorov)
+        // =========================================================
+        async function fetchLiveValues(zariadenieId) {
+            try {
+                const url = `{% url 'evidencia:api_iot_latest_telemetry' 0 %}`.replace('0', zariadenieId);
+                const res = await fetch(url);
+                if (!res.ok) throw new Error("Chyba servera pri čítaní telemetrie");
+                const data = await res.json();
+                
+                // ⏱️ Zobrazenie presného času, z kedy telemetrický záznam pochádza
+                const $tsBadge = $('#live-data-timestamp');
+                if (data.cas) {
+                    $tsBadge.text(`⏱️ Dáta v DB z: ${data.cas}`).show();
+                } else {
+                    $tsBadge.text(`⏱️ Žiadne dáta v DB`).show();
+                }
+                
+                if (data.data && Object.keys(data.data).length > 0) {
+                    $('.isas-register-row').each(function() {
+                        const nazov = $(this).find('.reg-nazov').val() || '';
+                        const typ = $(this).find('.reg-typ').val();
+                        const $cell = $(this).find('.live-val-text');
+                        
+                        // Skúsime nájsť presný názov, alebo názov s podčiarkovníkmi (ako to ukladá Celery)
+                        let val = data.data[nazov];
+                        if (val === undefined && nazov) {
+                            const slugified = nazov.replace(/ /g, '_');
+                            val = data.data[slugified];
+                        }
+                        
+                        if (val !== undefined) {
+                            if (typ === 'DIGITAL') {
+                                const isOn = (val === true || val === 1 || val === 'true');
+                                $cell.html(isOn ? '<span style="color:#10b981;">ZAP</span>' : '<span style="color:#64748b;">VYP</span>');
+                            } else {
+                                // Zaokrúhlenie na 2 desatinné miesta pre krajší vizuál
+                                $cell.html(`<span style="color:#3b82f6;">${(Number(val) || 0).toFixed(2)}</span>`);
+                            }
+                        } else {
+                            $cell.html('<span style="font-size: 11px; font-weight: 600; color: #94a3b8;">📡 Bez dát</span>');
+                        }
+                    });
+                }
+            } catch (e) {
+                console.error("Chyba pri načítaní Live dát:", e);
+                showISASToast("Chyba spojenia so serverom. Skontrolujte pripojenie.", "🔌", "error");
+            }
+        }
+
+        // Upravíme loadRegisters, aby na konci zavolal fetchLiveValues
+        const originalLoadRegisters = loadRegisters;
+        loadRegisters = async function(zariadenieId) {
+            await originalLoadRegisters(zariadenieId);
+            await fetchLiveValues(zariadenieId);
+        };
+
+        // =========================================================
+        // 📋 ISAS CORE: KLONOVANIE REGISTROV (Select2 Kaskáda)
+        // =========================================================
+        $('#btn-clone-registers').on('click', function() {
+            const currentTargetId = $('#sel-zariadenie').val();
+            if (!currentTargetId) return;
+
+            // 1. OCHRANA: Zistíme, či vôbec existujú INÉ zariadenia na klonovanie
+            let totalOtherDevices = 0;
+            for (const [zakId, devices] of Object.entries(IOT_ZARIADENIA_MAP)) {
+                devices.forEach(d => {
+                    if (String(d.id) !== String(currentTargetId)) totalOtherDevices++;
+                });
+            }
+
+            if (totalOtherDevices === 0) {
+                window.showGlobalAlertModal("Žiadne iné zariadenia", "V systéme zatiaľ nie sú žiadne iné IoT zariadenia, z ktorých by sa dali skopírovať registre.", "warning");
+                return;
+            }
+
+            // 2. Pripravíme roletku Zákazníkov (Iba tých, čo majú iné IoT zariadenia)
+            let customerOptions = '<option value=""></option>';
+            $('#sel-zakaznik option').each(function() {
+                const zakId = $(this).val();
+                const zakNazov = $(this).text();
+
+                if (zakId && IOT_ZARIADENIA_MAP[zakId]) {
+                    const otherDevices = IOT_ZARIADENIA_MAP[zakId].filter(d => String(d.id) !== String(currentTargetId));
+                    if (otherDevices.length > 0) {
+                        customerOptions += `<option value="${zakId}">🏢 ${zakNazov}</option>`;
+                    }
+                }
+            });
+
+            // 3. Vykreslíme Modal cez ISASModalEngine
+            window.ISASModalEngine({
+                maxWidth: "500px",
+                icon: "📋",
+                title: "Klonovať registre",
+                text: "Vyberte zariadenie, z ktorého chcete skopírovať Modbus/OPC UA registre.<br><span style='color: #10b981; font-weight: 700; display: inline-block; margin-top: 8px;'>✅ Nové registre sa pridajú. Existujúce sa aktualizujú.</span>",
+                fields: [
+                    {
+                        type: 'html',
+                        html: `
+                            <div style="display: flex; flex-direction: column; gap: 15px; text-align: left;">
+                                <div>
+                                    <label style="display:block;font-size:12px;font-weight:800;color:#475569;margin-bottom:5px;text-transform:uppercase;">1. Zákazník</label>
+                                    <select id="swal-clone-customer" class="form-select" style="width: 100%;">
+                                        ${customerOptions}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style="display:block;font-size:12px;font-weight:800;color:#475569;margin-bottom:5px;text-transform:uppercase;">2. Zariadenie</label>
+                                    <select id="swal-clone-device" class="form-select" style="width: 100%;" disabled>
+                                        <option value=""></option>
+                                    </select>
+                                </div>
+                            </div>
+                        `
+                    }
+                ],
+                buttons: [
+                    {
+                        id: "btn-confirm-clone",
+                        text: "Skopírovať",
+                        style: "background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; padding: 14px 25px; border-radius: 12px; font-size: 14px; font-weight: 800; cursor: pointer; text-transform: uppercase; flex: 1;",
+                        onClick: async (e, m, btn) => {
+                            const sourceId = $('#swal-clone-device').val();
+                            if (!sourceId) {
+                                showISASToast("Musíte vybrať konkrétne zariadenie.", "⚠️", "warning");
+                                return;
+                            }
+
+                            btn.disabled = true;
+                            btn.innerHTML = "⏳ Kopírujem...";
+
+                            try {
+                                const res = await fetch('{% url "evidencia:api_iot_clone_registers" %}', {
+                                    method: 'POST',
+                                    headers: { 
+                                        'Content-Type': 'application/json',
+                                        'X-CSRFToken': getCookie('csrftoken')
+                                    },
+                                    body: JSON.stringify({ source_id: sourceId, target_id: currentTargetId })
+                                });
+                                const data = await res.json();
+                                
+                                if (res.ok) {
+                                    m.close();
+                                    showISASToast(`Úspešne skopírovaných ${data.cloned_count} registrov.`, "✅", "success");
+                                    loadRegisters(currentTargetId);
+                                } else {
+                                    showISASToast(data.error || "Kopírovanie zlyhalo.", "❌", "error");
+                                    btn.disabled = false;
+                                    btn.innerHTML = "Skopírovať";
+                                }
+                            } catch (err) {
+                                console.error("Chyba pri klonovaní:", err);
+                                showISASToast("Chyba spojenia so serverom. Skontrolujte pripojenie.", "🔌", "error");
+                                btn.disabled = false;
+                                btn.innerHTML = "Skopírovať";
+                            }
+                        }
+                    }
+                ],
+                onRender: (m) => {
+                    $('#swal-clone-customer').select2({
+                        dropdownParent: m.card,
+                        placeholder: "Vyberte zákazníka...",
+                        width: '100%'
+                    });
+
+                    $('#swal-clone-device').select2({
+                        dropdownParent: m.card,
+                        placeholder: "Najprv vyberte zákazníka...",
+                        width: '100%'
+                    });
+
+                    $('#swal-clone-customer').on('change', function() {
+                        const selectedZakId = $(this).val();
+                        const $deviceSelect = $('#swal-clone-device');
+                        
+                        $deviceSelect.empty().append('<option value=""></option>');
+                        
+                        if (selectedZakId && IOT_ZARIADENIA_MAP[selectedZakId]) {
+                            const devices = IOT_ZARIADENIA_MAP[selectedZakId].filter(d => String(d.id) !== String(currentTargetId));
+                            
+                            devices.forEach(d => {
+                                $deviceSelect.append(new Option(d.text, d.id, false, false));
+                            });
+                            
+                            $deviceSelect.prop('disabled', false);
+                            $deviceSelect.select2({
+                                dropdownParent: m.card,
+                                placeholder: "Vyberte zdrojové zariadenie...",
+                                width: '100%'
+                            });
+                        } else {
+                            $deviceSelect.prop('disabled', true);
+                            $deviceSelect.select2({
+                                dropdownParent: m.card,
+                                placeholder: "Najprv vyberte zákazníka...",
+                                width: '100%'
+                            });
+                        }
+                    });
+                }
+            });
+        });
+
+        // =========================================================
+        // 🔍 ISAS CORE: RÝCHLE VYHĽADÁVANIE S PODFARBOVANÍM
+        // =========================================================
+        $('#search-registers').on('keyup', function() {
+            let value = $(this).val().toLowerCase();
+            
+            $("#registers-body tr.isas-register-row").each(function() {
+                let $row = $(this);
+                let $inputAdresa = $row.find('.reg-adresa');
+                let $inputNazov = $row.find('.reg-nazov');
+                
+                let adresa = $inputAdresa.val().toLowerCase();
+                let nazov = $inputNazov.val().toLowerCase();
+                
+                let matchAdresa = value !== "" && adresa.includes(value);
+                let matchNazov = value !== "" && nazov.includes(value);
+                
+                // Reset štýlov
+                $inputAdresa.css({'background-color': '', 'border-color': '', 'color': ''});
+                $inputNazov.css({'background-color': '', 'border-color': '', 'color': ''});
+                
+                if (value === "") {
+                    $row.show(); // Ak je hľadanie prázdne, ukáž všetko
+                } else if (matchAdresa || matchNazov) {
+                    $row.show(); // Ukáž riadok, ak je zhoda
+                    
+                    // Zvýrazni konkrétny input, kde sa našla zhoda (Jemná žltá + modrý border)
+                    let highlightCss = {'background-color': '#fef08a', 'border-color': '#3b82f6', 'color': '#0f172a'};
+                    if (matchAdresa) $inputAdresa.css(highlightCss);
+                    if (matchNazov) $inputNazov.css(highlightCss);
+                } else {
+                    $row.hide(); // Skry riadok, ak nie je zhoda
+                }
+            });
+        });
+
+        // =========================================================
+        // 📊 ISAS CORE: EXPORT DO EXCELU (.XLSX)
+        // =========================================================
+        function exportToExcel() {
+            let data = [];
+            
+            // 1. Hlavička Excelu
+            data.push(["Adresa (Modbus/PLC)", "Názov Signálu", "Typ Signálu", "Práva", "Merná jednotka", "Násobič"]);
+            
+            // 2. Zber dát z tabuľky
+            $('.isas-register-row').each(function() {
+                let adresa = $(this).find('.reg-adresa').val();
+                let nazov = $(this).find('.reg-nazov').val();
+                let typ = $(this).find('.reg-typ').val();
+                let prava = $(this).find('.reg-prava').val();
+                let jednotka = $(this).find('.reg-jednotka').val() || "";
+                let nasobic = $(this).find('.reg-nasobic').val() || "1";
+                
+                if (adresa && nazov) {
+                    data.push([adresa, nazov, typ, prava, jednotka, parseFloat(nasobic)]);
+                }
+            });
+            
+            if (data.length === 1) {
+                showISASToast("V tabuľke nie sú žiadne dáta na export.", "ℹ️", "warning");
+                return;
+            }
+
+            // 3. Vytvorenie Excel zošita cez SheetJS
+            let ws = XLSX.utils.aoa_to_sheet(data);
+            
+            // 4. Nastavenie šírky stĺpcov pre pekný vzhľad
+            ws['!cols'] = [
+                {wch: 20}, // Adresa
+                {wch: 35}, // Názov
+                {wch: 15}, // Typ
+                {wch: 12}, // Práva
+                {wch: 15}, // Merná jednotka
+                {wch: 10}  // Násobič
+            ];
+            
+            let wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Modbus Mapa");
+            
+            // 5. Stiahnutie súboru
+            let deviceName = $('#sel-zariadenie option:selected').text().replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            XLSX.writeFile(wb, `modbus_mapa_${deviceName}.xlsx`);
+        }
+
+        // =========================================================
+        // 🔄 ISAS CORE: MANUÁLNE NAČÍTANIE Z DB & AUTO-POLLING
+        // =========================================================
+        async function refreshLiveValuesBtn(btn) {
+            const zariadenieId = $('#sel-zariadenie').val();
+            if (!zariadenieId) return;
+            
+            let originalHtml = $(btn).html();
+            $(btn).html('⏳ Načítavam...').prop('disabled', true);
+            
+            await fetchLiveValues(zariadenieId);
+            
+            setTimeout(() => {
+                $(btn).html(originalHtml).prop('disabled', false);
+            }, 300);
+        }
+
+        // 🔴 Automatické obnovovanie tabuľky každých 5 sekúnd
+        window.autoPollInterval = null;
+        function toggleAutoPolling(checkbox) {
+            if (window.autoPollInterval) {
+                clearInterval(window.autoPollInterval);
+                window.autoPollInterval = null;
+            }
+            
+            if (checkbox.checked) {
+                const zariadenieId = $('#sel-zariadenie').val();
+                if (!zariadenieId) {
+                    checkbox.checked = false;
+                    showISASToast("Najprv vyberte zariadenie.", "⚠️", "warning");
+                    return;
+                }
+                
+                // Okamžité načítanie a spustenie dopytovania cez ISASPoller jadro
+                fetchLiveValues(zariadenieId);
+                const url = `{% url 'evidencia:api_iot_latest_telemetry' 0 %}`.replace('0', zariadenieId);
+                window.autoPollInterval = window.ISASPoller({
+                    url: url,
+                    type: 'json',
+                    interval: 5000,
+                    maxAttempts: 999999,
+                    onData: () => {
+                        const currentId = $('#sel-zariadenie').val();
+                        if (!currentId || currentId !== zariadenieId) return true; // Zastaví starý poller
+                        fetchLiveValues(currentId);
+                        return false;
+                    },
+                    onError: () => {
+                        showISASToast("Chyba spojenia so serverom. Skontrolujte pripojenie.", "🔌", "error");
+                        return false;
+                    }
+                });
+            }
+        }
+
+        // =========================================================
+        // 📤 ISAS CORE: HROMADNÝ IMPORT Z EXCELU
+        // =========================================================
+        function importFromExcel(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const zariadenieId = $('#sel-zariadenie').val();
+            if (!zariadenieId) {
+                showISASToast("Najprv vyberte zariadenie.", "⚠️", "warning");
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    
+                    // Prevod na JSON (hlavička je v prvom riadku)
+                    const json = XLSX.utils.sheet_to_json(worksheet, {header: 1});
+                    
+                    if (json.length <= 1) {
+                        showISASToast("Súbor je prázdny alebo nemá správny formát.", "⚠️", "warning");
+                        return;
+                    }
+
+                    // Preskočíme hlavičku (index 0) a spracujeme riadky
+                    let validRows = [];
+                    for (let i = 1; i < json.length; i++) {
+                        let row = json[i];
+                        if (row && row.length >= 2 && row[0] && row[1]) { // Musí mať aspoň Adresu a Názov
+                            validRows.push({
+                                zariadenie_id: zariadenieId,
+                                register_adresa: String(row[0]).trim(),
+                                nazov_signalu: String(row[1]).trim(),
+                                typ_signalu: (row[2] && String(row[2]).trim().toUpperCase() === 'DIGITAL') ? 'DIGITAL' : 'ANALOG',
+                                prava_pristupu: (row[3] && String(row[3]).trim().toUpperCase() === 'RW') ? 'RW' : 'R',
+                                merna_jednotka: row[4] ? String(row[4]).trim() : '',
+                                nasobic: (row[5] !== undefined && row[5] !== null && row[5] !== '' && !isNaN(parseFloat(String(row[5]).replace(',', '.')))) ? parseFloat(String(row[5]).replace(',', '.')) : 1.0
+                            });
+                        }
+                    }
+
+                    if (validRows.length === 0) {
+                        showISASToast("Nenašli sa žiadne platné dáta na import.", "⚠️", "warning");
+                        return;
+                    }
+
+                    window.showGlobalConfirmModal(
+                        "Potvrdenie importu",
+                        `Našlo sa ${validRows.length} platných registrov. Chcete ich importovať? Existujúce adresy budú prepísané.`,
+                        async () => {
+                            showISASToast("Prebieha import registrov...", "⏳", "warning");
+                            const bulkUrl = '{% url "evidencia:api_iot_save_registers_bulk" %}';
+                            const csrf = getCookie('csrftoken');
+
+                            try {
+                                const res = await fetch(bulkUrl, {
+                                    method: 'POST',
+                                    headers: { 
+                                        'Content-Type': 'application/json',
+                                        'X-CSRFToken': csrf
+                                    },
+                                    body: JSON.stringify({
+                                        zariadenie_id: zariadenieId,
+                                        registre: validRows
+                                    })
+                                });
+
+                                if (res.ok) {
+                                    const data = await res.json();
+                                    showISASToast(`Úspešne importovaných ${data.count || validRows.length} registrov.`, "✅", "success");
+                                    loadRegisters(zariadenieId);
+                                } else {
+                                    showISASToast("Hromadný import registrov zlyhal na serveri.", "❌", "error");
+                                }
+                            } catch (err) {
+                                console.error("Chyba pri hromadnom importe:", err);
+                                showISASToast("Chyba spojenia so serverom. Skontrolujte pripojenie.", "🔌", "error");
+                            }
+                        }
+                    );
+                } catch (err) {
+                    console.error("Chyba pri spracovaní Excelu:", err);
+                    showISASToast("Chyba pri spracovaní Excel súboru.", "❌", "error");
+                }
+            };
+            reader.readAsArrayBuffer(file);
+            event.target.value = '';
+        }
+
+        // 🛡️ ISAS CORE: Bezpečná funkcia pre spracovanie načítania Iframe (Skrytie preloaderu a widgetov)
+        window.handleIsasIframeLoad = function(iframe) {
+            // 1. Okamžité skrytie preloaderu
+            const preloader = document.getElementById('isas-iframe-preloader');
+            if (preloader) preloader.style.display = 'none';
+            
+            // 2. Vstreknutie CSS pre skrytie AI a poznámok vo vnútri modalu
+            try {
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                if (iframeDoc) {
+                    const style = iframeDoc.createElement('style');
+                    style.innerHTML = `
+                        #isas-ai-widget, .ai-assistant, #notes-widget, .notes-btn, 
+                        #isas-quick-note, .isas-quick-note,
+                        div[style*="position: fixed"][style*="bottom"] { 
+                            display: none !important; 
+                        }
+                    `;
+                    iframeDoc.head.appendChild(style);
+                }
+            } catch(e) {
+                console.warn('ISAS CORE: Nepodarilo sa skryť widgety v iframe (CORS)', e);
+            }
+        };
+
+        // =========================================================
+        // ⚙️ ISAS CORE: IFRAME MODAL PRE NASTAVENIA ZARIADENIA
+        // =========================================================
+        function openDeviceSettingsModal() {
+            const zariadenieId = $('#sel-zariadenie').val();
+            if (!zariadenieId) return;
+
+            const baseAdminChangePattern = "{% url 'admin:Evidencia_servisovanezariadenie_change' 0 %}";
+            const url = baseAdminChangePattern.replace('0', encodeURIComponent(zariadenieId)) + "?_popup=1";
+
+            window.ISASModalEngine({
+                maxWidth: "900px",
+                title: "⚙️ Náhľad karty zariadenia",
+                text: "",
+                customHtml: `
+                    <div id="isas-iframe-container" style="position: relative; width: 100%; height: 70vh;">
+                        <div id="isas-iframe-preloader" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(248, 250, 252, 0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10; border-radius: 8px;">
+                            <div class="isas-spinner" style="width: 45px; height: 45px; margin-bottom: 15px;"></div>
+                            <span style="font-weight: 800; color: #0f172a; font-size: 15px;">Načítavam formulár...</span>
+                        </div>
+                        <iframe src="${url}" onload="window.handleIsasIframeLoad(this)" style="width: 100%; height: 100%; border: none; border-radius: 8px; background: #ffffff; box-shadow: inset 0 2px 10px rgba(0,0,0,0.05);"></iframe>
+                    </div>
+                `,
+                buttons: [
+                    {
+                        id: "btn-close-reload-iframe",
+                        text: "🔄 Zavrieť a načítať zmeny",
+                        style: "background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; padding: 14px 20px; border-radius: 12px; font-weight: 800; font-size: 13px; text-transform: uppercase; cursor: pointer; flex: 1;",
+                        onClick: (e, m) => {
+                            m.close();
+                            location.reload();
+                        }
+                    }
+                ],
+                closeText: "Zavrieť (Bez obnovenia)",
+                showClose: true
+            });
+        }
+
+        // 🚀 ISAS CORE: Hromadné uloženie všetkých riadkov v tabuľke
+        async function saveAllRows() {
+            const $saveAllBtn = $('#btn-save-all');
+            if ($saveAllBtn.prop('disabled')) return;
+
+            const zariadenieId = $('#sel-zariadenie').val();
+            if (!zariadenieId) {
+                showISASToast("Najprv vyberte zariadenie.", "⚠️", "warning");
+                return;
+            }
+
+            const $rows = $('.isas-register-row');
+            if ($rows.length === 0) {
+                showISASToast("V tabuľke nie sú žiadne registre na uloženie.", "ℹ️", "warning");
+                return;
+            }
+
+            let invalidCount = 0;
+            let rowsToSave = [];
+
+            // 1. Validácia všetkých riadkov
+            $rows.each(function() {
+                const $row = $(this);
+                const adresa = $row.find('.reg-adresa').val()?.trim();
+                const nazov = $row.find('.reg-nazov').val()?.trim();
+
+                if (!adresa || !nazov) {
+                    invalidCount++;
+                    $row.css('background-color', '#fee2e2'); // Červené podfarbenie chybných
+                } else {
+                    $row.css('background-color', '');
+                    const rawId = $row.attr('id') ? $row.attr('id').replace('row-', '') : null;
+                    const rowId = (rawId && rawId !== 'undefined' && rawId !== 'null') ? rawId : null;
+                    rowsToSave.push({
+                        $row: $row,
+                        payload: {
+                            id: rowId,
+                            zariadenie_id: zariadenieId,
+                            register_adresa: adresa,
+                            nazov_signalu: nazov,
+                            typ_signalu: $row.find('.reg-typ').val(),
+                            prava_pristupu: $row.find('.reg-prava').val(),
+                            merna_jednotka: $row.find('.reg-jednotka').val() || '',
+                            nasobic: (Number($row.find('.reg-nasobic').val()) || 1.0)
+                        }
+                    });
+                }
+            });
+
+            if (invalidCount > 0) {
+                showISASToast(`Niektoré riadky (${invalidCount}) nemajú vyplnenú Adresu alebo Názov.`, "⚠️", "warning");
+                return;
+            }
+
+            // 2. Double-Submit Lock a indikátor
+            const origHtml = $saveAllBtn.html();
+            $saveAllBtn.prop('disabled', true).html('⏳ Ukladám...');
+            showISASToast("Prebieha hromadný zápis registrov...", "⏳", "warning");
+
+            let successCount = 0;
+            const url = `{% url 'evidencia:api_iot_save_register' %}`;
+            const csrf = getCookie('csrftoken');
+
+            // 3. Jediný atomický bulk HTTP request namiesto N+1 cyklu
+            const bulkUrl = `{% url 'evidencia:api_iot_save_registers_bulk' %}`;
+            try {
+                const res = await fetch(bulkUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrf
+                    },
+                    body: JSON.stringify({
+                        zariadenie_id: zariadenieId,
+                        registre: rowsToSave.map(r => r.payload)
+                    })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    successCount = data.count || 0;
+                    const savedMap = {};
+                    (data.saved || []).forEach(s => { savedMap[s.register_adresa] = s.id; });
+
+                    rowsToSave.forEach(item => {
+                        const $row = item.$row;
+                        const regAdresa = item.payload.register_adresa;
+                        const newId = savedMap[regAdresa] || item.payload.id;
+
+                        if (newId) {
+                            $row.attr('id', `row-${newId}`);
+                            $row.find('.btn-save').attr('onclick', `saveRow(this, '${newId}')`);
+
+                            const btnContainer = $row.find('.action-buttons');
+                            if (btnContainer.find('.btn-del').length === 0) {
+                                btnContainer.append(`<button class="btn-action btn-del" onclick="deleteRow('${newId}')" style="padding: 8px 12px; font-size: 12px;" title="Zmazať">🗑️</button>`);
+                            } else {
+                                btnContainer.find('.btn-del').attr('onclick', `deleteRow('${newId}')`);
+                            }
+                        }
+
+                        $row.css('transition', 'background 0.5s').css('background-color', '#dcfce7');
+                        setTimeout(() => { $row.css('background-color', ''); }, 1500);
+                    });
+                } else {
+                    showISASToast("Hromadný zápis registrov zlyhal na serveri.", "❌", "error");
+                }
+            } catch (err) {
+                console.error("Chyba pri hromadnom ukladaní:", err);
+                showISASToast("Chyba spojenia so serverom. Skontrolujte pripojenie.", "🔌", "error");
+            }
+
+            $saveAllBtn.prop('disabled', false).html(origHtml);
+
+            // 4. Záverečné oznámenie
+            showISASToast(`Úspešne sa uložilo ${successCount} z ${rowsToSave.length} registrov.`, "✅", "success");
+        }
+    </script>
+{% endblock %}

@@ -1,0 +1,158 @@
+{% extends "admin/zoznam_s_nacitavanim.html" %}
+{% load static %}
+
+{% block content_title %}
+{% csrf_token %}
+
+<div class="isas-title-bar">
+    <!-- LAVA STRANA: Notifikácie -->
+    <div class="title-left-group">
+        <!-- 🔔 TLAČIDLO NOTIFIKÁCIÍ -->
+        <button type="button" id="toggle-notifs-btn" class="enterprise-button {% if notifs_enabled %}notifs-on{% else %}notifs-off{% endif %}" aria-pressed="{% if notifs_enabled %}true{% else %}false{% endif %}" aria-label="Prepnúť notifikácie">
+            <div class="btn-icon-wrapper" id="notif-icon-wrapper">
+                <span id="notif-icon">{% if notifs_enabled %}🔔{% else %}🔕{% endif %}</span>
+            </div>
+            <span class="btn-text" id="notif-text">
+                {% if notifs_enabled %}NOTIFIKÁCIE: ZAPNUTÉ{% else %}NOTIFIKÁCIE: VYPNUTÉ{% endif %}
+            </span>
+            <div class="btn-shine"></div>
+        </button>
+    </div>
+
+    <!-- PRAVÁ STRANA: Tlačidlo Obratovosti -->
+    <div class="action-buttons-wrapper">
+        <a href="{% url 'admin:stockmovement_obratovost' %}" class="enterprise-button btn-obratovost">
+            <div class="btn-icon-wrapper obratovost-icon">
+                <span>📊</span>
+            </div>
+            <span class="btn-text">Obratovosť položiek</span>
+            <div class="btn-shine"></div> 
+        </a>
+    </div>
+</div>
+
+<style>
+    /* 🛡️ ISAS SYNC: Kompaktná horná lišta bez hluchého miesta */
+    .isas-title-bar { 
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center; 
+        margin-top: 0 !important;
+        margin-bottom: 12px !important;
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+        border-bottom: none !important;
+        gap: 12px;
+        opacity: 0 !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+    }
+
+    /* 🛑 Úplná likvidácia prázdneho Django object-tools kontajnera */
+    ul.object-tools:empty,
+    ul.object-tools {
+        display: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        height: 0 !important;
+    }
+
+    /* 🟢 Plynulé rozsvietenie lišty po dokončení preloaderu */
+    body.isas-ready .isas-title-bar {
+        opacity: 1 !important;
+        visibility: visible !important;
+        pointer-events: auto !important;
+        transition: opacity 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+    }
+    
+    /* Nová trieda pre zoskupenie nadpisu a tlačidla naľavo */
+    .title-left-group { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+    
+    .action-buttons-wrapper { display: flex; gap: 15px; align-items: center; margin-left: auto; flex-wrap: wrap; }
+
+    .enterprise-button {
+        position: relative; overflow: hidden; background: linear-gradient(145deg, #ffffff, #f8fafc) !important;
+        padding: 10px 22px 10px 12px !important; border: 1px solid #e2e8f0 !important; border-bottom: 2px solid #cbd5e1 !important; 
+        border-radius: 14px !important; text-decoration: none !important; font-weight: 800 !important; font-size: 13px !important;
+        text-transform: uppercase !important; letter-spacing: 0.5px !important; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05) !important;
+        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important; display: inline-flex !important; align-items: center !important; gap: 12px !important; cursor: pointer;
+    }
+
+    .btn-icon-wrapper { display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; font-size: 18px; transition: all 0.3s ease; }
+    .btn-shine { position: absolute; top: 0; left: -100%; width: 50%; height: 100%; background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.6) 100%); transform: skewX(-25deg); transition: all 0.7s ease; pointer-events: none !important; }
+    .enterprise-button:hover .btn-shine { left: 150%; }
+
+    /* --- FARBY PRE OBRATOVOSŤ (Modro-Zelená) --- */
+    .btn-obratovost { color: #1e293b !important; }
+    .obratovost-icon { background: #ecfdf5; color: #10b981; border: 2px solid #a7f3d0; }
+    .btn-obratovost:hover { border-color: #10b981 !important; color: #10b981 !important; transform: translateY(-3px) scale(1.02) !important; box-shadow: 0 15px 25px -10px rgba(16, 185, 129, 0.3) !important; }
+    .btn-obratovost:hover .obratovost-icon { background: #10b981; color: #ffffff; border-color: #059669; transform: scale(1.1) rotate(-10deg); }
+
+    /* --- FARBY PRE NOTIFIKÁCIE: ZAPNUTÉ (ZELENÁ) --- */
+    .notifs-on { color: #059669 !important; border-color: transparent !important; border-bottom-color: transparent !important; }
+    .notifs-on .btn-icon-wrapper { background: #10b981; color: white; border: 2px solid #059669; }
+    .notifs-on:hover, .notifs-on:active { border-color: #10b981 !important; border-bottom-color: #059669 !important; box-shadow: 0 15px 25px -10px rgba(16, 185, 129, 0.4) !important; transform: translateY(-3px) scale(1.02) !important; }
+
+    /* --- FARBY PRE NOTIFIKÁCIE: VYPNUTÉ (ČERVENÁ) --- */
+    .notifs-off { color: #b91c1c !important; border-color: transparent !important; border-bottom-color: transparent !important; }
+    .notifs-off .btn-icon-wrapper { background: #ef4444; color: white; border: 2px solid #b91c1c; }
+    .notifs-off:hover, .notifs-off:active { border-color: #ef4444 !important; border-bottom-color: #b91c1c !important; box-shadow: 0 15px 25px -10px rgba(239, 68, 68, 0.4) !important; transform: translateY(-3px) scale(1.02) !important; }
+
+    @media (max-width: 768px) {
+        .isas-title-bar { flex-direction: column !important; align-items: stretch !important; }
+        .action-buttons-wrapper { width: 100%; flex-direction: column; margin-left: 0; }
+        .enterprise-button { width: 100% !important; justify-content: center !important; }
+        .title-left-group { width: 100%; flex-direction: column; align-items: stretch !important; gap: 15px; }
+    }
+</style>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const notifBtn = document.getElementById("toggle-notifs-btn");
+
+    if (notifBtn) {
+        notifBtn.addEventListener("click", function() {
+            window.ISASAction({}, notifBtn, {
+                url: "{% url 'admin:toggle_notifications' %}",
+                method: "POST",
+                loadingText: `
+                    <div class="btn-icon-wrapper" id="notif-icon-wrapper">
+                        <span id="notif-icon">⏳</span>
+                    </div>
+                    <span class="btn-text" id="notif-text">SPRACOVÁVAM...</span>
+                    <div class="btn-shine"></div>
+                `,
+                reload: false,
+                onComplete: (data, btn, origHtml) => {
+                    btn.classList.remove('is-processing');
+                    btn.style.pointerEvents = "auto";
+
+                    if (data.status === 'error') {
+                        btn.innerHTML = origHtml;
+                        showISASToast(data.message || "Chyba pri zmene stavu notifikácií.", "❌", "error");
+                        return;
+                    }
+
+                    const isEnabled = data.is_enabled;
+                    btn.className = `enterprise-button ${isEnabled ? 'notifs-on' : 'notifs-off'}`;
+                    btn.setAttribute('aria-pressed', isEnabled ? 'true' : 'false');
+                    btn.innerHTML = `
+                        <div class="btn-icon-wrapper" id="notif-icon-wrapper">
+                            <span id="notif-icon">${isEnabled ? '🔔' : '🔕'}</span>
+                        </div>
+                        <span class="btn-text" id="notif-text">NOTIFIKÁCIE: ${isEnabled ? 'ZAPNUTÉ' : 'VYPNUTÉ'}</span>
+                        <div class="btn-shine"></div>
+                    `;
+
+                    showISASToast(
+                        data.message || (isEnabled ? "Notifikácie boli úspešne zapnuté." : "Notifikácie boli vypnuté."),
+                        isEnabled ? "🔔" : "🔕",
+                        isEnabled ? "success" : "warning"
+                    );
+                }
+            });
+        });
+    }
+});
+</script>
+{% endblock %}

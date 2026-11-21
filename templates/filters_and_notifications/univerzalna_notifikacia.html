@@ -1,0 +1,213 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html lang="sk" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta name="format-detection" content="telephone=no, date=no, address=no, email=no" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="color-scheme" content="light" />
+    <meta name="supported-color-schemes" content="light" />
+    <title>{{ payload.nadpis|default:'ISAS CORE Notifikácia'|striptags }}</title>
+    <style type="text/css">
+        :root {
+            color-scheme: light;
+            supported-color-schemes: light;
+        }
+        /* Ochrana pred prepisovaním farieb a podčiarkovaním v Apple Mail a Gmail */
+        a[x-apple-data-detectors] {
+            color: inherit !important;
+            text-decoration: none !important;
+            font-size: inherit !important;
+            font-family: inherit !important;
+            font-weight: inherit !important;
+            line-height: inherit !important;
+        }
+        u + #body a {
+            color: inherit !important;
+            text-decoration: none !important;
+            font-size: inherit !important;
+            font-family: inherit !important;
+            font-weight: inherit !important;
+            line-height: inherit !important;
+        }
+        u + #body a.btn-action {
+            color: #ffffff !important;
+            font-size: 15px !important;
+            font-weight: bold !important;
+            line-height: 18px !important;
+            text-decoration: none !important;
+        }
+    </style>
+    <!--[if gte mso 9]>
+    <xml>
+        <o:OfficeDocumentSettings>
+            <o:AllowPNG/>
+            <o:PixelsPerInch>96</o:PixelsPerInch>
+        </o:OfficeDocumentSettings>
+    </xml>
+    <style type="text/css">
+        body, table, td, h2, h3, p, a, div {
+            font-family: 'Segoe UI', Tahoma, Arial, sans-serif !important;
+        }
+    </style>
+    <![endif]-->
+</head>
+<body id="body" style="margin: 0; padding: 0; background-color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%;">
+<!--[if !mso]><!-->
+<div style="display: none; font-size: 1px; color: #f8fafc; line-height: 1px; max-height: 0px; max-width: 0px; opacity: 0; overflow: hidden; visibility: hidden; mso-hide: all;">
+    {{ payload.preheader|default:payload.nadpis|default:'Systémová notifikácia ISAS CORE'|striptags }}
+    &#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;
+</div>
+<!--<![endif]-->
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#f8fafc" style="background-color: #f8fafc; table-layout: fixed; width: 100%;">
+<tr>
+<td align="center" valign="top" style="padding: 20px 10px;">
+<!--[if (gte mso 9)|(IE)]>
+<table role="presentation" width="600" align="center" cellspacing="0" cellpadding="0" border="0">
+<tr>
+<td width="600" valign="top">
+<![endif]-->
+<table role="presentation" width="100%" align="center" cellspacing="0" cellpadding="0" border="0" bgcolor="#ffffff" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; border-collapse: separate; border-spacing: 0; mso-table-lspace: 0pt; mso-table-rspace: 0pt;">
+    
+    <!-- Hlavička -->
+    <tr>
+        <td bgcolor="{{ payload.farba_temy|default:'#3b82f6' }}" style="background-color: {{ payload.farba_temy|default:'#3b82f6' }}; padding: 25px 20px; text-align: center; border-top-left-radius: 12px; border-top-right-radius: 12px;">
+            {% if payload.logo_url and payload.logo_url|lower|slice:':8' == 'https://' or payload.logo_url and payload.logo_url|lower|slice:':7' == 'http://' or payload.logo_url and payload.logo_url|lower|slice:':4' == 'cid:' %}
+                <!-- Outlook vyžaduje explicitný height, inak môže obrázok roztiahnuť -->
+                <img src="{{ payload.logo_url }}" alt="{{ payload.hlavicka_text|default:payload.nadpis|default:'Logo'|striptags }}" height="55" style="height: 55px; max-height: 55px; width: auto; max-width: 100%; margin-bottom: 10px; display: inline-block; border: 0; outline: none; text-decoration: none; -ms-interpolation-mode: bicubic;">
+            {% else %}
+                <h2 style="color: #ffffff; margin: 0; font-size: 22px; line-height: 28px; mso-line-height-rule: exactly; text-transform: uppercase; letter-spacing: 1.5px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">{{ payload.hlavicka_text|default:'ISAS CORE'|striptags }}</h2>
+            {% endif %}
+            {% if payload.ikona or payload.nadpis %}
+            <p style="color: #f1f5f9; margin: 5px 0 0 0; font-size: 14px; font-weight: 500; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">{% if payload.ikona %}{{ payload.ikona|striptags }} {% endif %}{{ payload.nadpis|default:''|striptags }}</p>
+            {% endif %}
+        </td>
+    </tr>
+    
+    <!-- Telo -->
+    <tr>
+        <td style="padding: 30px 25px;">
+            
+            <!-- Tabuľka s položkami -->
+            {% if payload.polozky_tabulky %}
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-collapse: collapse; font-size: 15px; color: #334155; mso-table-lspace: 0pt; mso-table-rspace: 0pt;">
+                {% for kluc, hodnota in payload.polozky_tabulky %}
+                <tr>
+                    <td width="40%" valign="top" style="width: 40%; padding: 10px 10px 10px 0; border-bottom: 1px solid #f1f5f9; color: #64748b; vertical-align: top; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; word-break: break-word; overflow-wrap: break-word;">{% if kluc or kluc == 0 or kluc == False %}{{ kluc }}{% else %}—{% endif %}</td>
+                    <td width="60%" valign="top" style="width: 60%; padding: 10px 0 10px 10px; border-bottom: 1px solid #f1f5f9; text-align: right; font-weight: 600; color: #0f172a; vertical-align: top; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; word-break: break-word; overflow-wrap: break-word;">{% if hodnota or hodnota == 0 or hodnota == False %}{{ hodnota|striptags|linebreaksbr }}{% else %}—{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% endif %}
+            
+            <!-- Hlavný text (Detaily) -->
+            {% if payload.hlavny_text %}
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt;">
+                <tr>
+                    <!-- Padding-top nahrádza margin-top pre Outlook -->
+                    <td style="padding-top: 20px;">
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#f8fafc" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; border-collapse: collapse;">
+                            <tr>
+                                <td bgcolor="#f8fafc" style="padding: 15px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; word-break: break-word; overflow-wrap: break-word;">
+                                    <h3 style="color: #0f172a; margin: 0 0 10px 0; font-size: 14px; line-height: 18px; mso-line-height-rule: exactly; text-transform: uppercase;">📝 Detaily:</h3>
+                                    <div style="color: #475569; font-size: 14px; line-height: 1.6; word-break: break-word; overflow-wrap: break-word;">
+                                        {{ payload.hlavny_text|safe|linebreaksbr }}
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+            {% endif %}
+
+            <!-- KRITICKÉ Varovanie (Červené) -->
+            {% if payload.upozornenie_cervene %}
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt;">
+                <tr>
+                    <td style="padding-top: 20px;">
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#fef2f2" style="background-color: #fef2f2; border-collapse: collapse;">
+                            <tr>
+                                <td bgcolor="#fef2f2" style="border-left: 4px solid #ef4444; padding: 12px 15px; font-size: 13px; color: #991b1b; line-height: 1.5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; word-break: break-word; overflow-wrap: break-word;">
+                                    {{ payload.upozornenie_cervene|safe|linebreaksbr }}
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+            {% endif %}
+
+            <!-- INFO Varovanie (Oranžové) -->
+            {% if payload.upozornenie_oranzove %}
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt;">
+                <tr>
+                    <td style="padding-top: 20px;">
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#fffbeb" style="background-color: #fffbeb; border-collapse: collapse;">
+                            <tr>
+                                <td bgcolor="#fffbeb" style="border-left: 4px solid #f59e0b; padding: 12px 15px; font-size: 13px; color: #b45309; line-height: 1.5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; word-break: break-word; overflow-wrap: break-word;">
+                                    {{ payload.upozornenie_oranzove|safe|linebreaksbr }}
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+            {% endif %}
+            
+            <!-- Tlačidlo s defenzívnou validáciou http/https schémy -->
+            {% if payload.tlacidlo and payload.tlacidlo.url and payload.tlacidlo.url|lower|slice:':8' == 'https://' or payload.tlacidlo and payload.tlacidlo.url and payload.tlacidlo.url|lower|slice:':7' == 'http://' %}
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt;">
+                <tr>
+                    <td align="center" style="padding-top: 25px; padding-bottom: 5px;">
+                        <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                            <tr>
+                                <td align="center" bgcolor="{{ payload.farba_temy|default:'#3b82f6' }}" style="border-radius: 6px; background-color: {{ payload.farba_temy|default:'#3b82f6' }}; mso-padding-alt: 12px 28px;">
+                                    <a href="{{ payload.tlacidlo.url }}" target="_blank" rel="noopener noreferrer" class="btn-action" style="display: inline-block; padding: 12px 28px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 15px; color: #ffffff; text-decoration: none; font-weight: bold; -webkit-text-size-adjust: none; mso-line-height-rule: exactly; line-height: 18px; white-space: nowrap;">
+                                        <span style="color: #ffffff !important; text-decoration: none;">{{ payload.tlacidlo.text|default:'Zobraziť detail'|striptags }}</span>
+                                    </a>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+            {% endif %}
+            
+            <!-- AI Poznámka -->
+            {% if payload.ai_poznamka %}
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt;">
+                <tr>
+                    <td style="padding-top: 20px;">
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#f8fafc" style="background-color: #f8fafc; border-collapse: collapse;">
+                            <tr>
+                                <td bgcolor="#f8fafc" style="border-left: 4px solid {{ payload.farba_temy|default:'#3b82f6' }}; padding: 15px; font-size: 13px; color: #475569; font-style: italic; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; word-break: break-word; overflow-wrap: break-word;">
+                                    🤖 {{ payload.ai_poznamka|linebreaksbr }}
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+            {% endif %}
+            
+        </td>
+    </tr>
+    
+    <!-- Pätička -->
+    <tr>
+        <td bgcolor="#f1f5f9" style="background-color: #f1f5f9; padding: 15px 20px; text-align: center; border-top: 1px solid #e2e8f0; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;">
+            <p style="margin: 0; color: #64748b; font-size: 12px; font-weight: 600; letter-spacing: 1px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">{{ payload.paticka_text|default:'ISAS AI'|striptags }}</p>
+        </td>
+    </tr>
+</table>
+<!--[if (gte mso 9)|(IE)]>
+</td>
+</tr>
+</table>
+<![endif]-->
+</td>
+</tr>
+</table>
+</body>
+</html>

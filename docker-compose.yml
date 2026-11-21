@@ -1,0 +1,290 @@
+services:
+  db:
+    image: postgres:18
+    container_name: isas_db_container
+    restart: always
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    environment:
+      - POSTGRES_DB=isas_databaza
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${DB_PASS}
+      - TZ=Europe/Bratislava
+    ports:
+      - "127.0.0.1:5433:5432"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d isas_databaza"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build: .
+    container_name: isas_web_app
+    restart: always
+    init: true # 🛡️ OCHRANA PRED ZOMBIE PROCESMI V GUNICORNE
+    command: sh -c "python manage.py migrate && gunicorn ISASaplikacia.wsgi:application --bind 0.0.0.0:8000 --workers 4 --threads 2 --timeout 60 --max-requests 1000 --max-requests-jitter 100"
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - media_data:/app/media
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DJANGO_SETTINGS_MODULE=ISASaplikacia.settings
+      - DB_NAME=isas_databaza
+      - DB_USER=postgres
+      - DB_HOST=db
+      - DB_PORT=5432
+      - TZ=Europe/Bratislava
+    # 🚀 OCHRANA RAM PRE PLAYWRIGHT (Zabraňuje pádom pri PDF)
+    shm_size: '1gb'
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "3"
+
+  bot:
+    build: .
+    container_name: isas_telegram_bot
+    restart: always
+    command: python telegram_bot.py
+    volumes:
+      - media_data:/app/media
+      - bot_data:/app/data # 🛡️ ISAS CORE: Trvalé namontovanie priečinka pre pickle pamäť bota
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DB_NAME=isas_databaza
+      - DB_USER=postgres
+      - DB_HOST=db
+      - DB_PORT=5432
+      - TZ=Europe/Bratislava
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  discord_bot:
+    build: .
+    container_name: isas_discord_bot
+    restart: always
+    command: python discord_bot.py
+    volumes:
+      - media_data:/app/media
+      - bot_data:/app/data
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DB_NAME=isas_databaza
+      - DB_USER=postgres
+      - DB_HOST=db
+      - DB_PORT=5432
+      - TZ=Europe/Bratislava
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  redis:
+    image: redis:7-alpine
+    container_name: isas_redis
+    restart: always
+    # volatile-lru bezpečne uvoľňuje vypršané cache a Celery result kľúče pri 512MB RAM, pričom nikdy nezmaže úlohy z frontov (nemajú TTL)
+    command: redis-server --save 300 10 --save 60 100 --loglevel warning --maxmemory 512mb --maxmemory-policy volatile-lru
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_data:/data
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ⚡ DEDIKOVANÝ WORKER PRE BLESKOVÉ IOT A ALARMY (Nezastaviteľný ťažkými úlohami)
+  celery_worker_iot:
+    build: .
+    container_name: isas_celery_worker_iot
+    restart: always
+    init: true # 🛡️ Ochrana pred zombie procesmi z preforku
+    command: celery -A ISASaplikacia worker -l info -Q iot -c 4 --max-tasks-per-child=1000 --time-limit=60 --soft-time-limit=45 -O fair -n worker_iot@%h
+    volumes:
+      - media_data:/app/media
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DB_NAME=isas_databaza
+      - DB_USER=postgres
+      - DB_HOST=db
+      - DB_PORT=5432
+      - TZ=Europe/Bratislava
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "3"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # 🐘 DEDIKOVANÝ WORKER PRE ŤAŽKÉ DÁTOVÉ ÚLOHY, ZÁLOHY A PDF (Izolácia OOM rizika)
+  celery_worker_heavy:
+    build: .
+    container_name: isas_celery_worker_heavy
+    restart: always
+    init: true # 🛡️ OOM OCHRANA: Čistí zombie (defunct) procesy po Playwright Chromium prehliadači
+    # Zvýšenie limitu na 800 MB na child proces kvôli Playwright Chromium a zálohám
+    command: celery -A ISASaplikacia worker -l info -Q heavy -c 2 --max-tasks-per-child=20 -O fair -n worker_heavy@%h
+    volumes:
+      - media_data:/app/media
+      - backup_data:/app/isas_backups
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+      - CELERY_MAX_MEMORY_PER_CHILD=800000
+      - DB_NAME=isas_databaza
+      - DB_USER=postgres
+      - DB_HOST=db
+      - DB_PORT=5432
+      - PGHOST=db
+      - PGPORT=5432
+      - PGUSER=postgres
+      - PGDATABASE=isas_databaza
+      - PGPASSWORD=${DB_PASS} # 🛡️ KRITICKÉ: Umožní pg_dump v PostgreSQL 18 vykonať zálohu bez heslového promptu
+      - TZ=Europe/Bratislava
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "3"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    shm_size: '1gb'
+
+  # 📨 DEDIKOVANÝ WORKER PRE NOTIFIKÁCIE A ŠTANDARDNÉ ÚLOHY
+  celery_worker_default:
+    build: .
+    container_name: isas_celery_worker_default
+    restart: always
+    init: true # 🛡️ Ochrana pred zombie procesmi z preforku
+    command: celery -A ISASaplikacia worker -l info -Q notifications,default -c 2 --max-tasks-per-child=100 --time-limit=300 --soft-time-limit=270 -O fair -n worker_default@%h
+    volumes:
+      - media_data:/app/media
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DB_NAME=isas_databaza
+      - DB_USER=postgres
+      - DB_HOST=db
+      - DB_PORT=5432
+      - TZ=Europe/Bratislava
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "3"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  celery_beat:
+    build: .
+    container_name: isas_celery_beat
+    restart: always
+    init: true
+    command: sh -c "rm -f /tmp/celerybeat.pid && exec celery -A ISASaplikacia beat -l info --pidfile=/tmp/celerybeat.pid --schedule=/app/data/celerybeat-schedule"
+    volumes:
+      - media_data:/app/media
+      - bot_data:/app/data
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DB_NAME=isas_databaza
+      - DB_USER=postgres
+      - DB_HOST=db
+      - DB_PORT=5432
+      - TZ=Europe/Bratislava
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  flower:
+    image: mher/flower:latest
+    container_name: isas_flower
+    restart: always
+    env_file:
+      - .env
+    # 🛡️ OCHRANA PRED CRASHLOOP: Vynulovanie entrypointu zamedzí duplikácii 'celery flower' príkazu
+    entrypoint: []
+    command: celery flower --broker=redis://redis:6379/0 --port=5555 --basic_auth=${FLOWER_USER}:${FLOWER_PASSWORD} --max_tasks=5000
+    ports:
+      - "127.0.0.1:5555:5555"
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+      celery_worker_default:
+        condition: service_started
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  postgres_data:
+  media_data:
+  redis_data:      
+  bot_data: # 🛡️ ISAS CORE: Vyhradený produkčný zväzok pre trvalú pamäť bota
+  backup_data: # 🛡️ ISAS CORE: Vyhradený trvalý zväzok pre denné automatické zálohy DB a Media

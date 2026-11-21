@@ -1,0 +1,2061 @@
+{% extends 'web/base.html' %}
+
+{% block og_url %}{{ request.scheme }}://{{ request.get_host }}{% url 'webbuilder:home' %}{% endblock %}
+
+{% block extra_head %}
+    {{ block.super }}
+    <link rel="canonical" href="{{ request.scheme }}://{{ request.get_host }}{% url 'webbuilder:home' %}">
+{% endblock %}
+
+{% block extra_css %}
+    /* IoT Demo CSS */
+    .gauge-card { text-align: center; position: relative; background: rgba(255, 255, 255, 0.8); border: 1px solid #ffffff; border-radius: 24px; padding: 20px 10px; box-shadow: 0 10px 30px rgba(30, 41, 59, 0.04), inset 0 2px 5px rgba(255,255,255,1); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease; }
+    .gauge-card:hover { transform: translateY(-5px); box-shadow: 0 20px 40px rgba(30, 41, 59, 0.08), inset 0 2px 5px rgba(255,255,255,1); }
+    .gauge-value-overlay { position: absolute; bottom: 35px; left: 0; width: 100%; text-align: center; }
+    .gauge-value-overlay .val { font-size: 34px; font-weight: 900; line-height: 1; letter-spacing: -1px; background: linear-gradient(135deg, #0f172a 0%, #475569 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .gauge-value-overlay .unit { font-size: 12px; color: #64748b; font-weight: 800; text-transform: uppercase; margin-top: 2px; }
+    .gauge-title { font-size: 12px; font-weight: 800; color: #475569; margin-top: 15px; text-transform: uppercase; letter-spacing: 1px; }
+    .digital-badge { padding: 10px; border-radius: 12px; text-align: center; font-size: 12px; font-weight: bold; border: 1px solid rgba(0,0,0,0.05); }
+    .digital-badge.on { background: #dcfce7; color: #166534; }
+    .digital-badge.off { background: #f1f5f9; color: #475569; }
+{% endblock %}
+
+{% block content %}
+    <!-- 🟢 DYNAMICKÉ BLOKY Z DATABÁZY -->
+    {% for blok in bloky %}
+
+        <!-- 🚩 HERO BANNER -->
+        {% if blok.typ == 'HERO' %}
+        <section class="relative bg-gray-900 text-white py-32 px-6 text-center flex items-center justify-center min-h-[70vh]" 
+            {% if blok.obrazok and blok.obrazok.name %}style="background-image: url('{{ blok.obrazok.url }}'); background-size: cover; background-position: center;"{% endif %}>
+            <div class="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/80 backdrop-blur-[2px]"></div>
+            <div class="relative z-10 max-w-4xl mx-auto">
+                <h1 class="text-3xl sm:text-5xl md:text-7xl font-extrabold mb-6 leading-tight break-words">{{ blok.nadpis }}</h1>
+                <p class="text-xl md:text-2xl mb-10 text-gray-200">{{ blok.podnadpis }}</p>
+                <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+                    {% if blok.tlacidlo_text %}
+                    <a href="{% if has_booking %}#rezervacia{% else %}#kontakt{% endif %}" class="w-full sm:w-auto inline-block bg-brand hover-bg-brand text-white font-bold text-lg py-4 px-10 rounded-xl transition duration-300 shadow-2xl transform hover:-translate-y-1">
+                        {{ blok.tlacidlo_text }}
+                    </a>
+                    {% endif %}
+                    {% if sluzby %}
+                    <a href="#sluzby" class="w-full sm:w-auto inline-block bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold text-lg py-4 px-8 rounded-xl transition duration-300 backdrop-blur-sm">
+                        Naše služby &darr;
+                    </a>
+                    {% endif %}
+                </div>
+                {% if stat_zakaznici or nps_pocet > 0 or stat_servisy or stat_zariadenia or pocet_servisnych_stredisk %}
+                <div class="mt-12 pt-8 border-t border-white/10 flex flex-wrap items-center justify-center gap-6 sm:gap-10 text-xs sm:text-sm text-gray-300">
+                    {% if nps_pocet > 0 %}
+                    <div class="flex items-center gap-2">
+                        <span class="text-amber-400 font-extrabold text-base">★ {{ nps_priemer|floatformat:1 }}</span>
+                        <span class="text-gray-200 font-semibold">Overená spokojnosť ({{ nps_pocet }}+)</span>
+                    </div>
+                    {% endif %}
+                    {% if stat_zakaznici %}
+                    <div class="flex items-center gap-1.5">
+                        <strong class="text-white font-extrabold">{{ stat_zakaznici }}+</strong>
+                        <span>B2B klientov</span>
+                    </div>
+                    {% endif %}
+                    {% if stat_zariadenia %}
+                    <div class="flex items-center gap-1.5">
+                        <strong class="text-white font-extrabold">{{ stat_zariadenia }}+</strong>
+                        <span>{{ industry_terms.stat_zariadenia_label|default:"Zariadení v správe" }}</span>
+                    </div>
+                    {% endif %}
+                    {% if stat_servisy %}
+                    <div class="flex items-center gap-1.5">
+                        <strong class="text-white font-extrabold">{{ stat_servisy }}+</strong>
+                        <span>Zásahov</span>
+                    </div>
+                    {% endif %}
+                    {% if pocet_servisnych_stredisk and pocet_servisnych_stredisk > 0 %}
+                    <div class="flex items-center gap-1.5" title="Pobočky a servisné strediská">
+                        <strong class="text-white font-extrabold">{{ pocet_servisnych_stredisk }}</strong>
+                        <span>{% if pocet_servisnych_stredisk == 1 %}stredisko{% elif pocet_servisnych_stredisk < 5 %}strediská{% else %}stredísk{% endif %}</span>
+                    </div>
+                    {% endif %}
+                    {% if identita.predvolena_platnost_ponuk %}
+                    <div class="flex items-center gap-1.5" title="Písomná garancia platnosti cien v cenových ponukách">
+                        <span class="text-emerald-400 font-bold">✓</span>
+                        <span>Garancia cien {{ identita.predvolena_platnost_ponuk }} dní</span>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </section>
+        {% endif %}
+
+        <!-- ℹ️ O NÁS -->
+        {% if blok.typ == 'ABOUT' %}
+        <section class="py-20 px-6 bg-white">
+            <div class="max-w-5xl mx-auto text-center">
+                <h2 class="text-4xl font-bold mb-6 text-gray-900">{{ blok.nadpis }}</h2>
+                <p class="text-lg text-gray-600 leading-relaxed mb-10">{{ blok.podnadpis|linebreaksbr }}</p>
+                
+                <!-- ⭐ ISAS NPS: Živé hodnotenie spokojnosti -->
+                {% if nps_pocet > 0 %}
+                <div class="flex justify-center mb-16">
+                    <div class="inline-flex flex-col sm:flex-row items-center gap-3 sm:gap-5 bg-amber-50 border border-amber-200 px-6 py-3 rounded-2xl sm:rounded-full shadow-sm transform hover:scale-105 transition duration-300">
+                        <div class="flex text-amber-400 text-2xl drop-shadow-sm">
+                            ★★★★★
+                        </div>
+                        <div class="text-gray-900 font-extrabold text-xl">
+                            {{ nps_priemer|floatformat:1 }} / 5.0
+                        </div>
+                        <div class="hidden sm:block w-px h-6 bg-amber-200"></div>
+                        <div class="text-amber-800 text-sm font-semibold">
+                            Priemerná spokojnosť z {{ nps_pocet }} hodnotených výjazdov
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="mb-16"></div>
+                {% endif %}
+                
+                <!-- 📊 Live Štatistiky z ERP (Social Proof) -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 border-t border-gray-100 pt-12">
+                    <div class="p-6">
+                        <div class="text-5xl font-extrabold text-brand mb-2">{{ stat_zakaznici }}+</div>
+                        <div class="text-gray-500 font-semibold uppercase tracking-wider text-sm">Spokojných B2B klientov</div>
+                    </div>
+                    <div class="p-6 border-y md:border-y-0 md:border-x border-gray-100">
+                        <div class="text-5xl font-extrabold text-brand mb-2">{{ stat_zariadenia }}</div>
+                        <div class="text-gray-500 font-semibold uppercase tracking-wider text-sm">{{ industry_terms.stat_zariadenia_label|default:"Servisovaných zariadení" }}</div>
+                    </div>
+                    <div class="p-6">
+                        <div class="text-5xl font-extrabold text-brand mb-2">{{ stat_servisy }}+</div>
+                        <div class="text-gray-500 font-semibold uppercase tracking-wider text-sm">Úspešných zásahov</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        {% endif %}
+
+        <!-- 🏷️ ZNAČKY (Ťahané z ERP) -->
+        {% if blok.typ == 'BRANDS' and znacky %}
+        <section class="py-16 bg-white px-6 border-y border-gray-100" id="znacky">
+            <div class="max-w-7xl mx-auto text-center">
+                <h2 class="text-3xl font-bold mb-12 text-gray-900">{{ blok.nadpis|default:"Značky, ktoré servisujeme" }}</h2>
+                <div class="flex flex-wrap justify-center items-center gap-6 md:gap-8">
+                    {% for znacka in znacky %}
+                        {% if znacka.logo_na_webe %}
+                            <a href="#kontakt" onclick="selectBrandInForm('{{ znacka.id }}')" class="bg-gray-50 hover:bg-white border border-gray-100 hover:border-brand/40 rounded-2xl p-6 flex flex-col items-center justify-center w-44 h-28 shadow-sm hover:shadow-md transition duration-300 group relative cursor-pointer" title="Dopytovať servis a podporu pre značku {{ znacka.nazov_vyrobcu }}">
+                                {% if znacka.typ_vyroby == 'O' %}
+                                <span class="absolute top-2 right-2 bg-blue-100 text-blue-800 text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider" title="Certifikovaný OEM partner a dodávateľ">OEM</span>
+                                {% endif %}
+                                <img src="{{ MEDIA_URL }}{{ znacka.logo_na_webe }}" alt="{{ znacka.nazov_vyrobcu }}" loading="lazy" class="max-h-12 max-w-full object-contain grayscale group-hover:grayscale-0 transition duration-300 opacity-60 group-hover:opacity-100">
+                            </a>
+                        {% else %}
+                            <a href="#kontakt" onclick="selectBrandInForm('{{ znacka.id }}')" class="bg-gray-50 hover:bg-white border border-gray-100 hover:border-brand/40 rounded-2xl p-6 flex flex-col items-center justify-center w-44 h-28 shadow-sm hover:shadow-md transition duration-300 relative group cursor-pointer" title="Dopytovať servis a podporu pre značku {{ znacka.nazov_vyrobcu }}">
+                                {% if znacka.typ_vyroby == 'O' %}
+                                <span class="absolute top-2 right-2 bg-blue-100 text-blue-800 text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider" title="Certifikovaný OEM partner a dodávateľ">OEM</span>
+                                {% endif %}
+                                <span class="text-lg font-extrabold text-gray-400 group-hover:text-brand uppercase tracking-widest text-center transition-colors">{{ znacka.nazov_vyrobcu }}</span>
+                            </a>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+        {% endif %}
+
+        <!-- 🛠️ KATALÓG SLUŽIEB (Ťahané z ERP) -->
+        {% if blok.typ == 'SERVICES' and sluzby %}
+        <section class="py-20 bg-gray-100 px-6" id="sluzby">
+            <div class="max-w-7xl mx-auto">
+                <h2 class="text-4xl font-bold text-center mb-4 text-gray-900">{{ blok.nadpis|default:"Naše služby" }}</h2>
+                <p class="text-center text-gray-500 mb-16 max-w-2xl mx-auto">{{ blok.podnadpis }}</p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    {% for sluzba in sluzby|slice:":3" %}
+                    <div class="bg-white rounded-2xl shadow-sm hover:shadow-xl p-8 border-t-4 border-brand transition duration-300 transform hover:-translate-y-2 flex flex-col">
+                        <div class="flex items-center justify-between gap-2 mb-3">
+                            {% if sluzba.priorita == 'VYSOKA' %}
+                                <span class="bg-red-50 text-red-700 border border-red-200 text-xs font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">🚨 Pohotovosť / Havária</span>
+                            {% else %}
+                                <span class="bg-gray-100 text-gray-600 text-xs font-semibold px-2.5 py-0.5 rounded-full">Štandardný servis</span>
+                            {% endif %}
+                            {% if sluzba.zaruka_mesiace and sluzba.zaruka_mesiace > 0 %}
+                                <span class="bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-extrabold px-2 py-0.5 rounded-lg" title="Zmluvná záruka na prácu">🛡️ {{ sluzba.zaruka_mesiace }} mes. záruka</span>
+                            {% endif %}
+                        </div>
+                        {% if sluzba.hodnotenie_priemer_zaokruhlene %}
+                        <div class="flex items-center gap-2 mb-2 text-xs font-semibold text-amber-800">
+                            <span class="text-amber-500 font-bold">★ {{ sluzba.hodnotenie_priemer_zaokruhlene }}</span>
+                            {% if sluzba.hodnotenie_pocet %}<span class="text-gray-400">({{ sluzba.hodnotenie_pocet }} hodnotení)</span>{% endif %}
+                            {% if sluzba.pocet_realizacii %}<span class="text-gray-300">•</span><span class="text-gray-500">{{ sluzba.pocet_realizacii }}+ realizácií</span>{% endif %}
+                        </div>
+                        {% endif %}
+                        <h3 class="text-2xl font-bold mb-2 text-gray-800">{{ sluzba.nazov }}</h3>
+                        <p class="text-gray-600 mb-6 line-clamp-3 text-sm leading-relaxed" title="{{ sluzba.popis_na_webe|default:'Profesionálny servisný úkon.' }}">{{ sluzba.popis_na_webe|default:"Profesionálny servisný úkon." }}</p>
+                        
+                        <div class="mt-auto pt-4 border-t border-gray-100">
+                            {% if sluzba.je_fakturovatelna %}
+                                <div class="flex items-center justify-between">
+                                    <span class="text-xs text-gray-400 uppercase tracking-wider font-bold">Cena od</span>
+                                    {% if is_b2b and sluzba.povodna_cena %}
+                                    <span class="text-[10px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">B2B Sadzba (-{{ b2b_zlava }}%)</span>
+                                    {% endif %}
+                                </div>
+                                <div class="text-brand font-extrabold text-2xl mt-0.5">
+                                    {% if sluzba.povodna_cena %}
+                                        <span class="text-xs text-gray-400 line-through font-normal block">{{ sluzba.povodna_cena }} {{ mena }}</span>
+                                    {% endif %}
+                                    {% if sluzba.sposob_uctovania == 'HODINA' %}
+                                        {% if sluzba.cena_predaj and sluzba.cena_predaj > 0 %}{{ sluzba.cena_predaj }} {{ mena }} <span class="text-sm text-gray-500 font-medium">/ hod</span> <span class="text-xs text-gray-400 font-normal">bez DPH</span>{% else %}Na vyžiadanie{% endif %}
+                                    {% else %}
+                                        {% if sluzba.cena_predaj and sluzba.cena_predaj > 0 %}{{ sluzba.cena_predaj }} {{ mena }} <span class="text-xs text-gray-400 font-normal">bez DPH</span>{% else %}Na vyžiadanie{% endif %}
+                                    {% endif %}
+                                </div>
+                                {% if sluzba.sposob_uctovania == 'HODINA' and sluzba.normohodiny and sluzba.normohodiny > 0 %}
+                                <div class="text-[11px] font-semibold text-gray-500 mt-1 flex items-center gap-1">
+                                    <span>⏱️ Rozsah: cca {{ sluzba.normohodiny }} h</span>
+                                </div>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-xs text-emerald-600 uppercase tracking-wider font-bold">Služba v cene</span>
+                                <div class="text-emerald-700 font-extrabold text-xl mt-0.5">
+                                    Bezplatne / V rámci servisu
+                                </div>
+                            {% endif %}
+                            
+                            <div class="mt-4 grid grid-cols-2 gap-2">
+                                <a href="{% url 'webbuilder:sluzba_detail' sluzba.slug %}{% if is_preview %}?preview=ai_draft{% endif %}" class="w-full text-center bg-gray-50 hover:bg-gray-100 text-gray-900 font-bold py-2.5 rounded-xl transition duration-300 text-sm flex items-center justify-center">Detail</a>
+                                {% if sluzba.priorita == 'VYSOKA' and identita.telefon %}
+                                <a href="tel:{{ identita.telefon }}" class="w-full text-center bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 rounded-xl transition duration-300 text-sm flex items-center justify-center gap-1 shadow-sm" title="Okamžité telefonické nahlásenie havárie na pohotovostný dispečing">
+                                    <span>📞</span> Pohotovosť
+                                </a>
+                                {% else %}
+                                <button type="button" data-add-to-cart data-typ="SLUZBA" data-nazov="{{ sluzba.nazov }}" data-detail="{% if not sluzba.je_fakturovatelna %}V cene{% elif sluzba.sposob_uctovania == 'HODINA' %}{% if sluzba.cena_predaj and sluzba.cena_predaj > 0 %}{{ sluzba.cena_predaj }} {{ mena }} / hod{% else %}Na vyžiadanie{% endif %}{% else %}{% if sluzba.cena_predaj and sluzba.cena_predaj > 0 %}{{ sluzba.cena_predaj }} {{ mena }}{% else %}Na vyžiadanie{% endif %}{% endif %} ({{ sluzba.get_sposob_uctovania_display }}){% if sluzba.normohodiny %} | {{ sluzba.normohodiny }} h{% endif %}{% if sluzba.zaruka_mesiace %} | Záruka {{ sluzba.zaruka_mesiace }}m{% endif %}" data-db-id="{{ sluzba.pk }}" data-normohodiny="{{ sluzba.normohodiny|default:'' }}" data-sposob-uctovania="{{ sluzba.sposob_uctovania }}" data-orientacna-cena="{% if sluzba.sposob_uctovania == 'FIX' and sluzba.cena_predaj and sluzba.cena_predaj > 0 %}{{ sluzba.cena_predaj }}{% else %}{{ sluzba.orientacna_cena_celkom|default:'' }}{% endif %}" data-zaruka="{{ sluzba.zaruka_mesiace|default:'' }}" class="w-full text-center {% if sluzba.priorita == 'VYSOKA' %}bg-red-50 hover:bg-red-600 hover:text-white text-red-700 border border-red-200{% else %}bg-brand/10 hover:bg-brand hover:text-white text-brand{% endif %} font-bold py-2.5 rounded-xl transition duration-300 text-sm flex items-center justify-center gap-1 cursor-pointer">
+                                    <span>{% if sluzba.priorita == 'VYSOKA' %}🚨{% else %}+{% endif %}</span> {% if sluzba.priorita == 'VYSOKA' %}Urgent dopyt{% else %}Dopyt{% endif %}
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="text-center mt-12">
+                    <a href="{% url 'webbuilder:sluzby_list' %}" class="inline-block bg-white border-2 border-brand text-brand hover:bg-brand hover:text-white font-bold py-3 px-8 rounded-xl transition duration-300">Zobraziť všetky služby</a>
+                </div>
+            </div>
+        </section>
+        {% endif %}
+
+        <!-- 🛒 KATALÓG DIELOV (E-commerce Lite z ERP) -->
+        {% if blok.typ == 'PARTS' and eshop_diely %}
+        <section class="py-20 bg-white px-6 border-t border-gray-100" id="eshop">
+            <div class="max-w-7xl mx-auto">
+                <h2 class="text-4xl font-bold text-center mb-4 text-gray-900">{{ blok.nadpis|default:industry_terms.nav_katalog_label|default:"Katalóg produktov" }}</h2>
+                <p class="text-center text-gray-500 mb-8 max-w-2xl mx-auto">{{ blok.podnadpis }}</p>
+                
+                <!-- 🛡️ OEM GARANCIA PÔVODU -->
+                {% if has_oem_parts %}
+                <div class="max-w-3xl mx-auto mb-12 p-4 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left shadow-sm">
+                    <div class="flex items-center gap-3">
+                        <span class="text-3xl">💎</span>
+                        <div>
+                            <p class="text-xs font-black uppercase tracking-wider text-slate-800">100% Certifikovaný pôvod komponentov</p>
+                            <p class="text-[11px] text-slate-600">Dodávame výhradne overené originálne OEM komponenty a autorizované položky s plnou zárukou výrobcu.</p>
+                        </div>
+                    </div>
+                    <span class="bg-blue-50 text-blue-800 border border-blue-200 text-xs font-extrabold px-3 py-1 rounded-xl whitespace-nowrap">✓ Garantovaný pôvod</span>
+                </div>
+                {% endif %}
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                    {% for diel in eshop_diely %}
+                    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-xl transition duration-300 flex flex-col overflow-hidden group">
+                        <!-- Obrázok -->
+                        <div class="h-48 bg-gray-50 relative flex items-center justify-center border-b border-gray-100 overflow-hidden">
+                            {% if diel.obrazok_url %}
+                                <img src="{{ diel.obrazok_url }}" alt="{{ diel.nazov|default:diel.obchodny_nazov|default:diel.seriove_cislo|default:industry_terms.polozka_fallback_nazov|default:'Položka'|striptags }}" loading="lazy" class="w-full h-full object-contain p-2 group-hover:scale-105 transition duration-500">
+                            {% else %}
+                                <span class="text-5xl opacity-20">⚙️</span>
+                            {% endif %}
+                            
+                            <!-- Badges: OEM & Skladová dostupnosť -->
+                            <div class="absolute top-3 left-3 right-3 flex items-center justify-between gap-1 pointer-events-none">
+                                <div>
+                                    {% if diel.typ_vyroby == 'O' %}
+                                    <span class="bg-blue-600 text-white text-[10px] font-black px-2.5 py-1 rounded-full shadow-md uppercase tracking-wider">💎 OEM Originál</span>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    {% if diel.skladom %}
+                                    <span class="bg-emerald-100 text-emerald-800 text-xs font-extrabold px-3 py-1 rounded-full shadow-sm border border-emerald-200">
+                                        Skladom{% if diel.pocet_na_sklade and diel.pocet_na_sklade > 0 %} ({{ diel.pocet_na_sklade }}{% if diel.merna_jednotka %} {{ diel.merna_jednotka }}{% endif %}){% endif %}
+                                    </span>
+                                    {% else %}
+                                    <span class="bg-amber-100 text-amber-700 text-xs font-extrabold px-3 py-1 rounded-full shadow-sm border border-amber-200">Na objednávku</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Obsah -->
+                        <div class="p-6 flex flex-col flex-grow">
+                            <div class="text-xs text-gray-400 font-mono mb-1">SKU: {{ diel.katalogove_cislo|default:"N/A" }}</div>
+                            <h3 class="text-lg font-bold text-gray-900 mb-2 line-clamp-2" title="{{ diel.nazov|default:diel.obchodny_nazov|default:diel.seriove_cislo|default:industry_terms.polozka_fallback_nazov|default:'Položka'|striptags }}">{{ diel.nazov|default:diel.obchodny_nazov|default:diel.seriove_cislo|default:industry_terms.polozka_fallback_nazov|default:"Položka"|striptags }}</h3>
+                            <p class="text-sm text-gray-500 mb-6 line-clamp-3 flex-grow">{{ diel.popis_na_webe|striptags|default:diel.popis|default:"Popis nie je k dispozícii."|truncatewords:28 }}</p>
+                            
+                            <!-- Cena a Tlačidlo -->
+                            <div class="mt-auto">
+                                <div class="flex items-end justify-between mb-4">
+                                    <div>
+                                        {% if diel.cena_bez_dph %}
+                                            {% if diel.povodna_cena_bez_dph %}
+                                                <div class="text-xs text-gray-400 line-through">{{ diel.povodna_cena_bez_dph }} {{ mena }}</div>
+                                                <div class="text-2xl font-extrabold text-emerald-600">{{ diel.cena_bez_dph }} {{ mena }}</div>
+                                            {% else %}
+                                                <div class="text-2xl font-extrabold text-brand">{{ diel.cena_bez_dph }} {{ mena }}</div>
+                                            {% endif %}
+                                            <div class="text-xs text-gray-400 font-medium">bez DPH{% if diel.merna_jednotka %} / {{ diel.merna_jednotka }}{% endif %}</div>
+                                        {% else %}
+                                            <div class="text-lg font-bold text-brand">Na vyžiadanie</div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="text-right">
+                                        {% if diel.cena_s_dph %}
+                                        <div class="text-sm font-bold text-gray-600">{{ diel.cena_s_dph }} {{ mena }}</div>
+                                        <div class="text-xs text-gray-400">s DPH</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <a href="{% url 'webbuilder:eshop_detail' diel.slug %}{% if is_preview %}?preview=ai_draft{% endif %}" class="w-full mb-2 bg-white border-2 border-gray-900 text-gray-900 hover:bg-gray-900 hover:text-white font-bold py-2 rounded-xl transition duration-300 flex justify-center items-center text-sm">Detail položky</a>
+                                <button type="button" data-add-to-cart data-typ="DIEL" data-nazov="{{ diel.nazov|default:diel.obchodny_nazov|default:diel.seriove_cislo|default:industry_terms.polozka_fallback_nazov|default:'Položka'|striptags }}" data-detail="SKU: {{ diel.katalogove_cislo|default:diel.seriove_cislo|default:'N/A' }}" {% if diel.cena_bez_dph %}data-orientacna-cena="{{ diel.cena_bez_dph }}"{% endif %} class="w-full {% if is_b2b %}bg-emerald-600 hover:bg-emerald-700{% else %}bg-gray-900 hover:bg-brand{% endif %} text-white font-bold py-3 rounded-xl transition duration-300 flex justify-center items-center gap-2">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                                    Pridať do dopytu
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="text-center mt-12">
+                    <a href="{% url 'webbuilder:eshop_list' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="inline-block bg-white border-2 border-brand text-brand hover:bg-brand hover:text-white font-bold py-3 px-8 rounded-xl transition duration-300">Zobraziť celý katalóg</a>
+                </div>
+            </div>
+        </section>
+        {% endif %}
+
+        <!-- 🚜 POŽIČOVŇA STROJOV (Agregované z ERP) -->
+        {% if blok.typ == 'RENTAL' and rental_flotila %}
+        <section class="py-20 bg-gray-50 px-6 border-t border-gray-100" id="pozicovna">
+            <div class="max-w-7xl mx-auto">
+                <h2 class="text-4xl font-bold text-center mb-4 text-gray-900">{{ blok.nadpis|default:industry_terms.rental_title|default:"Požičovňa a náhradné zariadenia" }}</h2>
+                <p class="text-center text-gray-500 mb-16 max-w-2xl mx-auto">{{ blok.podnadpis }}</p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    {% for stroj in rental_flotila %}
+                    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-xl transition duration-300 flex flex-col overflow-hidden group">
+                        
+                        <!-- Obrázok a Odznak dostupnosti -->
+                        <div class="h-56 bg-white relative flex items-center justify-center border-b border-gray-100 overflow-hidden p-4">
+                            {% if stroj.obrazok_url %}
+                                <img src="{{ stroj.obrazok_url }}" alt="{{ stroj.nazov }}" loading="lazy" class="w-full h-full object-contain group-hover:scale-105 transition duration-500">
+                            {% else %}
+                                <span class="text-6xl opacity-20">{{ industry_terms.rental_fallback_icon|default:"⚙️" }}</span>
+                            {% endif %}
+                            
+                            <div class="absolute top-4 right-4 flex flex-col gap-2 items-end">
+                                {% if stroj.dostupne_pocet > 0 %}
+                                    <span class="bg-emerald-100 text-emerald-700 text-xs font-extrabold px-3 py-1.5 rounded-full shadow-sm border border-emerald-200 flex items-center gap-1">
+                                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                        Dostupné ihneď ({{ stroj.dostupne_pocet }} ks)
+                                    </span>
+                                {% else %}
+                                    <span class="bg-red-100 text-red-700 text-xs font-extrabold px-3 py-1.5 rounded-full shadow-sm border border-red-200 flex items-center gap-1">
+                                        Momentálne nedostupné
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Obsah -->
+                        <div class="p-6 flex flex-col flex-grow">
+                            <div class="flex items-center justify-between gap-2 mb-2">
+                                <span class="text-xs text-brand font-bold uppercase tracking-wider truncate">{{ stroj.kategoria }}</span>
+                                {% if stroj.rok_vyroby %}
+                                <span class="text-[11px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded flex-shrink-0">r. {{ stroj.rok_vyroby }}</span>
+                                {% endif %}
+                            </div>
+                            <h3 class="text-xl font-bold text-gray-900 mb-3">{{ stroj.nazov }}</h3>
+
+                            {% if stroj.ui_parametre %}
+                            <div class="grid grid-cols-2 gap-2 mb-4">
+                                {% for param in stroj.ui_parametre|slice:":2" %}
+                                <div class="bg-gray-50 border border-gray-100 p-2 rounded-xl text-left">
+                                    <span class="block text-[10px] uppercase font-bold text-gray-400 truncate" title="{{ param.nazov }}">{{ param.nazov }}</span>
+                                    <span class="text-xs font-extrabold text-gray-800 truncate block">{{ param.hodnota }}</span>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            
+                            {% if stroj.je_v_zaruke %}
+                            <div class="mb-2 flex items-center gap-1.5 text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-xl border border-emerald-200">
+                                <span>🛡️</span>
+                                <span>Garantovaný stav v plnej záruke</span>
+                            </div>
+                            {% endif %}
+                            {% if stroj.referencie %}
+                            <div class="mb-3 text-[11px] text-gray-600 bg-gray-50 p-2 rounded-xl border border-gray-100 truncate" title="Nasadené v prevádzkach: {{ stroj.referencie|join:', ' }}">
+                                <span class="font-bold text-gray-800">🏢 Overené u partnerov:</span> {{ stroj.referencie|slice:":2"|join:", " }}{% if stroj.referencie|length > 2 %} +{{ stroj.referencie|length|add:"-2" }}{% endif %}
+                            </div>
+                            {% endif %}
+                            <div class="mb-4 flex-grow flex items-center justify-between text-xs text-gray-500">
+                                <span>Kapacita flotily: <strong>{{ stroj.celkovy_pocet }} ks</strong></span>
+                                {% if stroj.dostupne_pocet > 0 %}
+                                <span class="text-emerald-700 font-bold">Voľné: {{ stroj.dostupne_pocet }} ks</span>
+                                {% else %}
+                                <span class="text-amber-700 font-semibold">Aktuálne v nasadení</span>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Cena a Tlačidlá -->
+                            <div class="mt-auto pt-4 border-t border-gray-100">
+                                <div class="flex items-center justify-between mb-4">
+                                    <span class="text-xs text-gray-400 uppercase tracking-wider font-bold">Cena prenájmu:</span>
+                                    {% if stroj.cena_na_den %}
+                                        <div class="text-right">
+                                            {% if stroj.povodna_cena_na_den %}
+                                                <span class="text-xs text-gray-400 line-through block">{{ stroj.povodna_cena_na_den }} {{ mena }}</span>
+                                                <span class="text-xl font-extrabold text-emerald-600">{{ stroj.cena_na_den }} {{ mena }}</span> <span class="text-xs text-gray-400 font-medium">/ deň</span>
+                                            {% else %}
+                                                <span class="text-xl font-extrabold text-gray-900">{{ stroj.cena_na_den }} {{ mena }}</span> <span class="text-xs text-gray-400 font-medium">/ deň</span>
+                                            {% endif %}
+                                        </div>
+                                    {% else %}
+                                        <div class="text-sm font-bold text-brand">Na vyžiadanie</div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="grid grid-cols-2 gap-2">
+                                    <a href="{% url 'webbuilder:rental_detail' stroj.slug %}{% if is_preview %}?preview=ai_draft{% endif %}" class="w-full text-center bg-gray-50 hover:bg-gray-100 text-gray-900 font-bold py-2.5 rounded-xl transition duration-300 flex items-center justify-center text-sm">{{ industry_terms.rental_detail_label|default:"Detail" }}</a>
+                                    {% if stroj.dostupne_pocet > 0 %}
+                                    <button type="button" data-add-to-cart data-typ="STROJ" data-nazov="{{ stroj.nazov }}" data-db-id="{{ stroj.pk }}" data-detail="Dostupné ihneď ({{ stroj.dostupne_pocet }} ks){% if stroj.cena_na_den %} ({{ stroj.cena_na_den }} {{ mena }}/deň){% endif %}" {% if stroj.cena_na_den %}data-orientacna-cena="{{ stroj.cena_na_den }}"{% endif %} class="w-full text-center {% if is_b2b %}bg-emerald-600 hover:bg-emerald-700{% else %}bg-brand hover-bg-brand{% endif %} text-white font-bold py-2.5 rounded-xl transition duration-300 flex items-center justify-center text-sm cursor-pointer">
+                                        Do dopytu
+                                    </button>
+                                    {% else %}
+                                    <button type="button" data-add-to-cart data-typ="STROJ" data-nazov="{{ stroj.nazov }}" data-db-id="{{ stroj.pk }}" data-detail="Rezervácia pri uvoľnení (Flotila vyťažená){% if stroj.cena_na_den %} ({{ stroj.cena_na_den }} {{ mena }}/deň){% endif %}" {% if stroj.cena_na_den %}data-orientacna-cena="{{ stroj.cena_na_den }}"{% endif %} class="w-full text-center bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-bold py-2.5 rounded-xl transition duration-300 flex items-center justify-center text-xs sm:text-sm cursor-pointer" title="Nezáväzná rezervácia pri uvoľnení {{ industry_terms.zariadenie_genitiv|default:'zariadenia' }} z prevádzky">
+                                        ⏳ Rezervovať
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>              
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="text-center mt-12">
+                    <a href="{% url 'webbuilder:rental_list' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="inline-block bg-white border-2 border-brand text-brand hover:bg-brand hover:text-white font-bold py-3 px-8 rounded-xl transition duration-300">{{ industry_terms.rental_catalog_btn|default:"Zobraziť celú ponuku" }}</a>
+                </div>
+            </div>
+        </section>
+        {% endif %}
+
+        <!-- 👥 NÁŠ TÍM (Ťahané z ERP) -->
+        {% if blok.typ == 'TEAM' and tim %}
+        <section class="py-20 bg-white px-6 border-t border-gray-100" id="tim">
+            <div class="max-w-7xl mx-auto">
+                <h2 class="text-4xl font-bold text-center mb-4 text-gray-900">{{ blok.nadpis|default:"Náš tím certifikovaných špecialistov" }}</h2>
+                <p class="text-center text-gray-500 mb-16 max-w-2xl mx-auto">{{ blok.podnadpis|default:"Odborné zázemie našej spoločnosti tvoria vyškolení interní špecialisti a technici s platnými odbornými certifikáciami." }}</p>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                    {% for clen in tim|slice:":4" %}
+                    <div class="bg-gray-50 rounded-3xl p-6 text-center hover:shadow-xl transition duration-300 border border-gray-100 group flex flex-col justify-between">
+                        <div class="relative w-32 h-32 mx-auto mb-6 flex items-center justify-center">
+                            {% if clen.profilova_fotka and clen.profilova_fotka.name %}
+                                <img src="{{ clen.profilova_fotka.url }}" alt="{{ clen.meno }} {{ clen.priezvisko }}" loading="lazy" class="w-full h-full object-cover rounded-full border-4 border-white shadow-md group-hover:scale-105 transition duration-300">
+                            {% else %}
+                                <div class="w-full h-full rounded-full bg-brand/10 text-brand border-4 border-white shadow-md flex items-center justify-center text-4xl font-black">
+                                    {{ clen.meno|slice:":1" }}{{ clen.priezvisko|slice:":1" }}
+                                </div>
+                            {% endif %}
+                            
+                            <!-- 📜 Odznak certifikácie (Ak má osvedčenie) -->
+                            {% if clen.certifikaty.exists %}
+                            <div class="absolute -bottom-2 -right-2 bg-brand text-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg border-2 border-white" title="Certifikovaný špecialista ({{ clen.certifikaty.first.nazov }})">
+                                📜
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <h3 class="text-xl font-bold text-gray-900 mb-1">{{ clen.meno }} {{ clen.priezvisko }}</h3>
+                        <p class="text-brand font-semibold text-sm uppercase tracking-wider">{{ clen.verejna_rola|default:clen.get_pracovna_rola_display|default:"Servisný špecialista" }}</p>
+                        
+                        <div class="mt-4 flex flex-wrap justify-center gap-2">
+                            {% for cert in clen.certifikaty.all %}
+                            <span class="text-xs text-gray-700 font-semibold bg-white py-1.5 px-3 rounded-lg border border-gray-200 shadow-xs" title="Odborné osvedčenie a certifikácia">
+                                {{ cert.nazov }}
+                            </span>
+                            {% endfor %}
+                            {% if clen.prax_roky and clen.prax_roky > 0 %}
+                            <span class="text-xs text-emerald-700 font-bold bg-emerald-50 py-1.5 px-3 rounded-lg border border-emerald-200" title="Dĺžka pôsobenia v našom servisnom tíme">
+                                🎖️ {{ clen.prax_roky }} {% if clen.prax_roky == 1 %}rok{% elif clen.prax_roky < 5 %}roky{% else %}rokov{% endif %} v tíme
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% if tim|length > 4 %}
+                <div class="text-center mt-12">
+                    <a href="{% url 'webbuilder:kariera_list' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="inline-block bg-white border border-gray-300 hover:border-gray-900 hover:bg-gray-900 hover:text-white text-gray-800 font-bold py-3 px-8 rounded-xl transition duration-300 text-sm shadow-xs">
+                        Zobraziť celý náš servisný tím ({{ tim|length }}) &rarr;
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </section>
+        {% endif %}
+
+        <!-- Samostatný blok CALCULATOR bol plnohodnotne integrovaný priamo do Smart Bookingu nižšie -->
+
+        <!-- 🔬 ENGINEERING HUB TEASER (Inžinierske & Diagnostické Centrum) -->
+        {% if blok.typ == 'ENGINEERING_HUB' %}
+        {% if has_esg_audit or has_rekuperacia or has_tco or has_vtz or has_fplyny or has_media_quality or has_vibro or has_capex %}
+        <section class="py-20 bg-white px-6 border-t border-gray-100" id="engineering-hub">
+            <div class="max-w-7xl mx-auto">
+                <div class="text-center mb-16">
+                    <div class="inline-flex items-center justify-center p-3 bg-gray-900 text-white rounded-2xl mb-4 shadow-md">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                    </div>
+                    <h2 class="text-3xl sm:text-4xl font-extrabold mb-4 text-gray-900">{{ blok.nadpis|default:"Inžinierske & Diagnostické Centrum" }}</h2>
+                    <p class="text-lg text-gray-500 max-w-3xl mx-auto">{{ blok.podnadpis|default:"Využite naše B2B nástroje pre optimalizáciu prevádzky, kontrolu legislatívy a technickú diagnostiku." }}</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <!-- Pilier 1: Energetika & ESG -->
+                    {% if has_esg_audit or has_rekuperacia or has_tco %}
+                    <div class="bg-gray-50 rounded-3xl p-8 border border-gray-200 shadow-sm hover:shadow-md transition duration-300 flex flex-col justify-between">
+                        <div>
+                            <div class="w-12 h-12 bg-amber-100 rounded-2xl flex items-center justify-center text-2xl mb-6">⚡</div>
+                            <h3 class="text-xl font-bold text-gray-900 mb-3">{{ industry_terms.hub_tab_esg|default:"Úspora energie & ESG" }}</h3>
+                            <p class="text-sm text-gray-600 mb-6 leading-relaxed">{% if has_esg_audit or has_rekuperacia %}Meranie a vyhodnocovanie prevádzkových strát, optimalizácia nákladov na energie a znižovanie uhlíkovej stopy.{% else %}{{ industry_terms.tco_desc|default:"Optimalizácia celkových prevádzkových a investičných nákladov." }}{% endif %}</p>
+                            <ul class="space-y-2.5 text-xs text-gray-700 font-semibold mb-8">
+                                {% if has_esg_audit %}<li class="flex items-center gap-2"><span class="text-emerald-600 font-bold">✓</span> {{ industry_terms.esg_idle_title|default:"Audit chodu bez záťaže & CO₂ stopa" }}</li>{% endif %}
+                                {% if has_rekuperacia %}<li class="flex items-center gap-2"><span class="text-emerald-600 font-bold">✓</span> {{ industry_terms.rekuperacia_title|default:"Potenciál rekuperácie odpadového tepla" }}</li>{% endif %}
+                                {% if has_tco %}<li class="flex items-center gap-2"><span class="text-emerald-600 font-bold">✓</span> {{ industry_terms.tco_title|default:"TCO model celkových nákladov životného cyklu" }}</li>{% endif %}
+                            </ul>
+                        </div>
+                        <a href="{% url 'webbuilder:nastroje' %}{% if is_preview %}?preview=ai_draft{% endif %}#esg" class="w-full text-center bg-white border border-gray-300 hover:border-gray-900 hover:bg-gray-900 hover:text-white text-gray-900 font-bold py-3 rounded-xl transition text-sm block shadow-xs">
+                            {% if has_esg_audit or has_rekuperacia %}Spustiť ESG & Energetický kalkulátor{% else %}Spustiť {{ industry_terms.tco_title|default:"TCO kalkulátor" }}{% endif %} &rarr;
+                        </a>
+                    </div>
+                    {% endif %}
+
+                    <!-- Pilier 2: Zákony & Revízie -->
+                    {% if has_vtz or has_fplyny %}
+                    <div class="bg-gray-50 rounded-3xl p-8 border border-gray-200 shadow-sm hover:shadow-md transition duration-300 flex flex-col justify-between">
+                        <div>
+                            <div class="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center text-2xl mb-6">⚖️</div>
+                            <h3 class="text-xl font-bold text-gray-900 mb-3">{{ industry_terms.hub_tab_law|default:"Legislatíva & Bezpečnosť" }}</h3>
+                            <p class="text-sm text-gray-600 mb-6 leading-relaxed">{{ industry_terms.revizie_desc|default:"Sledovanie povinných auditov, inšpekcií a bezpečnostných predpisov." }}</p>
+                            <ul class="space-y-2.5 text-xs text-gray-700 font-semibold mb-8">
+                                {% if has_vtz %}<li class="flex items-center gap-2"><span class="text-emerald-600 font-bold">✓</span> {{ industry_terms.revizie_title|default:"Periodické inšpekcie a revízie" }}</li>{% endif %}
+                                {% if has_fplyny %}<li class="flex items-center gap-2"><span class="text-emerald-600 font-bold">✓</span> {{ industry_terms.fplyny_title|default:"F-plyny, fluorované chladivá a limity únikov" }}</li>{% endif %}
+                                <li class="flex items-center gap-2"><span class="text-emerald-600 font-bold">✓</span> Garancia súladu s predpismi a normami</li>
+                            </ul>
+                        </div>
+                        <a href="{% url 'webbuilder:nastroje' %}{% if is_preview %}?preview=ai_draft{% endif %}#law" class="w-full text-center bg-white border border-gray-300 hover:border-gray-900 hover:bg-gray-900 hover:text-white text-gray-900 font-bold py-3 rounded-xl transition text-sm block shadow-xs">
+                            Overiť {{ industry_terms.hub_tab_law|default:"legislatívu a revízie"|striptags }} &rarr;
+                        </a>
+                    </div>
+                    {% endif %}
+
+                    <!-- Pilier 3: Diagnostika & Dimenzovanie -->
+                    {% if has_media_quality or has_vibro or has_capex %}
+                    <div class="bg-gray-50 rounded-3xl p-8 border border-gray-200 shadow-sm hover:shadow-md transition duration-300 flex flex-col justify-between">
+                        <div>
+                            <div class="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center text-2xl mb-6">🔬</div>
+                            <h3 class="text-xl font-bold text-gray-900 mb-3">{{ industry_terms.hub_tab_diag|default:"Technická Diagnostika" }}</h3>
+                            <p class="text-sm text-gray-600 mb-6 leading-relaxed">Prediktívna diagnostika, prevádzkové parametre a ekonomické modely prevádzky.</p>
+                            <ul class="space-y-2.5 text-xs text-gray-700 font-semibold mb-8">
+                                {% if has_media_quality %}<li class="flex items-center gap-2"><span class="text-emerald-600 font-bold">✓</span> {{ industry_terms.cistota_title|default:"Normy akosti a filtrácie pracovného média" }}</li>{% endif %}
+                                {% if has_vibro %}<li class="flex items-center gap-2"><span class="text-emerald-600 font-bold">✓</span> {{ industry_terms.vibro_title|default:"Vibrodiagnostika pohonu" }}</li>{% endif %}
+                                {% if has_capex %}<li class="flex items-center gap-2"><span class="text-emerald-600 font-bold">✓</span> {{ industry_terms.capex_title|default:"Finančné porovnanie CAPEX vs. OPEX" }}</li>{% endif %}
+                            </ul>
+                        </div>
+                        <a href="{% url 'webbuilder:nastroje' %}{% if is_preview %}?preview=ai_draft{% endif %}#diag" class="w-full text-center bg-white border border-gray-300 hover:border-gray-900 hover:bg-gray-900 hover:text-white text-gray-900 font-bold py-3 rounded-xl transition text-sm block shadow-xs">
+                            Otvoriť {{ industry_terms.hub_tab_diag|default:"technickú diagnostiku"|striptags }} &rarr;
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="text-center mt-12">
+                    <a href="{% url 'webbuilder:nastroje' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="inline-block bg-white border-2 border-brand text-brand hover:bg-brand hover:text-white font-bold py-3.5 px-8 rounded-xl transition duration-300 shadow-sm">
+                        Otvoriť kompletné Inžinierske centrum (všetky kalkulačky) &rarr;
+                    </a>
+                </div>
+            </div>
+        </section>
+        {% endif %}
+        {% endif %}
+
+        <!-- 📸 NAŠE REALIZÁCIE (Before / After z ERP) -->
+        {% if blok.typ == 'REFERENCES' and referencie %}
+        <section class="py-20 bg-gray-50 px-6 border-t border-gray-100" id="referencie">
+            <div class="max-w-7xl mx-auto">
+                <h2 class="text-4xl font-bold text-center mb-4 text-gray-900">{{ blok.nadpis|default:"Naše realizácie" }}</h2>
+                <p class="text-center text-gray-500 mb-16 max-w-2xl mx-auto">{{ blok.podnadpis }}</p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    {% for ref in referencie|slice:":6" %}
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-xl transition duration-300 group flex flex-col">
+                        {% if not ref.foto_pred and not ref.foto_po and ref.video and ref.video.name %}
+                        <!-- Video-only realizácia -->
+                        <div class="relative h-56 sm:h-64 w-full bg-slate-900 flex items-center justify-center group-hover:bg-slate-800 transition duration-500">
+                            <div class="text-center p-4">
+                                <div class="w-12 h-12 mx-auto mb-2 rounded-full bg-white/10 flex items-center justify-center text-white text-xl shadow-inner group-hover:scale-110 transition duration-300">
+                                    ▶️
+                                </div>
+                                <span class="text-xs font-extrabold text-white tracking-wider uppercase block">Videozáznam realizácie</span>
+                            </div>
+                            <div class="absolute top-2 right-2 sm:top-3 sm:right-3 bg-indigo-600 text-white text-[10px] sm:text-xs font-extrabold px-2 sm:px-2.5 py-0.5 sm:py-1 rounded uppercase tracking-wider shadow-sm">Video</div>
+                        </div>
+                        {% else %}
+                        <!-- Fotky 50/50 Split -->
+                        <div class="flex h-56 sm:h-64 w-full overflow-hidden">
+                            <!-- PRED -->
+                            <div class="w-1/2 relative border-r border-gray-200 overflow-hidden bg-gray-50 flex items-center justify-center">
+                                {% if ref.foto_pred and ref.foto_pred.name %}
+                                <img src="{{ ref.foto_pred.url }}" alt="{{ ref.verejny_popis_referencie|default:'Servisný zásah' }} - Stav pred" loading="lazy" class="w-full h-full object-cover grayscale-[30%] group-hover:grayscale-0 transition duration-500">
+                                {% else %}
+                                <span class="text-gray-400 text-xs">Bez foto</span>
+                                {% endif %}
+                                <div class="absolute top-2 left-2 sm:top-3 sm:left-3 bg-red-500/90 backdrop-blur-sm text-white text-[10px] sm:text-xs font-extrabold px-2 sm:px-2.5 py-0.5 sm:py-1 rounded uppercase tracking-wider shadow-sm">Pred</div>
+                            </div>
+                            <!-- PO -->
+                            <div class="w-1/2 relative overflow-hidden bg-gray-50 flex items-center justify-center">
+                                {% if ref.foto_po and ref.foto_po.name %}
+                                <img src="{{ ref.foto_po.url }}" alt="{{ ref.verejny_popis_referencie|default:'Servisný zásah' }} - Stav po" loading="lazy" class="w-full h-full object-cover transition duration-500 group-hover:scale-110">
+                                {% else %}
+                                <span class="text-gray-400 text-xs">Bez foto</span>
+                                {% endif %}
+                                <div class="absolute top-2 right-2 sm:top-3 sm:right-3 bg-green-500/90 backdrop-blur-sm text-white text-[10px] sm:text-xs font-extrabold px-2 sm:px-2.5 py-0.5 sm:py-1 rounded uppercase tracking-wider shadow-sm">Po</div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        <!-- Popis -->
+                        <div class="p-6 flex-grow flex flex-col justify-between">
+                            <div>
+                                <div class="flex items-center justify-between text-[11px] text-gray-400 mb-2 flex-wrap gap-1">
+                                    {% if ref.zariadenie %}
+                                    <span class="font-extrabold text-brand uppercase tracking-wider truncate max-w-[65%]" title="{{ ref.zariadenie.verejny_nazov }}">⚙️ {{ ref.zariadenie.verejny_nazov }}</span>
+                                    {% endif %}
+                                    <div class="flex items-center gap-1">
+                                        {% if ref.zmena_hardveru %}
+                                        <span class="font-extrabold text-indigo-900 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded text-[9px]" title="Technologický retrofit / Modernizácia">🚀 Retrofit</span>
+                                        {% endif %}
+                                        {% if ref.meter_display != '—' %}
+                                        <span class="font-semibold text-gray-600 bg-gray-100 px-2 py-0.5 rounded text-[10px]" title="{{ ref.meter_label }}">{{ ref.meter_display }}</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% if ref.zakaznik and ref.zakaznik.zobrazit_ako_referenciu %}
+                                <p class="text-xs font-extrabold text-emerald-800 mb-1 flex items-center gap-1 truncate">
+                                    <span>🏢</span> {{ ref.zakaznik.Nazov_spolocnosti }}{% if ref.zakaznik.mesto %} ({{ ref.zakaznik.mesto }}){% endif %}
+                                </p>
+                                {% endif %}
+                                <p class="text-gray-800 font-bold text-base line-clamp-2 mb-2" title="{{ ref.verejny_popis_referencie|default:'Profesionálny servisný zásah' }}">
+                                    {{ ref.verejny_popis_referencie|default:"Profesionálny servisný zásah." }}
+                                </p>
+                                {% if ref.formalne_zhodnotenie_ai %}
+                                <div class="mb-3 p-2.5 bg-blue-50/70 rounded-xl border border-blue-100 text-xs text-slate-700 line-clamp-2" title="{{ ref.formalne_zhodnotenie_ai }}">
+                                    <span class="font-bold text-blue-900">🤖 AI zhodnotenie:</span> {{ ref.formalne_zhodnotenie_ai }}
+                                </div>
+                                {% endif %}
+                                {% if ref.namerane_hodnoty %}
+                                <div class="mb-3 p-2 bg-emerald-50/60 rounded-xl border border-emerald-100 text-[11px] text-emerald-900 line-clamp-1 font-mono" title="{{ ref.namerane_hodnoty }}">
+                                    <span class="font-bold">📊 Výstup:</span> {{ ref.namerane_hodnoty }}
+                                </div>
+                                {% endif %}
+                                {% if ref.typ_servisu.all %}
+                                <div class="flex flex-wrap gap-1 mb-3">
+                                    {% for sluzba in ref.typ_servisu.all %}
+                                    <span class="text-[10px] font-semibold bg-gray-100 text-gray-600 px-2 py-0.5 rounded">🛠️ {{ sluzba.nazov }}</span>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="pt-3 border-t border-gray-100 mt-2 flex flex-col gap-2">
+                                <div class="flex items-center justify-between gap-2 text-xs">
+                                    {% if ref.hodnotenie_zakaznika %}
+                                    <span class="font-bold text-amber-600 text-xs bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">⭐ {{ ref.hodnotenie_zakaznika }}/5</span>
+                                    {% elif ref.protokol_uzavrety %}
+                                    <span class="text-[10px] font-extrabold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">🔒 Zapečatený audit</span>
+                                    {% else %}
+                                    <span></span>
+                                    {% endif %}
+                                    {% if ref.video and ref.video.name %}
+                                    <span class="text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded text-[10px] font-bold">🎥 Video</span>
+                                    {% endif %}
+                                </div>
+                                <div class="grid {% if ref.typ_servisu.first %}grid-cols-2{% else %}grid-cols-1{% endif %} gap-2 mt-1">
+                                    <a href="{% url 'webbuilder:referencia_detail' ref.slug %}{% if is_preview %}?preview=ai_draft{% endif %}" class="w-full text-center bg-gray-50 hover:bg-gray-100 text-gray-900 font-bold py-2.5 rounded-xl transition duration-300 flex items-center justify-center text-xs">Prípadová štúdia &rarr;</a>
+                                    {% if ref.typ_servisu.first %}
+                                    <button type="button" data-add-to-cart data-typ="SLUZBA" data-nazov="{{ ref.typ_servisu.first.nazov }}" data-detail="Inšpirované realizáciou: {% if ref.zariadenie %}{{ ref.zariadenie.verejny_nazov }}{% endif %}" data-db-id="{{ ref.typ_servisu.first.pk }}" class="w-full text-center bg-brand/10 hover:bg-brand hover:text-white text-brand font-bold py-2.5 rounded-xl transition duration-300 text-xs flex items-center justify-center gap-1 cursor-pointer" title="Pridať dopyt na rovnaký typ servisu">
+                                        <span>+</span> Dopytovať
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="text-center mt-12">
+                    <a href="{% url 'webbuilder:referencie_list' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="inline-block bg-white border-2 border-brand text-brand hover:bg-brand hover:text-white font-bold py-3 px-8 rounded-xl transition duration-300">Zobraziť všetky realizácie</a>
+                </div>
+            </div>
+        </section>
+        {% endif %}
+
+        <!-- 📡 LIVE IOT DEMO -->
+        {% if blok.typ == 'IOT_DEMO' and has_iot_demo %}
+        <section class="py-20 bg-gray-50 px-6 border-t border-gray-100" id="iot-demo">
+            <div class="max-w-7xl mx-auto">
+                <div class="text-center mb-12">
+                    <div class="inline-flex items-center justify-center p-4 bg-brand/10 text-brand rounded-2xl mb-6">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"></path></svg>
+                    </div>
+                    <h2 class="text-4xl font-bold mb-4 text-gray-900">{{ blok.nadpis|default:"Live IoT Telemetria" }}</h2>
+                    <p class="text-lg text-gray-500 max-w-2xl mx-auto">{{ blok.podnadpis }}</p>
+                </div>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <!-- Analógové budíky -->
+                    <div class="lg:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-6" id="demo-gauges">
+                        <div class="gauge-card relative flex flex-col items-center justify-center p-4 min-h-[220px]">
+                            <div class="relative w-full h-36 flex items-center justify-center">
+                                <canvas id="demo-gauge-1"></canvas>
+                                <div class="gauge-value-overlay pointer-events-none">
+                                    <div class="val text-3xl font-black text-gray-900" id="demo-val-1">{{ industry_terms.gauge_1_base|default:"--" }}</div>
+                                    <div class="unit text-xs font-bold text-gray-500 uppercase">{{ industry_terms.gauge_1_unit|default:"" }}</div>
+                                </div>
+                            </div>
+                            <div class="gauge-title font-extrabold text-xs text-gray-600 uppercase mt-2">{{ industry_terms.gauge_1_title|default:"Primárne prevádzkové zaťaženie" }}</div>
+                        </div>
+                        <div class="gauge-card relative flex flex-col items-center justify-center p-4 min-h-[220px]">
+                            <div class="relative w-full h-36 flex items-center justify-center">
+                                <canvas id="demo-gauge-2"></canvas>
+                                <div class="gauge-value-overlay pointer-events-none">
+                                    <div class="val text-3xl font-black text-gray-900" id="demo-val-2">{{ industry_terms.gauge_2_base|default:"--" }}</div>
+                                    <div class="unit text-xs font-bold text-gray-500 uppercase">{{ industry_terms.gauge_2_unit|default:"" }}</div>
+                                </div>
+                            </div>
+                            <div class="gauge-title font-extrabold text-xs text-gray-600 uppercase mt-2">{{ industry_terms.gauge_2_title|default:"Prevádzková teplota" }}</div>
+                        </div>
+                        <div class="gauge-card relative flex flex-col items-center justify-center p-4 min-h-[220px]">
+                            <div class="relative w-full h-36 flex items-center justify-center">
+                                <canvas id="demo-gauge-3"></canvas>
+                                <div class="gauge-value-overlay pointer-events-none">
+                                    <div class="val text-3xl font-black text-gray-900" id="demo-val-3">{{ industry_terms.gauge_3_base|default:"--" }}</div>
+                                    <div class="unit text-xs font-bold text-gray-500 uppercase">{{ industry_terms.gauge_3_unit|default:"" }}</div>
+                                </div>
+                            </div>
+                            <div class="gauge-title font-extrabold text-xs text-gray-600 uppercase mt-2">{{ industry_terms.gauge_3_title|default:"Energetické vyťaženie" }}</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Digitálne stavy a CTA -->
+                    <div class="flex flex-col justify-between bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
+                        <div>
+                            <h3 class="text-lg font-bold text-gray-900 mb-6">{{ industry_terms.system_status_title|default:"Stav Systému" }}</h3>
+                            <div class="grid grid-cols-2 gap-4 mb-8" id="demo-digital">
+                                <div class="digital-badge off" id="demo-dig-1">
+                                    <div class="mb-1 text-gray-500">{{ industry_terms.dig_1_title|default:"Primárny okruh" }}</div>
+                                    <span class="stav-text">ČAKÁM...</span>
+                                </div>
+                                <div class="digital-badge off" id="demo-dig-2">
+                                    <div class="mb-1 text-gray-500">{{ industry_terms.dig_2_title|default:"Sekundárny okruh" }}</div>
+                                    <span class="stav-text">ČAKÁM...</span>
+                                </div>
+                                <div class="digital-badge off col-span-2" id="demo-dig-chyba">
+                                    <div class="mb-1 text-gray-500">{{ industry_terms.dig_error_title|default:"Systémový stav" }}</div>
+                                    <span class="stav-text">ČAKÁM...</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <a href="#kontakt" class="w-full bg-brand hover-bg-brand text-white font-bold text-center py-4 rounded-xl transition duration-300 shadow-md">
+                            Chcem vedieť viac
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+        {% endif %}
+
+        <!-- 📞 KONTAKT A DOPYT -->
+        {% if blok.typ == 'CONTACT' %}
+        <section class="py-24 bg-gray-900 text-white px-6" id="kontakt">
+            <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+                <!-- Kontaktné údaje z ERP -->
+                <div>
+                    <h2 class="text-4xl md:text-5xl font-bold mb-6">{{ blok.nadpis|default:"Kontaktujte nás" }}</h2>
+                    <p class="text-gray-400 mb-12 text-lg">{{ blok.podnadpis }}</p>
+                    
+                    <div class="space-y-6 text-lg">
+                        <div class="flex items-start gap-4">
+                            <div class="bg-gray-800 p-3 rounded-lg text-brand">📍</div>
+                            <div>
+                                <p class="font-bold text-gray-300 text-sm uppercase tracking-wider">Sídlo spoločnosti</p>
+                                <p>{{ identita.sidlo_ulica }} {{ identita.sidlo_cislo }}<br>{{ identita.sidlo_psc }} {{ identita.sidlo_mesto }}</p>
+                            </div>
+                        </div>
+                        {% if identita.adresa_prevadzky %}
+                        <div class="flex items-start gap-4">
+                            <div class="bg-gray-800 p-3 rounded-lg text-brand">🏭</div>
+                            <div>
+                                <p class="font-bold text-gray-300 text-sm uppercase tracking-wider">Prevádzka a príjem servisu</p>
+                                <p>{{ identita.adresa_prevadzky|linebreaksbr }}</p>
+                                {% if identita.telefon_sklad %}
+                                <p class="text-xs text-gray-400 mt-1">Sklad / Príjem: <a href="tel:{{ identita.telefon_sklad }}" class="text-white hover:underline">{{ identita.telefon_sklad }}</a></p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if servisne_strediska %}
+                        <div class="pt-2 border-t border-gray-800">
+                            <p class="font-bold text-gray-300 text-sm uppercase tracking-wider mb-2">🏪 Regionálna servisná sieť (Pobočky a strediská)</p>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-gray-300">
+                                {% for stredisko in servisne_strediska %}
+                                <div class="bg-gray-800/80 p-2.5 rounded-xl border border-gray-700/60">
+                                    <p class="font-bold text-white">{{ stredisko.nazov }}{% if stredisko.kod_pobocky %} <span class="text-gray-400 font-mono">[{{ stredisko.kod_pobocky }}]</span>{% endif %}</p>
+                                    {% if stredisko.adresa %}<p class="text-gray-400 text-[11px] mt-0.5">{{ stredisko.adresa }}</p>{% endif %}
+                                    <div class="flex flex-wrap gap-x-3 mt-1 text-[11px]">
+                                        {% if stredisko.telefon %}<a href="tel:{{ stredisko.telefon }}" class="text-brand hover:underline">📞 {{ stredisko.telefon }}</a>{% endif %}
+                                        {% if stredisko.email %}<a href="mailto:{{ stredisko.email }}" class="text-gray-400 hover:text-white">✉️ {{ stredisko.email }}</a>{% endif %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <div class="flex items-start gap-4">
+                            <div class="bg-gray-800 p-3 rounded-lg text-brand">📞</div>
+                            <div>
+                                <p class="font-bold text-gray-300 text-sm uppercase tracking-wider">Telefón</p>
+                                {% if identita.telefon %}
+                                <a href="tel:{{ identita.telefon }}" class="font-semibold text-white hover:text-brand transition duration-200 block">{{ identita.telefon }}</a>
+                                {% else %}
+                                <p class="font-semibold">—</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-4">
+                            <div class="bg-gray-800 p-3 rounded-lg text-brand">✉️</div>
+                            <div>
+                                <p class="font-bold text-gray-300 text-sm uppercase tracking-wider">E-mail</p>
+                                {% if identita.email_vseobecny %}
+                                <a href="mailto:{{ identita.email_vseobecny }}" class="font-semibold text-white hover:text-brand transition duration-200 block break-all">{{ identita.email_vseobecny }}</a>
+                                {% else %}
+                                <p class="font-semibold">—</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-4">
+                            <div class="bg-gray-800 p-3 rounded-lg text-brand">🏢</div>
+                            <div>
+                                <p class="font-bold text-gray-300 text-sm uppercase tracking-wider">Fakturačné údaje</p>
+                                <p>IČO: {{ identita.ico }} <br> DIČ: {{ identita.dic }}{% if identita.ic_dph %} <br> IČ DPH: {{ identita.ic_dph }}{% endif %}</p>
+                            </div>
+                        </div>
+
+                        {% if identita.linkedin or identita.facebook or identita.instagram %}
+                        <div class="pt-4 border-t border-gray-800 flex items-center gap-3 text-sm">
+                            <span class="text-gray-400 font-bold uppercase tracking-wider text-xs">Sledujte nás:</span>
+                            {% if identita.linkedin %}
+                            <a href="{{ identita.linkedin }}" target="_blank" rel="noopener noreferrer" class="text-brand hover:underline font-semibold">LinkedIn</a>
+                            {% endif %}
+                            {% if identita.facebook %}
+                            <a href="{{ identita.facebook }}" target="_blank" rel="noopener noreferrer" class="text-brand hover:underline font-semibold">Facebook</a>
+                            {% endif %}
+                            {% if identita.instagram %}
+                            <a href="{{ identita.instagram }}" target="_blank" rel="noopener noreferrer" class="text-brand hover:underline font-semibold">Instagram</a>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Dopytový formulár -->
+                <div class="bg-white text-gray-900 rounded-3xl p-8 md:p-10 shadow-2xl">
+                    <div class="flex items-center justify-between gap-2 mb-4">
+                        <h3 class="text-2xl font-bold">Havarijná podpora & Rýchly dopyt</h3>
+                        <span class="bg-red-50 text-red-700 border border-red-200 text-[11px] font-black px-2.5 py-1 rounded-full uppercase">🚨 Dispečing 24/7</span>
+                    </div>
+                    {% if has_booking %}
+                    <p class="text-xs text-gray-500 mb-6 bg-gray-50 p-2.5 rounded-xl border border-gray-100 flex items-center justify-between">
+                        <span>Potrebujete bežnú periodickú prehliadku?</span>
+                        <a href="#rezervacia" class="text-brand font-bold hover:underline">Rezervovať termín online &darr;</a>
+                    </p>
+                    {% endif %}
+                    <form id="dopytForm" class="space-y-5" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <!-- 🛡️ HONEYPOT -->
+                        <input type="text" name="website_url" class="hidden" tabindex="-1" autocomplete="off">
+                        {% if request.user.is_authenticated and request.user.zakaznik_profil %}
+                        <input type="hidden" name="is_b2b_direct" value="true">
+                        <div class="bg-emerald-50 border border-emerald-200 p-3 rounded-xl text-xs text-emerald-900 mb-2 space-y-1">
+                            <p class="font-bold flex items-center gap-1.5">
+                                <span>🏢</span> Prihlásený partner: <b>{{ request.user.zakaznik_profil.Nazov_spolocnosti }}</b>
+                            </p>
+                            <div class="text-[11px] text-emerald-800 flex flex-wrap gap-x-3 pt-0.5">
+                                {% if request.user.zakaznik_profil.b2b_zlava_percenta and request.user.zakaznik_profil.b2b_zlava_percenta > 0 %}
+                                <span>💰 Zmluvná zľava: <strong>-{{ request.user.zakaznik_profil.b2b_zlava_percenta }} %</strong></span>
+                                {% endif %}
+                                {% if request.user.zakaznik_profil.predvolena_splatnost_dni %}
+                                <span>💳 Splatnosť faktúr: <strong>{{ request.user.zakaznik_profil.predvolena_splatnost_dni }} dní</strong></span>
+                                {% endif %}
+                            </div>
+                            {% if request.user.zakaznik_profil.vyzaduje_povolenie_vstupu %}
+                            <p class="text-[10px] text-amber-900 bg-amber-100/80 px-2 py-0.5 rounded border border-amber-300 mt-1 inline-block">
+                                🛂 Vstup vyžaduje evidenciu povolenia (Gate Pass)
+                            </p>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-2">Firma / Meno *</label>
+                                <input type="text" name="firma" required value="{% if request.user.is_authenticated and request.user.zakaznik_profil %}{{ request.user.zakaznik_profil.Nazov_spolocnosti }}{% endif %}" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 ring-brand transition">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-2">Číslo objednávky / PO <span class="text-gray-400 font-normal">(Voliteľné pre B2B)</span></label>
+                                <input type="text" name="cislo_objednavky_klienta" placeholder="Napr. PO-{% now 'Y' %}-089" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 ring-brand transition">
+                            </div>
+                        </div>
+                        {% if request.user.is_authenticated and request.user.zakaznik_profil and klient_zariadenia %}
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 mb-2">Vaše evidované zariadenie <span class="text-gray-400 font-normal">(Voliteľné)</span></label>
+                            <select name="zariadenie_id" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 ring-brand transition appearance-none">
+                                <option value="">-- Vyberte zariadenie z vašej evidencie --</option>
+                                {% for zar in klient_zariadenia %}
+                                <option value="{{ zar.id }}">{{ zar.vyrobca.nazov_vyrobcu|default:'' }} {{ zar.model_zariadenia|default:zar.nazov }} [SN: {{ zar.vyrobne_cislo }}]</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        {% endif %}
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-2">E-mail *</label>
+                                <input type="email" name="email" value="{% if request.user.is_authenticated and request.user.zakaznik_profil %}{{ request.user.zakaznik_profil.email|default:request.user.email }}{% endif %}" required class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 ring-brand transition">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-2">Telefón</label>
+                                <input type="text" name="telefon" value="{% if request.user.is_authenticated and request.user.zakaznik_profil %}{{ request.user.zakaznik_profil.telefon|default:'' }}{% endif %}" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 ring-brand transition">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5 mb-5">
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-2">Značka zariadenia <span class="text-gray-400 font-normal">(Voliteľné)</span></label>
+                                <select name="znacka_id" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 ring-brand transition appearance-none">
+                                    <option value="">Neviem / Iná</option>
+                                    {% for znacka in znacky %}
+                                        <option value="{{ znacka.id }}">{{ znacka.nazov_vyrobcu }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-2">Typ požiadavky <span class="text-gray-400 font-normal">(Voliteľné)</span></label>
+                                <select name="sluzba_id" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 ring-brand transition appearance-none">
+                                    <option value="">Vyberte typ</option>
+                                    {% for sluzba in sluzby %}
+                                        <option value="{{ sluzba.id }}">{{ sluzba.nazov }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 mb-2">Vaša požiadavka *</label>
+                            <textarea name="poziadavka" rows="4" required class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 ring-brand transition" placeholder="{{ industry_terms.poziadavka_placeholder|default:'Ako vám môžeme pomôcť?' }}"></textarea>
+                        </div>
+                        <div class="p-3 bg-red-50 border border-red-200 rounded-xl">
+                            <label class="flex items-start gap-2.5 cursor-pointer">
+                                <input type="checkbox" id="dopytPrioritaCheck" name="priorita" value="VYSOKA" onchange="const tip = document.getElementById('dopytEmergencyTip'); if(tip) tip.classList.toggle('hidden', !this.checked);" class="mt-0.5 w-4 h-4 text-red-600 border-red-300 rounded focus:ring-red-500">
+                                <span class="text-xs text-red-950 font-semibold leading-relaxed">
+                                    <span class="font-extrabold text-red-900 flex items-center gap-1">🚨 Havarijná požiadavka / Odstávka technológie (Expresné SLA)</span>
+                                    <span class="block text-[11px] text-red-700 font-normal mt-0.5">Zaškrtnite výhradne v prípade havárie alebo akútneho ohrozenia prevádzky pre prioritné spracovanie dispečingom.</span>
+                                </span>
+                            </label>
+                            {% if identita.telefon %}
+                            <div id="dopytEmergencyTip" class="hidden mt-2 pt-2 border-t border-red-200/80 text-[11px] text-red-900 flex items-center justify-between flex-wrap gap-2">
+                                <span>⚡ Pre okamžitý výjazd pohotovosti odporúčame po odoslaní aj telefonát:</span>
+                                <a href="tel:{{ identita.telefon }}" class="font-black text-red-700 hover:underline inline-flex items-center gap-1">📞 {{ identita.telefon }}</a>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 mb-1.5 flex items-center justify-between">
+                                <span>📸 Fotografia štítku / závady {{ industry_terms.zariadenie_genitiv|default:"zariadenia" }}</span>
+                                <span class="text-xs font-normal text-gray-400">Voliteľné (max 10 MB – bežné rozlíšenie)</span>
+                            </label>
+                            <input type="file" id="dopytPrilohaInput" name="priloha" accept=".jpg,.jpeg,.png,.webp,.pdf,.mp4,.mov" onchange="const f=this.files[0]; if(f && f.size > 10*1024*1024){ alert('⚠️ Zvolený súbor má ' + (f.size/(1024*1024)).toFixed(1) + ' MB. Maximálny povolený limit je 10 MB. Pre úspešné odoslanie zvoľte fotografiu v bežnom rozlíšení.'); this.value=''; }" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs file:mr-3 file:py-1.5 file:px-3.5 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-brand/10 file:text-brand hover:file:bg-brand/20 transition focus:outline-none">
+                        </div>
+                        {% if not request.user.is_authenticated or not request.user.zakaznik_profil %}
+                        <div class="flex items-start gap-3 mt-4 mb-2">
+                            <input type="checkbox" name="gdpr_suhlas" id="gdpr_suhlas" required class="mt-1 w-5 h-5 text-brand border-gray-300 rounded focus:ring-brand">
+                            <label for="gdpr_suhlas" class="text-sm text-gray-600">
+                                Súhlasím so spracovaním osobných údajov za účelom vybavenia tohto dopytu v súlade s platnou legislatívou (GDPR). *
+                            </label>
+                        </div>
+                        {% endif %}
+
+                        {% if identita.predvolena_platnost_ponuk or identita.splatnost_faktur or globalne_nastavenia.pracovny_cas_od %}
+                        <div class="bg-gray-50 border border-gray-200 p-3 rounded-xl text-xs text-gray-600 space-y-1">
+                            <div class="flex items-center justify-between flex-wrap gap-2 font-semibold">
+                                {% if identita.predvolena_platnost_ponuk %}
+                                <span>⏱️ Garancia cien ponuky: <strong class="text-gray-900">{{ identita.predvolena_platnost_ponuk }} dní</strong></span>
+                                {% endif %}
+                                {% if identita.splatnost_faktur %}
+                                <span>💳 B2B splatnosť: <strong class="text-gray-900">{{ identita.splatnost_faktur }} dní</strong></span>
+                                {% endif %}
+                            </div>
+                            {% if globalne_nastavenia.pracovny_cas_od and globalne_nastavenia.pracovny_cas_do %}
+                                {% if sla_telemetria %}
+                                    {% if sla_telemetria.status == 'MIMO_PREVADZKY' %}
+                                    <p class="text-[11px] text-slate-700 bg-slate-100 p-2.5 rounded-xl border border-slate-200 flex items-center justify-between flex-wrap gap-1">
+                                        <span class="font-bold flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-slate-400"></span> Dispečing je offline</span>
+                                        <span>Spracujeme v najbližší pracovný deň ({{ globalne_nastavenia.pracovny_cas_od|time:"H:i" }} – {{ globalne_nastavenia.pracovny_cas_do|time:"H:i" }})</span>
+                                    </p>
+                                    {% else %}
+                                    <p class="text-[11px] text-emerald-900 bg-emerald-50 p-2.5 rounded-xl border border-emerald-200 flex items-center justify-between flex-wrap gap-1">
+                                        <span class="font-bold flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Dispečing je v prevádzke</span>
+                                        <span>Prijímame a spracovávame požiadavky (do {{ globalne_nastavenia.pracovny_cas_do|time:"H:i" }})</span>
+                                    </p>
+                                    {% endif %}
+                                {% else %}
+                                    <p class="text-[11px] text-gray-600 bg-gray-50 p-2.5 rounded-xl border border-gray-200 flex items-center justify-between flex-wrap gap-1">
+                                        <span class="font-bold flex items-center gap-1.5">📞 Pracovná doba dispečingu:</span>
+                                        <span><strong>{{ globalne_nastavenia.pracovny_cas_od|time:"H:i" }} – {{ globalne_nastavenia.pracovny_cas_do|time:"H:i" }}</strong>{% if not globalne_nastavenia.pracovat_vikendy %} (Po–Pi){% endif %}</span>
+                                    </p>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                        {% endif %}
+
+                        <button type="submit" id="submitBtn" class="w-full bg-brand hover-bg-brand text-white font-bold text-lg py-4 rounded-xl transition duration-300 shadow-lg mt-2 flex justify-center items-center gap-3">
+                            <svg id="btnSpinner" class="hidden animate-spin h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span id="btnText">{% if request.user.is_authenticated and request.user.zakaznik_profil %}Odoslať záväznú požiadavku{% else %}Odoslať požiadavku{% endif %}</span>
+                        </button>
+                        <p class="text-[11px] text-gray-400 text-center mt-3">
+                            {% if request.user.is_authenticated and request.user.zakaznik_profil %}
+                            🏢 Požiadavka bude evidovaná pod vaším B2B profilom ({{ request.user.zakaznik_profil.Nazov_spolocnosti }}).
+                            {% else %}
+                            🔒 Odoslanie je nezáväzné. Dostupnosť a podrobnosti potvrdíme e-mailom alebo telefonicky.
+                            {% endif %}
+                        </p>
+                    </form>
+                    
+                    <!-- Správa o výsledku -->
+                    <div id="formMessage" class="hidden mt-6 text-center p-8 rounded-2xl border"></div>
+                </div>
+            </div>
+        </section>
+        {% endif %}
+
+        <!-- 🤝 KARIÉRA / NÁBOR (Subtílny Employer Branding pás na Landing Page) -->
+        {% if blok.typ == 'CAREER' and pozicie %}
+        <section class="py-8 sm:py-10 bg-slate-900 text-white px-6 border-y border-slate-800" id="kariera">
+            <div class="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-5 sm:gap-6">
+                <div class="flex items-center gap-4 text-left w-full sm:w-auto">
+                    <div class="w-12 h-12 rounded-2xl bg-white/10 border border-white/10 flex items-center justify-center text-2xl flex-shrink-0 shadow-inner">
+                        🤝
+                    </div>
+                    <div class="min-w-0">
+                        <h3 class="text-base sm:text-lg font-bold text-white leading-snug">{{ blok.nadpis|default:"Rozširujeme náš servisný tím" }}</h3>
+                        <p class="text-xs text-slate-400 mt-0.5 leading-relaxed">
+                            {{ blok.podnadpis|default:"Hľadáme technikov a špecialistov pre moderné technológie a systémy." }}
+                        </p>
+                    </div>
+                </div>
+                <a href="{% url 'webbuilder:kariera_list' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="w-full sm:w-auto text-center bg-white/10 hover:bg-white/20 text-white border border-white/20 text-xs font-extrabold py-3 px-6 rounded-xl transition duration-300 whitespace-nowrap shadow-sm hover:scale-105 flex-shrink-0">
+                    {{ blok.tlacidlo_text|default:"Voľné pracovné pozície" }} ({{ pozicie|length }}) &rarr;
+                </a>
+            </div>
+        </section>
+        {% endif %}
+
+        <!-- 📅 SMART BOOKING -->
+        {% if blok.typ == 'BOOKING' and sluzby %}
+        <section class="py-20 bg-white px-6 border-t border-gray-100" id="rezervacia">
+            <div class="max-w-5xl mx-auto">
+                <div class="text-center mb-12">
+                    <div class="inline-flex items-center justify-center p-4 bg-brand/10 text-brand rounded-2xl mb-6">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    </div>
+                    <h2 class="text-4xl font-bold mb-4 text-gray-900">{{ blok.nadpis|default:"Online rezervácia termínu" }}</h2>
+                    <p class="text-lg text-gray-500">{{ blok.podnadpis|default:"Vyberte si službu, zvoľte voľný termín a my zabezpečíme výjazd." }}</p>
+                </div>
+                
+                <div class="bg-gray-50 p-8 rounded-3xl border border-gray-200 shadow-xl">
+                    <p class="text-xs text-amber-950 mb-6 bg-amber-50 p-3 rounded-2xl border border-amber-200 flex items-center justify-between flex-wrap gap-2">
+                        <span class="flex items-center gap-1.5 font-medium"><span>🚨</span> <strong>Akútna havária alebo odstávka technológie?</strong> Online termíny sú vyhradené na plánovaný servis od zajtra.</span>
+                        <a href="#kontakt" class="text-red-700 font-bold hover:underline">Havarijný dispečing 24/7 &rarr;</a>
+                    </p>
+                    <form id="bookingForm" class="space-y-6">
+                        {% csrf_token %}
+                        <input type="text" name="website_url" class="hidden" tabindex="-1" autocomplete="off">
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <!-- Krok 1: Služba a Dátum -->
+                            <div class="space-y-6">
+                                <div>
+                                    <label class="block text-sm font-bold text-gray-700 mb-2">1. Akú službu potrebujete? *</label>
+                                    <select name="sluzba_id" required class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 ring-brand outline-none">
+                                        <option value="">Vyberte službu</option>
+                                        {% for sluzba in sluzby %}
+                                            <option value="{{ sluzba.id }}">{{ sluzba.nazov }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <!-- Krok 2: Spôsob realizácie a lokalita -->
+                                <div class="space-y-3">
+                                    <label class="block text-sm font-bold text-gray-700">2. Spôsob realizácie a lokalita *</label>
+                                    <div class="grid grid-cols-2 gap-2 text-xs font-bold">
+                                        <label class="flex items-center gap-2 p-3 bg-white border border-gray-200 rounded-xl cursor-pointer hover:border-brand transition">
+                                            <input type="radio" name="sposob_realizacie" value="VYJAZD" checked class="text-brand focus:ring-brand">
+                                            <span>🚙 Výjazd k vám</span>
+                                        </label>
+                                        <label class="flex items-center gap-2 p-3 bg-white border border-gray-200 rounded-xl cursor-pointer hover:border-brand transition">
+                                            <input type="radio" name="sposob_realizacie" value="DIELNA" class="text-brand focus:ring-brand">
+                                            <span>🏢 Príjem na stredisku (0 {{ mena }})</span>
+                                        </label>
+                                    </div>
+
+                                    <!-- Možnosť: Výjazd (Mesto + Live výpočet) -->
+                                    <div id="bookingVyjazdWrap">
+                                        <input type="text" id="bookingLocationInput" name="mesto" required value="{% if request.user.is_authenticated and request.user.zakaznik_profil %}{{ request.user.zakaznik_profil.psc|default:'' }} {{ request.user.zakaznik_profil.mesto|default:'' }}{% endif %}" placeholder="Vaše mesto alebo PSČ (napr. 811 01 Bratislava)" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 ring-brand outline-none text-base md:text-sm">
+                                        <div id="bookingLiveCalcBadge" class="hidden mt-2 p-2.5 bg-brand/5 border border-brand/20 rounded-xl text-xs text-gray-700 flex flex-wrap items-center justify-between gap-2">
+                                            <span id="bookingLiveDistance" class="font-bold text-gray-900"></span>
+                                            <span id="bookingLiveTravel" class="font-extrabold text-brand"></span>
+                                            <span id="bookingLiveLabor" class="text-gray-600"></span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Možnosť: Dielňa (Výber strediska) -->
+                                    <div id="bookingDielnaWrap" class="hidden space-y-2">
+                                        <select name="stredisko_info" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 ring-brand outline-none text-base md:text-xs font-semibold">
+                                            {% if identita.adresa_prevadzky %}
+                                                <option value="Centrála / Hlavný sklad ({{ identita.adresa_prevadzky }})">🏢 Centrála a hlavné stredisko ({{ identita.adresa_prevadzky }}) – 0 {{ mena }} doprava</option>
+                                            {% elif not servisne_strediska %}
+                                                <option value="Servisné stredisko spoločnosti">🏢 Servisné stredisko spoločnosti – 0 {{ mena }} doprava</option>
+                                            {% endif %}
+                                            {% for stredisko in servisne_strediska %}
+                                                <option value="{{ stredisko.nazov }} ({{ stredisko.adresa|default:'' }})">🏢 Pobočka: {{ stredisko.nazov }}{% if stredisko.adresa %} – {{ stredisko.adresa }}{% endif %} – 0 {{ mena }} doprava</option>
+                                            {% endfor %}
+                                        </select>
+                                        <p class="text-[11px] text-emerald-800 bg-emerald-50 p-2 rounded-lg border border-emerald-200">
+                                            💡 Pri doručení na naše servisné stredisko neplatíte žiaden poplatok za dopravu (0 {{ mena }}).
+                                        </p>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-bold text-gray-700 mb-2">3. Vyberte dátum *</label>
+                                    <input type="date" id="bookingDate" name="datum" data-pracovat-vikendy="{% if globalne_nastavenia.pracovat_vikendy %}1{% else %}0{% endif %}" required class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 ring-brand outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-bold text-gray-700 mb-2">4. Preferovaný čas *</label>
+                                    <div id="bookingSlots" class="grid grid-cols-1 gap-3">
+                                        <p class="text-sm text-gray-500 italic">Najprv zvoľte dátum.</p>
+                                    </div>
+                                    <input type="hidden" name="cas" id="bookingTime">
+                                </div>
+                            </div>
+                            
+                            <!-- Krok 2: Údaje -->
+                            <div class="space-y-6">
+                                <div>
+                                    <label class="block text-sm font-bold text-gray-700 mb-2">Firma / Meno *</label>
+                                    <input type="text" name="firma" required value="{% if request.user.is_authenticated and request.user.zakaznik_profil %}{{ request.user.zakaznik_profil.Nazov_spolocnosti }}{% endif %}" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 ring-brand outline-none">
+                                </div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-bold text-gray-700 mb-2">E-mail *</label>
+                                        <input type="email" name="email" required value="{% if request.user.is_authenticated and request.user.zakaznik_profil %}{{ request.user.zakaznik_profil.email|default:request.user.email }}{% endif %}" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 ring-brand outline-none">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-bold text-gray-700 mb-2">Telefón *</label>
+                                        <input type="text" name="telefon" required value="{% if request.user.is_authenticated and request.user.zakaznik_profil %}{{ request.user.zakaznik_profil.telefon|default:'' }}{% endif %}" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 ring-brand outline-none">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-bold text-gray-700 mb-2">Poznámka pre technika</label>
+                                    <textarea name="poznamka" rows="3" placeholder="Špecifikácia závady, prístupu do areálu alebo požiadavky na technológiu..." class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 ring-brand outline-none"></textarea>
+                                </div>
+                                <div class="bg-blue-50 p-4 rounded-xl border border-blue-100 text-sm text-blue-800">
+                                    <span class="font-bold">ℹ️ Dôležité:</span> Váš termín je predbežný. Presný čas príchodu technika vám potvrdí náš dispečing na základe aktuálnej trasy a logistiky.
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" id="bookingSubmitBtn" class="w-full bg-brand hover-bg-brand text-white font-bold text-lg py-4 rounded-xl transition shadow-lg mt-4 flex justify-center items-center gap-2">
+                            <svg id="bookingBtnSpinner" class="hidden animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span id="bookingBtnText">Odoslať požiadavku na termín</span>
+                        </button>
+                    </form>
+                    <div id="bookingMessage" class="hidden mt-6 text-center p-8 rounded-2xl border"></div>
+                </div>
+            </div>
+        </section>
+        {% endif %}
+
+        <!-- Blok WARRANTY_CLAIM bol z Landing Page odstránený z dôvodu konverzného UX. Reklamácie majú vlastnú podstránku. -->
+
+        <!-- ❓ ČASTO KLADENÉ OTÁZKY (FAQ) -->
+        {% if blok.typ == 'FAQ' and faqs %}
+        <section class="py-20 bg-white px-6 border-t border-gray-100" id="faq">
+            <div class="max-w-4xl mx-auto">
+                <div class="text-center mb-12">
+                    <h2 class="text-4xl font-bold mb-4 text-gray-900">{{ blok.nadpis|default:"Často kladené otázky" }}</h2>
+                    <p class="text-lg text-gray-500">{{ blok.podnadpis }}</p>
+                </div>
+                
+                {% regroup faqs by get_kategoria_display as faq_kategorie %}
+                
+                <div class="space-y-10">
+                    {% for kategoria in faq_kategorie %}
+                    <div>
+                        <h3 class="text-xl font-extrabold text-gray-900 mb-4 flex items-center gap-2">
+                            {{ kategoria.grouper }}
+                        </h3>
+                        <div class="space-y-3">
+                            {% for faq in kategoria.list %}
+                            <div id="{{ faq.slug }}" class="faq-item border border-gray-200 rounded-2xl bg-white overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 scroll-mt-24">
+                                <button onclick="toggleFaq(this)" aria-expanded="false" class="w-full text-left px-6 py-5 font-bold text-gray-900 flex justify-between items-center focus:outline-none group">
+                                    <span class="text-lg group-hover:text-brand transition-colors pr-4">{{ faq.otazka }}</span>
+                                    <div class="flex items-center gap-3">
+                                        <span onclick="copyFaqLink(event, '{{ faq.slug }}')" class="hidden md:flex items-center justify-center w-8 h-8 rounded-full bg-gray-50 hover:bg-gray-200 text-gray-400 hover:text-gray-700 transition-colors" title="Kopírovať odkaz na túto otázku">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+                                        </span>
+                                        <svg class="w-6 h-6 text-gray-400 transform transition-transform duration-300 faq-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                    </div>
+                                </button>
+                                <div class="faq-content hidden px-6 pb-6 border-t border-gray-50 pt-4 prose prose-brand max-w-none text-gray-600">
+                                    {{ faq.odpoved|safe }}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+        <script>
+            function toggleFaq(btn) {
+                const content = btn.nextElementSibling;
+                const icon = btn.querySelector('.faq-icon');
+                const parentItem = btn.closest('.faq-item');
+                
+                // Zatvoríme všetky ostatné
+                document.querySelectorAll('.faq-content').forEach(el => {
+                    if (el !== content && !el.classList.contains('hidden')) {
+                        el.classList.add('hidden');
+                        const prevBtn = el.previousElementSibling;
+                        prevBtn.querySelector('.faq-icon').classList.remove('rotate-180');
+                        prevBtn.setAttribute('aria-expanded', 'false');
+                        el.closest('.faq-item').classList.remove('border-brand', 'ring-1', 'ring-brand');
+                    }
+                });
+
+                // Toggle aktuálneho
+                const isHidden = content.classList.toggle('hidden');
+                icon.classList.toggle('rotate-180');
+                btn.setAttribute('aria-expanded', !isHidden);
+                
+                // Zvýraznenie otvoreného boxu
+                if (!isHidden) {
+                    parentItem.classList.add('border-brand', 'ring-1', 'ring-brand');
+                } else {
+                    parentItem.classList.remove('border-brand', 'ring-1', 'ring-brand');
+                }
+            }
+
+            function copyFaqLink(event, slug) {
+                event.stopPropagation(); // Zabráni otvoreniu akordeónu pri kliknutí na kopírovanie
+                const url = window.location.origin + window.location.pathname + '#' + slug;
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(url).then(() => {
+                        alert('Odkaz na otázku bol skopírovaný do schránky.');
+                    });
+                } else {
+                    alert('Váš prehliadač nepodporuje automatické kopírovanie. Odkaz: ' + url);
+                }
+            }
+
+            // 🧠 ISAS UX: Ak zákazník príde cez priamy link (napr. z e-mailu), automaticky otvoríme danú otázku
+            document.addEventListener("DOMContentLoaded", function() {
+                if (window.location.hash) {
+                    const targetId = window.location.hash.substring(1);
+                    
+                    // 🛡️ EDGE CASE OCHRANA: Ignorujeme kliknutie na hlavné menu (id="faq")
+                    if (targetId !== 'faq') {
+                        const targetFaq = document.getElementById(targetId);
+                        
+                        // Overíme, či sme naozaj našli otázku a nie iný element na webe
+                        if (targetFaq && targetFaq.classList.contains('faq-item')) {
+                            const btn = targetFaq.querySelector('button');
+                            if (btn) {
+                                setTimeout(() => {
+                                    toggleFaq(btn);
+                                    // Scrollujeme na začiatok elementu (block: 'start'), aby dlhé odpovede neutiekli z obrazovky
+                                    targetFaq.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                }, 300);
+                            }
+                        }
+                    }
+                }
+            });
+        </script>
+        {% endif %}
+
+        <!-- 📰 ODBORNÉ ČLÁNKY / BLOG (SEO Booster) -->
+        {% if blok.typ == 'BLOG_TEASER' and clanky %}
+        <section class="py-20 bg-gray-50 px-6 border-t border-gray-100" id="blog">
+            <div class="max-w-7xl mx-auto">
+                <div class="text-center mb-12">
+                    <h2 class="text-4xl font-bold mb-4 text-gray-900">{{ blok.nadpis|default:"Odborné články a novinky" }}</h2>
+                    <p class="text-lg text-gray-500">{{ blok.podnadpis }}</p>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    {% for clanok in clanky %}
+                    <a href="{% url 'webbuilder:blog_detail' clanok.slug %}{% if is_preview %}?preview=ai_draft{% endif %}" class="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden group">
+                        <div class="h-48 bg-gray-100 relative overflow-hidden">
+                            {% if clanok.obrazok and clanok.obrazok.name %}
+                                <img src="{{ clanok.obrazok.url }}" alt="{{ clanok.obrazok_alt|default:clanok.nadpis }}" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+                            {% else %}
+                                <div class="w-full h-full flex items-center justify-center text-4xl opacity-20">📰</div>
+                            {% endif %}
+                            {% if clanok.kategoria %}
+                            <div class="absolute top-4 left-4 flex flex-col gap-2 items-start">
+                                <span class="bg-brand text-white text-xs font-extrabold px-3 py-1.5 rounded-lg shadow-sm uppercase tracking-wider">
+                                    {{ clanok.get_kategoria_display }}
+                                </span>
+                            </div>
+                            {% endif %}
+                            <div class="absolute bottom-4 right-4 bg-white/90 backdrop-blur-sm text-gray-900 text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-1">
+                                ⏱️ {{ clanok.cas_citania|default:"3" }} min.
+                            </div>
+                        </div>
+                        <div class="p-6 flex flex-col flex-grow">
+                            <h3 class="text-xl font-bold text-gray-900 mb-3 group-hover:text-brand transition-colors line-clamp-2">{{ clanok.nadpis }}</h3>
+                            <p class="text-sm text-gray-500 line-clamp-3 mb-4 flex-grow">{{ clanok.perex|default:clanok.obsah|striptags|truncatewords:28 }}</p>
+                            <span class="text-brand font-bold text-sm flex items-center gap-1 mt-auto">
+                                Čítať viac <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                            </span>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+                
+                <div class="text-center mt-12">
+                    <a href="{% url 'webbuilder:blog_list' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="inline-block bg-white border-2 border-brand text-brand hover:bg-brand hover:text-white font-bold py-3 px-8 rounded-xl transition duration-300">Zobraziť všetky články</a>
+                </div>
+            </div>
+        </section>
+        {% endif %}
+
+    {% endfor %}
+
+    <!-- 🚀 ISAS SEO ENGINE: LocalBusiness & Organization Schema -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "LocalBusiness",
+      "name": "{{ identita.nazov_spolocnosti|escapejs }}",
+      {% if nastavenia.logo and nastavenia.logo.name %}
+      "image": "{% if '://' in nastavenia.logo.url %}{{ nastavenia.logo.url }}{% else %}{{ request.scheme }}://{{ request.get_host }}{{ nastavenia.logo.url }}{% endif %}",
+      {% endif %}
+      "@id": "{{ request.scheme }}://{{ request.get_host }}",
+      "url": "{{ request.scheme }}://{{ request.get_host }}",
+      "telephone": "{{ identita.telefon|escapejs }}",
+      "email": "{{ identita.email_vseobecny|escapejs }}",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "{{ identita.sidlo_ulica|escapejs }} {{ identita.sidlo_cislo|escapejs }}",
+        "addressLocality": "{{ identita.sidlo_mesto|escapejs }}",
+        "postalCode": "{{ identita.sidlo_psc|escapejs }}",
+        "addressCountry": "{{ identita.sidlo_stat_kod|default:identita.sidlo_stat|escapejs }}"
+      },
+      "taxID": "{{ identita.dic|escapejs }}",
+      "vatID": "{{ identita.ic_dph|escapejs }}"{% if identita.linkedin or identita.facebook or identita.instagram %},
+      "sameAs": [
+        {% if identita.linkedin %}"{{ identita.linkedin|escapejs }}"{% if identita.facebook or identita.instagram %},{% endif %}{% endif %}
+        {% if identita.facebook %}"{{ identita.facebook|escapejs }}"{% if identita.instagram %},{% endif %}{% endif %}
+        {% if identita.instagram %}"{{ identita.instagram|escapejs }}"{% endif %}
+      ]
+      {% endif %}
+    }
+    </script>
+
+    <!-- 🚀 ISAS SEO ENGINE: FAQ Schema pre Google Rich Snippets -->
+    {% if faqs %}
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {% for faq in faqs %}
+        {
+          "@type": "Question",
+          "name": "{{ faq.otazka|striptags|escapejs }}",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "{{ faq.odpoved|striptags|escapejs }}"
+          }
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+      ]
+    }
+    </script>
+    {% endif %}
+
+    {{ hub_config|json_script:"hub-config-data" }}
+    {{ industry_terms|json_script:"industry-terms-data" }}
+    {% endblock %}
+
+{% block extra_js %}
+    <!-- 🟢 AJAX SKRIPT PRE FORMULÁR -->
+    <script>
+        function selectBrandInForm(brandId) {
+            const selectEl = document.querySelector('#dopytForm select[name="znacka_id"]');
+            if (selectEl && brandId) {
+                selectEl.value = brandId;
+                selectEl.classList.add('ring-2', 'ring-brand');
+                setTimeout(() => {
+                    try { selectEl.focus({ preventScroll: true }); } catch (e) {}
+                }, 800);
+                setTimeout(() => selectEl.classList.remove('ring-2', 'ring-brand'), 3500);
+            }
+        }
+
+        const dopytForm = document.getElementById('dopytForm');
+        if (dopytForm) {
+            dopytForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const form = this;
+                const formData = new FormData(form);
+                const msgDiv = document.getElementById('formMessage');
+                const btn = form.querySelector('button[type="submit"]');
+                
+                const btnSpinner = document.getElementById('btnSpinner');
+                const btnText = document.getElementById('btnText');
+                
+                // Zablokovanie tlačidla počas odosielania
+                btn.disabled = true;
+                btn.classList.add('opacity-75', 'cursor-not-allowed');
+                btnSpinner.classList.remove('hidden');
+                btnText.innerText = 'Odosielam...';
+                
+                fetch('{% url "webbuilder:submit_inquiry" %}', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    msgDiv.classList.remove('hidden', 'bg-red-50', 'border-red-200', 'text-red-700', 'bg-green-50', 'border-green-200', 'text-green-700');
+                    if(data.status === 'success') {
+                        form.classList.add('hidden'); // Skryjeme formulár
+                        msgDiv.classList.add('bg-green-50', 'border-green-200', 'text-green-700');
+                        msgDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        
+                        // Vykreslíme Success hlášku s tlačidlom pre nový dopyt
+                        msgDiv.innerHTML = `
+                            <div class="text-5xl mb-4">✅</div>
+                            <h4 class="text-2xl font-bold mb-1 text-gray-900">Dopyt bol úspešne zaevidovaný!</h4>
+                            <p class="text-gray-500 text-sm mb-4">Potvrdenie a odkaz na sledovanie sme vám poslali na e-mail.</p>
+                            
+                            <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-inner mb-6 inline-flex flex-col items-center">
+                                <span class="text-xs uppercase font-bold text-gray-400 tracking-wider mb-1">Vaše číslo zákazky:</span>
+                                <div class="flex items-center gap-2">
+                                    <span class="font-mono text-xl font-extrabold text-brand" id="ticketNumberSpan">${data.cislo_objednavky}</span>
+                                    <button type="button" onclick="if(navigator.clipboard){navigator.clipboard.writeText('${data.cislo_objednavky}'); this.innerText='Skopírované! ✅'; setTimeout(()=>this.innerText='Kopírovať 📋', 2000);}else{alert('Váš prehliadač nepodporuje kopírovanie.');}" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-1 px-2.5 rounded-lg border border-gray-300 transition">
+                                        Kopírovať 📋
+                                    </button>
+                                </div>
+                            </div><br>
+                            
+                            <button type="button" id="resetFormBtn" class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 font-bold py-3 px-6 rounded-xl transition shadow-sm">
+                                Odoslať ďalší dopyt
+                            </button>
+                        `;
+
+                        // Logika pre tlačidlo "Odoslať ďalší dopyt"
+                        document.getElementById('resetFormBtn').addEventListener('click', function() {
+                            form.reset(); // Vyčistí všetky inputy
+                            form.classList.remove('hidden'); // Znovu zobrazí formulár
+                            msgDiv.classList.add('hidden'); // Skryje Success hlášku
+                            
+                            // Vráti hlavné odosielacie tlačidlo do pôvodného stavu
+                            btn.disabled = false;
+                            btn.classList.remove('opacity-75', 'cursor-not-allowed');
+                            btnSpinner.classList.add('hidden');
+                            btnText.innerText = 'Odoslať požiadavku';
+                        });
+
+                    } else {
+                        msgDiv.classList.add('bg-red-50', 'border-red-200', 'text-red-700');
+                        msgDiv.innerHTML = '<b>Chyba:</b> <span class="error-text"></span>';
+                        msgDiv.querySelector('.error-text').textContent = data.message; // 🛡️ XSS Ochrana
+                        msgDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                        
+                        // Obnova tlačidla len pri chybe
+                        btn.disabled = false;
+                        btn.classList.remove('opacity-75', 'cursor-not-allowed');
+                        btnSpinner.classList.add('hidden');
+                        btnText.innerText = 'Odoslať požiadavku';
+                    }
+                })
+                .catch(error => {
+                    msgDiv.classList.remove('hidden');
+                    msgDiv.classList.add('bg-red-50', 'border-red-200', 'text-red-700');
+                    msgDiv.innerHTML = '<b>Chyba:</b> Nastala chyba pri komunikácii so serverom. Skúste to prosím neskôr.';
+                    msgDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-75', 'cursor-not-allowed');
+                    btnSpinner.classList.add('hidden');
+                    btnText.innerText = 'Odoslať požiadavku';
+                });
+            });
+        }
+
+        // 🧮 LIVE KALKULÁCIA DOJAZDU INTEGROVANÁ PRIAMO V SMART BOOKINGU (S ochranou pred race condition)
+        const bookingLocInput = document.getElementById('bookingLocationInput');
+        const bookingServiceSelect = document.querySelector('#bookingForm select[name="sluzba_id"]');
+        const liveCalcBadge = document.getElementById('bookingLiveCalcBadge');
+        let calcDebounceTimer = null;
+        let calcAbortController = null;
+
+        function runLiveBookingCalc() {
+            if (!bookingLocInput || !bookingServiceSelect) return;
+            const destVal = bookingLocInput.value.trim();
+            const srvVal = bookingServiceSelect.value;
+            const isVyjazd = document.querySelector('input[name="sposob_realizacie"][value="VYJAZD"]')?.checked;
+
+            if (calcAbortController) {
+                calcAbortController.abort();
+                calcAbortController = null;
+            }
+
+            if (!isVyjazd || destVal.length < 3 || !srvVal) {
+                if (liveCalcBadge) liveCalcBadge.classList.add('hidden');
+                return;
+            }
+
+            const csrfEl = document.querySelector('#bookingForm input[name="csrfmiddlewaretoken"]');
+            if (!csrfEl) return;
+
+            calcAbortController = typeof AbortController !== 'undefined' ? new AbortController() : null;
+
+            // Vizuálny loading feedback pre návštevníka
+            if (liveCalcBadge) {
+                document.getElementById('bookingLiveDistance').textContent = '⏳ Prepočítavam trasu...';
+                document.getElementById('bookingLiveTravel').textContent = '';
+                document.getElementById('bookingLiveLabor').textContent = '';
+                liveCalcBadge.classList.remove('hidden');
+            }
+
+            const fd = new FormData();
+            fd.append('destination', destVal);
+            fd.append('service_id', srvVal);
+            fd.append('csrfmiddlewaretoken', csrfEl.value);
+
+            fetch('{% url "webbuilder:calculate_callout_fee" %}', {
+                method: 'POST',
+                body: fd,
+                signal: calcAbortController ? calcAbortController.signal : undefined,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    document.getElementById('bookingLiveDistance').textContent = `🛣️ ${data.vzdialenost}`;
+                    document.getElementById('bookingLiveTravel').textContent = `🚙 Doprava: ${data.cena_cesta}`;
+                    document.getElementById('bookingLiveLabor').textContent = `⏱️ Práca: ${data.cena_praca}`;
+                    liveCalcBadge.classList.remove('hidden');
+                } else {
+                    liveCalcBadge.classList.add('hidden');
+                }
+            })
+            .catch(err => {
+                if (err && err.name === 'AbortError') return;
+                if (liveCalcBadge) liveCalcBadge.classList.add('hidden');
+            });
+        }
+
+        if (bookingLocInput) {
+            bookingLocInput.addEventListener('input', () => {
+                clearTimeout(calcDebounceTimer);
+                calcDebounceTimer = setTimeout(runLiveBookingCalc, 600);
+            });
+        }
+        if (bookingServiceSelect) {
+            bookingServiceSelect.addEventListener('change', runLiveBookingCalc);
+        }
+
+        // Prepínanie spôsobu realizácie (Výjazd vs. Dielňa) s obnovou slotov
+        document.querySelectorAll('input[name="sposob_realizacie"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                const isVyjazd = this.value === 'VYJAZD';
+                const vyjazdWrap = document.getElementById('bookingVyjazdWrap');
+                const dielnaWrap = document.getElementById('bookingDielnaWrap');
+                if (vyjazdWrap) vyjazdWrap.classList.toggle('hidden', !isVyjazd);
+                if (dielnaWrap) dielnaWrap.classList.toggle('hidden', isVyjazd);
+                if (bookingLocInput) {
+                    bookingLocInput.required = isVyjazd;
+                }
+                runLiveBookingCalc();
+                // 🔄 Aktualizácia voľných termínov pre vybraný región / pobočku
+                const dateEl = document.getElementById('bookingDate');
+                if (dateEl && dateEl.value) {
+                    dateEl.dispatchEvent(new Event('change'));
+                }
+            });
+        });
+
+        // 🔄 Aktualizácia termínov pri zmene konkrétnej pobočky dielne
+        const bookingStrediskoSelect = document.querySelector('select[name="stredisko_info"]');
+        if (bookingStrediskoSelect) {
+            bookingStrediskoSelect.addEventListener('change', function() {
+                const dateEl = document.getElementById('bookingDate');
+                if (dateEl && dateEl.value) {
+                    dateEl.dispatchEvent(new Event('change'));
+                }
+            });
+        }
+
+        // 📡 LOGIKA PRE IOT DEMO
+        (function initIoTDemo() {
+            const canvas1 = document.getElementById('demo-gauge-1');
+            const canvas2 = document.getElementById('demo-gauge-2');
+            const canvas3 = document.getElementById('demo-gauge-3');
+
+            if (!canvas1 || !canvas2 || !canvas3 || typeof Chart === 'undefined') return;
+
+            const makeGaugeConfig = (color) => ({
+                type: 'doughnut',
+                data: {
+                    datasets: [{
+                        data: [0, 100],
+                        backgroundColor: [color, '#e2e8f0'],
+                        borderWidth: 0,
+                        borderRadius: 12
+                    }]
+                },
+                options: {
+                    circumference: 180,
+                    rotation: -90,
+                    cutout: '78%',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { tooltip: { enabled: false }, legend: { display: false } },
+                    animation: { duration: 500, easing: 'easeOutQuart' },
+                    layout: { padding: { bottom: 6, top: 4 } }
+                }
+            });
+
+            const chart1 = new Chart(canvas1.getContext('2d'), makeGaugeConfig('#0284c7'));
+            const chart2 = new Chart(canvas2.getContext('2d'), makeGaugeConfig('#10b981'));
+            const chart3 = new Chart(canvas3.getContext('2d'), makeGaugeConfig('#6366f1'));
+
+            function updateGauge(chart, val, max, color) {
+                const clamped = Math.min(Math.max(0, val), max);
+                chart.data.datasets[0].data = [clamped, max - clamped];
+                chart.data.datasets[0].backgroundColor[0] = color;
+                chart.update();
+            }
+
+            function updateBadge(id, isOn, textOn, textOff, isErrorBadge = false) {
+                const el = document.getElementById(id);
+                if (!el) return;
+                const textEl = el.querySelector('.stav-text');
+                const colSpanClass = id === 'demo-dig-chyba' ? ' col-span-2' : '';
+                if (isOn) {
+                    el.className = 'digital-badge on' + colSpanClass;
+                    if (textEl) textEl.innerText = textOn;
+                } else {
+                    el.className = `digital-badge ${isErrorBadge ? 'bg-red-100 text-red-700 border-red-200' : 'off'}` + colSpanClass;
+                    if (textEl) textEl.innerText = textOff;
+                }
+            }
+
+            const termsDataEl = document.getElementById('industry-terms-data');
+            const indTerms = termsDataEl ? JSON.parse(termsDataEl.textContent) : {};
+            const hubConfigEl = document.getElementById('hub-config-data');
+            const hubConfig = hubConfigEl ? JSON.parse(hubConfigEl.textContent) : {};
+            const warnRatio = parseFloat(hubConfig.gauge_warn_ratio) || 0.75;
+
+            const gaugeBase1 = parseFloat(indTerms.gauge_1_base) || 0;
+            const gaugeBase2 = parseFloat(indTerms.gauge_2_base) || 0;
+            const gaugeBase3 = parseFloat(indTerms.gauge_3_base) || 0;
+            const gaugeMax1 = parseFloat(indTerms.gauge_1_max) || (gaugeBase1 > 0 ? gaugeBase1 * 1.5 : 1);
+            const gaugeMax2 = parseFloat(indTerms.gauge_2_max) || (gaugeBase2 > 0 ? gaugeBase2 * 1.5 : 1);
+            const gaugeMax3 = parseFloat(indTerms.gauge_3_max) || (gaugeBase3 > 0 ? gaugeBase3 * 1.5 : 1);
+
+            function applyIoTValues(val1, val2, val3, dig1On, dig2On, noError) {
+                const el1 = document.getElementById('demo-val-1');
+                const el2 = document.getElementById('demo-val-2');
+                const el3 = document.getElementById('demo-val-3');
+
+                if (el1) el1.innerText = Number(val1).toFixed(2);
+                if (el2) el2.innerText = Number(val2).toFixed(1);
+                if (el3) el3.innerText = Number(val3).toFixed(1);
+
+                updateGauge(chart1, val1, gaugeMax1, '#0284c7');
+                updateGauge(chart2, val2, gaugeMax2, val2 > (gaugeMax2 * warnRatio) ? '#f59e0b' : '#10b981');
+                updateGauge(chart3, val3, gaugeMax3, '#6366f1');
+
+                updateBadge('demo-dig-1', dig1On, indTerms.dig_1_on || 'AKTÍVNY', indTerms.dig_1_off || 'NEAKTÍVNY');
+                updateBadge('demo-dig-2', dig2On, indTerms.dig_2_on || 'AKTÍVNY', indTerms.dig_2_off || 'NEAKTÍVNY');
+                updateBadge('demo-dig-chyba', noError, indTerms.dig_error_ok || 'V NORME (BEZ PORÚCH)', indTerms.dig_error_fail || 'PORUCHA', true);
+            }
+
+            let isVisible = false;
+            let pollTimeout = null;
+            let abortController = null;
+            let currentRequestId = 0;
+
+            function stopPolling() {
+                currentRequestId++;
+                if (pollTimeout) {
+                    clearTimeout(pollTimeout);
+                    pollTimeout = null;
+                }
+                if (abortController) {
+                    abortController.abort();
+                    abortController = null;
+                }
+            }
+
+            function pollIoT() {
+                if (!isVisible || document.hidden) {
+                    stopPolling();
+                    return;
+                }
+
+                if (pollTimeout) {
+                    clearTimeout(pollTimeout);
+                    pollTimeout = null;
+                }
+
+                if (abortController) {
+                    abortController.abort();
+                }
+                abortController = typeof AbortController !== 'undefined' ? new AbortController() : null;
+                const requestId = ++currentRequestId;
+
+                fetch('{% url "webbuilder:public_iot_demo" %}', {
+                    signal: abortController ? abortController.signal : undefined
+                })
+                    .then(res => {
+                        if (!res.ok) throw new Error('HTTP ' + res.status);
+                        return res.json();
+                    })
+                    .then(data => {
+                        if (requestId !== currentRequestId) return;
+                        if (data && data.status === 'success' && data.analog && data.digital && isVisible && !document.hidden) {
+                            applyIoTValues(
+                                data.analog.hodnota_1,
+                                data.analog.hodnota_2,
+                                data.analog.hodnota_3,
+                                data.digital.chod,
+                                data.digital.pomocny_okruh,
+                                !data.digital.porucha
+                            );
+                        }
+                    })
+                    .catch(err => {
+                        if (err && err.name === 'AbortError') return;
+                        // V sieťovom výpadku sa nevymýšľajú fiktívne senzorové dáta s natvrdo vpísanými koeficientmi
+                    })
+                    .finally(() => {
+                        if (requestId === currentRequestId) {
+                            abortController = null;
+                            if (isVisible && !document.hidden) {
+                                pollTimeout = setTimeout(pollIoT, 2500);
+                            }
+                        }
+                    });
+            }
+
+            const iotSection = document.getElementById('iot-demo') || canvas1.closest('section');
+            if (iotSection && 'IntersectionObserver' in window) {
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            isVisible = true;
+                            pollIoT();
+                        } else {
+                            isVisible = false;
+                            stopPolling();
+                        }
+                    });
+                }, { threshold: 0.1 });
+                observer.observe(iotSection);
+            } else if (iotSection) {
+                isVisible = true;
+                pollIoT();
+            }
+
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden) {
+                    stopPolling();
+                } else if (isVisible) {
+                    pollIoT();
+                }
+            });
+        })();
+
+        // Obsluha reklamačného formulára cez centrálny handler z base.html
+        if (typeof window.handleSpecialForm === 'function') {
+            window.handleSpecialForm('warrantyForm', '{% url "webbuilder:submit_special_lead" %}');
+        }
+        
+        // Vlastný handler pre Booking s inline spätnou väzbou (Zero-Alert UX)
+        const bookingForm = document.getElementById('bookingForm');
+        if (bookingForm) {
+            bookingForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const timeInput = document.getElementById('bookingTime');
+                const msgDiv = document.getElementById('bookingMessage');
+                const btn = document.getElementById('bookingSubmitBtn') || bookingForm.querySelector('button[type="submit"]');
+                const btnSpinner = document.getElementById('bookingBtnSpinner');
+                const btnText = document.getElementById('bookingBtnText');
+                const slotsBox = document.getElementById('bookingSlots');
+
+                if (!timeInput.value) {
+                    if (slotsBox) {
+                        slotsBox.classList.add('ring-2', 'ring-red-500', 'p-2', 'rounded-xl');
+                        slotsBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        setTimeout(() => slotsBox.classList.remove('ring-2', 'ring-red-500', 'p-2', 'rounded-xl'), 2500);
+                    }
+                    if (msgDiv) {
+                        msgDiv.classList.remove('hidden', 'bg-green-50', 'border-green-200', 'text-green-700');
+                        msgDiv.classList.add('bg-amber-50', 'border-amber-200', 'text-amber-800');
+                        msgDiv.innerHTML = '<b>Upozornenie:</b> Prosím, vyberte si konkrétny časový blok výjazdu.';
+                    }
+                    return;
+                }
+                
+                btn.disabled = true;
+                btn.classList.add('opacity-75', 'cursor-not-allowed');
+                if (btnSpinner) btnSpinner.classList.remove('hidden');
+                if (btnText) btnText.innerText = 'Overujem a rezervujem...';
+                
+                fetch('{% url "webbuilder:submit_booking" %}', {
+                    method: 'POST',
+                    body: new FormData(bookingForm),
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (msgDiv) {
+                        msgDiv.classList.remove('hidden', 'bg-red-50', 'border-red-200', 'text-red-700', 'bg-green-50', 'border-green-200', 'text-green-700', 'bg-amber-50', 'border-amber-200', 'text-amber-800');
+                    }
+                    if (data.status === 'success') {
+                        bookingForm.classList.add('hidden');
+                        if (msgDiv) {
+                            msgDiv.classList.add('bg-green-50', 'border-green-200', 'text-green-700');
+                            msgDiv.innerHTML = `
+                                <div class="text-5xl mb-4">📅</div>
+                                <h4 class="text-2xl font-bold mb-1 text-gray-900">Termín bol úspešne rezervovaný!</h4>
+                                <p class="text-gray-500 text-sm mb-4">Potvrdenie a harmonogram výjazdu vám pošle dispečing na e-mail.</p>
+                                
+                                <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-inner mb-6 inline-flex flex-col items-center">
+                                    <span class="text-xs uppercase font-bold text-gray-400 tracking-wider mb-1">Číslo rezervovanej zákazky:</span>
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-mono text-xl font-extrabold text-brand" id="bookingTicketSpan">${data.cislo_objednavky}</span>
+                                        <button type="button" onclick="if(navigator.clipboard){navigator.clipboard.writeText('${data.cislo_objednavky}'); this.innerText='Skopírované! ✅'; setTimeout(()=>this.innerText='Kopírovať 📋', 2000);}else{prompt('Skopírujte si číslo zákazky:', '${data.cislo_objednavky}');}" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-1 px-2.5 rounded-lg border border-gray-300 transition">
+                                            Kopírovať 📋
+                                        </button>
+                                    </div>
+                                </div><br>
+                                
+                                <button type="button" id="resetBookingBtn" class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 font-bold py-3 px-6 rounded-xl transition shadow-sm">
+                                    Rezervovať ďalší termín
+                                </button>
+                            `;
+
+                            document.getElementById('resetBookingBtn').addEventListener('click', function() {
+                                bookingForm.reset();
+                                if (slotsBox) slotsBox.innerHTML = '<p class="text-sm text-gray-500 italic">Najprv zvoľte dátum.</p>';
+                                timeInput.value = '';
+                                if (liveCalcBadge) liveCalcBadge.classList.add('hidden');
+                                const defaultVyjazd = document.querySelector('input[name="sposob_realizacie"][value="VYJAZD"]');
+                                if (defaultVyjazd) {
+                                    defaultVyjazd.checked = true;
+                                    defaultVyjazd.dispatchEvent(new Event('change'));
+                                }
+                                bookingForm.classList.remove('hidden');
+                                msgDiv.classList.add('hidden');
+                                btn.disabled = false;
+                                btn.classList.remove('opacity-75', 'cursor-not-allowed');
+                                if (btnSpinner) btnSpinner.classList.add('hidden');
+                                if (btnText) btnText.innerText = 'Odoslať požiadavku na termín';
+                            });
+                        }
+                    } else {
+                        if (msgDiv) {
+                            msgDiv.classList.remove('hidden');
+                            msgDiv.classList.add('bg-red-50', 'border-red-200', 'text-red-700');
+                            msgDiv.innerHTML = '<b>Chyba:</b> <span class="error-text"></span>';
+                            msgDiv.querySelector('.error-text').textContent = data.message;
+                            msgDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                        }
+                        btn.disabled = false;
+                        btn.classList.remove('opacity-75', 'cursor-not-allowed');
+                        if (btnSpinner) btnSpinner.classList.add('hidden');
+                        if (btnText) btnText.innerText = 'Odoslať požiadavku na termín';
+                    }
+                })
+                .catch(() => {
+                    if (msgDiv) {
+                        msgDiv.classList.remove('hidden');
+                        msgDiv.classList.add('bg-red-50', 'border-red-200', 'text-red-700');
+                        msgDiv.innerHTML = '<b>Chyba:</b> Nastala chyba pri komunikácii so serverom. Skúste to prosím neskôr.';
+                        msgDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-75', 'cursor-not-allowed');
+                    if (btnSpinner) btnSpinner.classList.add('hidden');
+                    if (btnText) btnText.innerText = 'Odoslať požiadavku na termín';
+                });
+            });
+        }
+
+        // Spojenie kalkulačky a bookingu je teraz natívne integrované priamo vo formulári rezervácie vyššie
+
+        // 📅 LOGIKA PRE SMART BOOKING
+        const bookingDate = document.getElementById('bookingDate');
+        const bookingSlots = document.getElementById('bookingSlots');
+        const bookingTime = document.getElementById('bookingTime');
+        let slotsAbortController = null;
+        
+        if (bookingDate) {
+            // 🛡️ Nastavíme minimálny dátum na najbližší pracovný deň podľa prevádzky firmy
+            const zajtra = new Date();
+            zajtra.setDate(zajtra.getDate() + 1);
+            const pracovatVikendy = bookingDate.getAttribute('data-pracovat-vikendy') === '1';
+            if (!pracovatVikendy) {
+                if (zajtra.getDay() === 6) { // Sobota -> posun na pondelok (+2 dni)
+                    zajtra.setDate(zajtra.getDate() + 2);
+                } else if (zajtra.getDay() === 0) { // Nedeľa -> posun na pondelok (+1 deň)
+                    zajtra.setDate(zajtra.getDate() + 1);
+                }
+            }
+            const yyyy = zajtra.getFullYear();
+            const mm = String(zajtra.getMonth() + 1).padStart(2, '0');
+            const dd = String(zajtra.getDate()).padStart(2, '0');
+            bookingDate.setAttribute('min', `${yyyy}-${mm}-${dd}`);
+            bookingDate.addEventListener('change', function() {
+                const dateVal = this.value;
+                if (!dateVal) return;
+                
+                // 🛡️ OKAMŽITÁ KONTROLA VÍKENDU V PREHLIADAČI
+                const dParts = dateVal.split('-');
+                if (dParts.length === 3) {
+                    const pickedDate = new Date(parseInt(dParts[0], 10), parseInt(dParts[1], 10) - 1, parseInt(dParts[2], 10));
+                    const dayOfWeek = pickedDate.getDay(); // 0 = Nedeľa, 6 = Sobota
+                    const pracovatVikendy = bookingDate.getAttribute('data-pracovat-vikendy') === '1';
+
+                    if (!pracovatVikendy && (dayOfWeek === 0 || dayOfWeek === 6)) {
+                        const daysToMon = dayOfWeek === 6 ? 2 : 1;
+                        pickedDate.setDate(pickedDate.getDate() + daysToMon);
+                        const nextY = pickedDate.getFullYear();
+                        const nextM = String(pickedDate.getMonth() + 1).padStart(2, '0');
+                        const nextD = String(pickedDate.getDate()).padStart(2, '0');
+                        const nextMonVal = `${nextY}-${nextM}-${nextD}`;
+
+                        bookingSlots.innerHTML = `
+                            <div class="col-span-2 p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 space-y-1.5">
+                                <p class="font-bold flex items-center gap-1.5"><span>⚠️</span> Cez víkendy bežný servis neposkytujeme.</p>
+                                <p class="text-[11px] leading-relaxed">Štandardné výjazdy prebiehajú v pracovné dni. Pre havarijné stavy volajte dispečing.</p>
+                                <button type="button" onclick="const b=document.getElementById('bookingDate'); if(b){b.value='${nextMonVal}'; b.dispatchEvent(new Event('change'));}" class="mt-1 bg-amber-700 hover:bg-amber-800 text-white font-bold py-1.5 px-3 rounded-lg transition text-xs shadow-sm">
+                                    Nastaviť na pondelok (${nextD}.${nextM}.) &rarr;
+                                </button>
+                            </div>
+                        `;
+                        bookingTime.value = '';
+                        return;
+                    }
+                }
+
+                bookingSlots.innerHTML = '<p class="text-sm text-gray-500 col-span-2">⏳ Načítavam voľné termíny...</p>';
+                bookingTime.value = '';
+
+                if (slotsAbortController) {
+                    slotsAbortController.abort();
+                }
+                slotsAbortController = typeof AbortController !== 'undefined' ? new AbortController() : null;
+                
+                const isVyjazdSelected = document.querySelector('input[name="sposob_realizacie"][value="VYJAZD"]')?.checked ?? true;
+                const locationInput = document.querySelector('input[name="mesto"]');
+                const strediskoSelect = document.querySelector('select[name="stredisko_info"]');
+                let effectiveLoc = isVyjazdSelected ? (locationInput ? locationInput.value.trim() : '') : (strediskoSelect ? strediskoSelect.value.trim() : '');
+                const locationVal = encodeURIComponent(effectiveLoc);
+
+                fetch(`{% url "webbuilder:get_available_slots" %}?date=${dateVal}&location=${locationVal}`, {
+                    signal: slotsAbortController ? slotsAbortController.signal : undefined
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        if (data.slots.length === 0) {
+                            bookingSlots.innerHTML = '<p class="text-sm text-red-500 font-bold col-span-2">❌ V tento deň už nemáme voľné kapacity.</p>';
+                            return;
+                        }
+                        
+                        bookingSlots.innerHTML = '';
+                        data.slots.forEach(slot => {
+                            const btn = document.createElement('button');
+                            btn.type = 'button';
+                            btn.className = 'slot-btn py-3 px-4 rounded-lg border-2 border-gray-200 font-bold text-gray-600 hover:border-brand hover:text-brand transition text-left flex justify-between items-center';
+                            const labelSpan = document.createElement('span');
+                            labelSpan.textContent = slot.label;
+                            const iconSpan = document.createElement('span');
+                            iconSpan.className = 'text-xl opacity-50';
+                            iconSpan.textContent = '⏱️';
+                            btn.appendChild(labelSpan);
+                            btn.appendChild(iconSpan);
+                            btn.onclick = function() {
+                                document.querySelectorAll('.slot-btn').forEach(b => b.classList.remove('border-brand', 'text-brand', 'bg-brand/5'));
+                                this.classList.add('border-brand', 'text-brand', 'bg-brand/5');
+                                bookingTime.value = slot.id;
+                            };
+                            bookingSlots.appendChild(btn);
+                        });
+                    } else {
+                        bookingSlots.innerHTML = '<p class="text-sm text-red-500 col-span-2 error-text"></p>';
+                        bookingSlots.querySelector('.error-text').textContent = data.message; // 🛡️ XSS Ochrana
+                    }
+                })
+                .catch(err => {
+                    if (err && err.name === 'AbortError') return;
+                    bookingSlots.innerHTML = '<p class="text-sm text-red-500 col-span-2">Chyba pri načítavaní termínov.</p>';
+                });
+            });
+        }
+    </script>
+{% endblock %}

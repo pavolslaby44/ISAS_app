@@ -1,0 +1,239 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}📖 Kniha úloh | ISAS Command Center{% endblock %}
+
+{% block extrahead %}
+    {{ block.super }}
+    <link rel="stylesheet" href="{% static 'admin/css/vendor/select2/select2.min.css' %}">
+    <script src="{% static 'admin/js/vendor/jquery/jquery.min.js' %}"></script>
+    <script src="{% static 'admin/js/vendor/select2/select2.full.min.js' %}"></script>
+{% endblock %}
+
+{% block content %}
+<style>
+    /* --- 💎 VIVID TASK BOOK BUILDER --- */
+    :root {
+        --primary: #3b82f6; --primary-dark: #2563eb;
+        --slate-900: #0f172a; --slate-800: #1e293b; --slate-500: #64748b; --slate-200: #e2e8f0;
+        --emerald: #10b981; --amber: #f59e0b; --rose: #ef4444;
+        --glass-bg: rgba(255, 255, 255, 0.85);
+    }
+    
+    #content { background: transparent !important; padding: 20px 30px !important; min-height: 90vh; }
+    .breadcrumbs, #content > h1 { display: none !important; }
+    
+    .builder-container { display: grid; grid-template-columns: 350px 1fr; gap: 30px; max-width: 1600px; margin: 0 auto; align-items: start; animation: fadeUp 0.5s ease; }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+    .panel { background: var(--glass-bg); backdrop-filter: blur(20px); border-radius: 24px; border: 1px solid rgba(255,255,255,0.9); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.08); padding: 30px; }
+    .panel-header { font-size: 18px; font-weight: 900; color: var(--slate-900); margin-bottom: 25px; display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #f1f5f9; padding-bottom: 15px;}
+    
+    .btn-ghost { background: #f1f5f9; color: var(--slate-800); border: 1px solid var(--slate-200); padding: 8px 16px; border-radius: 12px; font-weight: 800; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; transition: 0.3s; font-size: 12px; text-transform: uppercase;}
+    .btn-ghost:hover { background: #e2e8f0; transform: translateY(-1px); }
+
+    .form-group label { display: block; font-size: 11px; font-weight: 800; color: var(--slate-500); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+    
+    /* 🚀 MODERNIZOVANÝ SELECT2 */
+    .select2-container--default .select2-selection--single { height: 48px; border-radius: 14px; border: 2px solid #e2e8f0; display: flex; align-items: center; background: #ffffff; font-weight: 700; color: #1e293b; box-shadow: 0 2px 4px rgba(0,0,0,0.02); transition: all 0.3s ease; }
+    .select2-container--default.select2-container--open .select2-selection--single, .select2-container--default.select2-container--focus .select2-selection--single { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15); }
+    .select2-container--default .select2-selection--single .select2-selection__arrow { height: 46px; right: 10px; }
+    .select2-container--default .select2-selection--single .select2-selection__rendered { padding-left: 16px; color: #0f172a; display: flex; align-items: center; gap: 8px;}
+    .select2-dropdown { border: 1px solid #e2e8f0; border-radius: 14px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); overflow: hidden; padding: 4px; z-index: 11000 !important; }
+    .select2-container--default .select2-results__option--highlighted.select2-results__option--selectable { background-color: #eff6ff; color: var(--primary-dark); font-weight: 800; border-radius: 8px;}
+    .select2-results__option { padding: 10px 16px; font-weight: 600; color: #475569; display: flex; align-items: center; gap: 8px; transition: background 0.2s; border-radius: 8px;}
+
+    /* TASK CARDS */
+    .task-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 20px; }
+    .task-card { background: white; border-radius: 16px; border: 1px solid #e2e8f0; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); transition: all 0.3s ease; display: flex; flex-direction: column; justify-content: space-between;}
+    .task-card:hover { transform: translateY(-5px); box-shadow: 0 15px 30px -5px rgba(0,0,0,0.1); border-color: #cbd5e1; }
+    
+    .tc-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; }
+    .tc-id { background: #eff6ff; color: #3b82f6; padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: 900; }
+    .tc-date { font-size: 12px; color: var(--slate-500); font-weight: 700; display: flex; align-items: center; gap: 4px;}
+    
+    .tc-customer { font-size: 16px; font-weight: 900; color: var(--slate-900); margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+    .tc-body { font-size: 13px; color: var(--slate-500); margin-bottom: 15px; line-height: 1.5; background: #f8fafc; padding: 12px; border-radius: 12px;}
+    
+    .tc-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 15px;}
+    .badge { background: #f1f5f9; color: #475569; padding: 4px 10px; border-radius: 6px; font-size: 10px; font-weight: 800; text-transform: uppercase; }
+    .badge-job { background: #fef2f2; color: #ef4444; border: 1px solid #fecaca;}
+    .badge-machine { background: #fffbeb; color: #d97706; border: 1px solid #fde68a;}
+    
+    .tc-footer { border-top: 1px dashed #e2e8f0; padding-top: 15px; display: flex; justify-content: space-between; align-items: center; }
+    .btn-detail { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: #ffffff !important; padding: 8px 16px; border-radius: 8px; text-decoration: none; font-size: 11px; font-weight: 800; text-transform: uppercase; transition: 0.2s; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);}
+    .btn-detail:hover { transform: scale(1.05); color: #ffffff !important;}
+    
+    .empty-state { text-align: center; padding: 50px 20px; color: var(--slate-500); }
+    .empty-state span { font-size: 16px; font-weight: 800; margin-top: 10px; display: block; }
+
+    /* --- 📱 MOBILE RESPONSIVENESS (ISAS CORE) --- */
+    @media (max-width: 1024px) {
+        /* 1. Zmenšenie vnútorných okrajov pre menšie obrazovky */
+        #content { padding: 10px !important; }
+        .panel { padding: 20px; }
+
+        /* 2. Zrušenie 2-stĺpcového gridu a uloženie kariet pod seba */
+        .builder-container { 
+            grid-template-columns: 1fr; 
+            gap: 20px;
+            width: 100%;
+            overflow-x: hidden; /* Poistka proti pretečeniu celej stránky */
+        }
+
+        /* 🚀 MAGICKÝ FIX: Zabraňuje horizontálnemu roztiahnutiu panela, ak obsahuje dlhý scroll */
+        .builder-container > .panel {
+            min-width: 0; 
+        }
+
+        /* 3. Vycentrovanie karty "Priradenie" (ľavý panel) */
+        .builder-container > .panel:first-child {
+            margin: 0 auto; 
+            width: 100%;
+            max-width: 450px; /* Zabraňuje zbytočnému roztiahnutiu na tabletoch */
+        }
+
+        /* 4. Horizontálny scroll pre pravý panel (Úlohy/Vstupy) */
+        .task-grid { 
+            display: flex; /* Zmena z grid na flex pre horizontálne radenie */
+            flex-wrap: nowrap; 
+            overflow-x: auto; 
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch; /* Plynulý "momentum" scroll na iOS */
+            padding-bottom: 20px; /* Priestor pre scrollbar */
+            scroll-snap-type: x mandatory; /* Prichytávanie kariet ako v natívnej appke */
+            gap: 15px;
+        }
+
+        /* 5. Prispôsobenie samotných kariet v scrolle */
+        .task-card { 
+            flex: 0 0 85%; /* Karta zaberie 85% šírky obrazovky, aby bolo vidieť kúsok ďalšej */
+            max-width: 320px;
+            scroll-snap-align: center; /* Karta sa pri scrollovaní zastaví v strede */
+        }
+
+        /* 6. Dizajn horizontálneho scrollbaru (Webkit) */
+        .task-grid::-webkit-scrollbar { height: 6px; }
+        .task-grid::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 10px; }
+        .task-grid::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    }
+</style>
+
+<div class="builder-container">
+    
+    <!-- ĽAVÝ PANEL: VÝBER TECHNIKA -->
+    <div class="panel" style="height: fit-content;">
+        <div class="panel-header">
+            <span>👨‍🔧 Priradenie</span>
+            <a href="{% url 'admin:Evidencia_uloha_changelist' %}" class="btn-ghost">
+                Naspäť
+            </a>
+        </div>
+
+        <form method="GET" id="filter-form">
+            <div class="form-group">
+                <label>👇 Vyhľadávať v zozname zamestnancov</label>
+                <select id="sel-technik" name="technik_id" class="select2-main">
+                    <option value="" disabled {% if not vybrany_technik %}selected{% endif %}>👤 Vyberte zamestnanca...</option>
+                    {% for z in zamestnanci %}
+                        <option value="{{ z.id }}" {% if vybrany_technik and vybrany_technik.id == z.id %}selected{% endif %}>
+                            {% if z.pracovna_rola == 'TE' %}👨‍🔧{% elif z.pracovna_rola == 'DI' %}🎧{% elif z.pracovna_rola == 'SK' %}📦{% elif z.pracovna_rola == 'AD' %}👩‍💼{% else %}👨‍💼{% endif %} {{ z.meno }} {{ z.priezvisko }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div style="margin-top: 20px; padding: 15px; background: #f8fafc; border-radius: 12px; border: 1px dashed #cbd5e1;">
+                <p style="font-size: 11px; color: var(--slate-500); line-height: 1.4; margin: 0; font-weight: 600;">
+                    💡 <b>Info:</b> Zvoľte zamestnanca zo zoznamu. Systém prehľadá všetky nedokončené (živé) úlohy a zobrazí ich chronologicky na paneli vpravo.
+                </p>
+            </div>
+        </form>
+    </div>
+
+    <!-- PRAVÝ PANEL: VÝPIS ÚLOH -->
+    <div class="panel">
+        <div class="panel-header" style="border-bottom: none; margin-bottom: 10px;">
+            <span>📝 Otvorené úlohy {% if vybrany_technik %}<span style="color: var(--primary);">({% if vybrany_technik.pracovna_rola == 'TE' %}👨‍🔧{% elif vybrany_technik.pracovna_rola == 'DI' %}🎧{% elif vybrany_technik.pracovna_rola == 'SK' %}📦{% elif vybrany_technik.pracovna_rola == 'AD' %}👩‍💼{% else %}👨‍💼{% endif %} {{ vybrany_technik.meno }} {{ vybrany_technik.priezvisko }})</span>{% endif %}</span>
+            <span style="font-size: 12px; background: #f1f5f9; padding: 4px 10px; border-radius: 20px; color: var(--slate-500); font-weight: 800;">
+                📊 Počet: {{ otvorene_ulohy|length }}
+            </span>
+        </div>
+
+        {% if not vybrany_technik %}
+            <div class="empty-state">
+                <div style="font-size: 50px;">👈</div>
+                <span>Pre zobrazenie knihy úloh vyberte zamestnanca v ľavom paneli.</span>
+            </div>
+        {% elif otvorene_ulohy|length == 0 %}
+            <div class="empty-state">
+                <div style="font-size: 50px;">🎉</div>
+                <span>Čistý stôl! Tento zamestnanec nemá žiadne otvorené úlohy.</span>
+            </div>
+        {% else %}
+            <div class="task-grid">
+                {% for u in otvorene_ulohy %}
+                <div class="task-card">
+                    <div>
+                        <div class="tc-header">
+                            <span class="tc-id">#{{ u.id }}</span>
+                            <span class="tc-date">🗓️ {{ u.zaciatok }}</span>
+                        </div>
+                        
+                        <div class="tc-customer">
+                            {% if u.zakaznik %}
+                                🏢 {{ u.zakaznik.Nazov_spolocnosti }}
+                            {% else %}
+                                📭 <span style="color: var(--slate-500); font-weight: 700; font-size: 14px;">Bez zákazníka</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="tc-badges">
+                            {% for typ in u.typ_servisu.all %}
+                                <span class="badge badge-job">{{ typ.nazov }}</span>
+                            {% endfor %}
+                            {% for zar in u.zariadenia.all %}
+                                <span class="badge badge-machine">{{ zar.model_zariadenia }}</span>
+                            {% endfor %}
+                        </div>
+
+                        {% if u.blizsie_informacie %}
+                        <div class="tc-body">
+                            {{ u.blizsie_informacie|truncatechars:120 }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="tc-footer">
+                        <span style="font-size: 10px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">
+                            ⏳ Čaká na vybavenie
+                        </span>
+                        <a href="{% url 'admin:Evidencia_uloha_change' u.id %}" class="btn-detail" target="_blank" rel="noopener noreferrer">Otvoriť detail</a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+
+</div>
+
+<script>
+(function($) {
+    $(document).ready(function() {
+        var $select = $('.select2-main');
+        if ($.fn.select2) {
+            $select.select2({ width: '100%' });
+        }
+        $select.on('change', function() {
+            var form = document.getElementById('filter-form');
+            if (form) {
+                // Defenzívny zámok interakcie bez vyradenia poľa z payloadu
+                $(this).closest('.form-group').css('pointer-events', 'none').css('opacity', '0.7');
+                form.submit();
+            }
+        });
+    });
+})(window.jQuery || (window.django && window.django.jQuery) || window.$);
+</script>
+{% endblock %}

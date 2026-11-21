@@ -1,25 +1,38 @@
-"""
-URL configuration for ISASaplikacia project.
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/5.2/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
-"""
-
 from django.contrib import admin
-from django.urls import path
-from . import views
+from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
+from django.shortcuts import redirect
+
+from ISASaplikacia.views import isas_mail_api, crm_intel_api, api_live_radar, spotify_login, spotify_callback, api_spotify_token, api_history_radar, api_optimize_route, api_easter_egg_2048
+
+admin.site.empty_value_display = ""
+
+def dynamic_root_redirect(request):
+    """🛡️ Subdoménu klienta presmeruje na IoT Dashboard, hlavnú doménu do ERP Adminu."""
+    if getattr(request, 'is_subdomain', False):
+        return redirect('/evidencia/iot-dashboard/', permanent=False)
+    return redirect('/admin/', permanent=False)
 
 urlpatterns = [
-    path('', views.home),         # root -> redirect na admin
-    path('admin/', admin.site.urls),
+    # Explicitné lomítko na začiatku bráni chybnému zreťazeniu relatívnych URL za reverse proxy
+    path('', dynamic_root_redirect),
+    # 🎮 ISAS 2048: Musí byť PRED admin.site.urls, inak admin zachytí požiadavku a vráti 404
+    path('admin/api/easter-egg/2048/', api_easter_egg_2048, name='api_easter_egg_2048'),
+    path('api/easter-egg/2048/', api_easter_egg_2048),
+    path("admin/", admin.site.urls),
+    path("_nested_admin/", include("nested_admin.urls")),
+    path("evidencia/", include("Evidencia.urls")),
+    path("isas-mail-api/", isas_mail_api, name="isas_mail_api"),
+    path('api/crm-intel/', crm_intel_api, name='crm_intel_api'),
+    path('api/live-radar/', api_live_radar, name='api_live_radar'),
+    path('api/history-radar/', api_history_radar, name='api_history_radar'),
+    path('api/optimize-route/', api_optimize_route, name='api_optimize_route'),
+    path('spotify/login/', spotify_login, name='spotify_login'),
+    path('spotify/callback/', spotify_callback, name='spotify_callback'),
+    path('api/spotify/token/', api_spotify_token, name='api_spotify_token'),
+    path('', include('WebBuilder.urls')),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

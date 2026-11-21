@@ -1,0 +1,279 @@
+{% extends 'web/base.html' %}
+
+{% block title %}Naše realizácie | {{ nastavenia.titulok_webu|default:identita.nazov_spolocnosti }}{% endblock %}
+{% block description %}Pozrite si prehľad overených servisných zásahov, generálnych opráv a technických realizácií pre našich klientov.{% endblock %}
+
+{% block og_title %}Naše realizácie | {{ identita.nazov_spolocnosti }}{% endblock %}
+{% block og_description %}Prehľad overených servisných zásahov a výsledky práce našich certifikovaných špecialistov v praxi.{% endblock %}
+
+{% block og_image_tag %}
+    {% with prva=referencie.0 %}
+        {% if prva and prva.foto_po and prva.foto_po.name %}
+        <meta property="og:image" content="{% if '://' in prva.foto_po.url %}{{ prva.foto_po.url }}{% else %}{{ request.scheme }}://{{ request.get_host }}{{ prva.foto_po.url }}{% endif %}">
+        {% elif prva and prva.foto_pred and prva.foto_pred.name %}
+        <meta property="og:image" content="{% if '://' in prva.foto_pred.url %}{{ prva.foto_pred.url }}{% else %}{{ request.scheme }}://{{ request.get_host }}{{ prva.foto_pred.url }}{% endif %}">
+        {% elif nastavenia.logo and nastavenia.logo.name %}
+        <meta property="og:image" content="{% if '://' in nastavenia.logo.url %}{{ nastavenia.logo.url }}{% else %}{{ request.scheme }}://{{ request.get_host }}{{ nastavenia.logo.url }}{% endif %}">
+        {% else %}
+        {{ block.super }}
+        {% endif %}
+    {% endwith %}
+{% endblock %}
+
+{% block extra_head %}
+<link rel="canonical" href="{{ request.scheme }}://{{ request.get_host }}{% url 'webbuilder:referencie_list' %}">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  "name": "Naše realizácie | {{ identita.nazov_spolocnosti|default:nastavenia.titulok_webu|escapejs }}",
+  "description": "Prehľad overených servisných zásahov a výsledky práce našich certifikovaných špecialistov v praxi.",
+  "url": "{{ request.scheme }}://{{ request.get_host }}{% url 'webbuilder:referencie_list' %}",
+  "mainEntity": {
+    "@type": "ItemList",
+    "itemListElement": [
+      {% for ref in referencie %}
+      {
+        "@type": "ListItem",
+        "position": {{ forloop.counter }},
+        "url": "{{ request.scheme }}://{{ request.get_host }}{% url 'webbuilder:referencia_detail' ref.slug %}",
+        "name": "{{ ref.verejny_popis_referencie|default:'Realizácia'|escapejs }}"
+      }{% if not forloop.last %},{% endif %}
+      {% endfor %}
+    ]
+  }
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="bg-gray-100 py-4 border-b border-gray-200">
+    <div class="max-w-7xl mx-auto px-6 text-sm text-gray-500 font-medium">
+        <a href="{% url 'webbuilder:home' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="hover:text-brand transition">Domov</a>
+        <span class="mx-2">/</span>
+        <span class="text-gray-900">Naše realizácie</span>
+    </div>
+</div>
+
+<section class="py-16 bg-white px-6">
+    <div class="max-w-7xl mx-auto">
+        <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4">Naše realizácie</h1>
+        <p class="text-lg text-gray-500 mb-8 max-w-3xl">Ukážky našej práce. Pozrite si reálne výsledky servisných zásahov u našich klientov.</p>
+
+        <!-- 🏷️ DATA-DRIVEN FILTER: Kategórie technológií, Výrobcovia a Typy servisných prác -->
+        {% if dostupne_kategorie or dostupne_sluzby or dostupni_vyrobcovia %}
+        <div class="space-y-3 mb-8">
+            {% if has_active_filter %}
+            <div class="flex items-center justify-between pb-1 flex-wrap gap-2">
+                <span class="text-xs font-bold text-gray-500">
+                    Aktívne filtre: <strong class="text-gray-900">{% if is_paginated %}{{ paginator.count }}{% else %}{{ referencie|length }}{% endif %}</strong> overených realizácií
+                </span>
+                <a href="{% url 'webbuilder:referencie_list' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100 transition shadow-2xs">
+                    <span>✕</span> Zrušiť všetky filtre
+                </a>
+            </div>
+            {% endif %}
+
+            {% if dostupne_kategorie %}
+            <div class="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
+                <span class="text-xs font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap mr-1">⚙️ Technológia:</span>
+                <a href="?{% if aktivna_sluzba %}sluzba={{ aktivna_sluzba }}&{% endif %}{% if aktivny_vyrobca %}vyrobca={{ aktivny_vyrobca }}&{% endif %}{% if is_preview %}preview=ai_draft{% endif %}" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap {% if not aktivna_kategoria %}bg-gray-900 text-white shadow-2xs{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+                    Všetky technológie
+                </a>
+                {% for kat in dostupne_kategorie %}
+                <a href="?kategoria={{ kat.kod }}{% if aktivna_sluzba %}&sluzba={{ aktivna_sluzba }}{% endif %}{% if aktivny_vyrobca %}&vyrobca={{ aktivny_vyrobca }}{% endif %}{% if is_preview %}&preview=ai_draft{% endif %}" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap {% if aktivna_kategoria == kat.kod %}bg-gray-900 text-white shadow-2xs{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+                    {{ kat.nazov }}{% if kat.pocet %} ({{ kat.pocet }}){% endif %}
+                </a>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if dostupni_vyrobcovia %}
+            <div class="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
+                <span class="text-xs font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap mr-1">🏭 Výrobca:</span>
+                <a href="?{% if aktivna_kategoria %}kategoria={{ aktivna_kategoria }}&{% endif %}{% if aktivna_sluzba %}sluzba={{ aktivna_sluzba }}&{% endif %}{% if is_preview %}preview=ai_draft{% endif %}" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap {% if not aktivny_vyrobca %}bg-blue-900 text-white shadow-2xs{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+                    Všetky značky
+                </a>
+                {% for vyr in dostupni_vyrobcovia %}
+                <a href="?vyrobca={{ vyr.id }}{% if aktivna_kategoria %}&kategoria={{ aktivna_kategoria }}{% endif %}{% if aktivna_sluzba %}&sluzba={{ aktivna_sluzba }}{% endif %}{% if is_preview %}&preview=ai_draft{% endif %}" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap {% if aktivny_vyrobca == vyr.id|stringformat:'s' %}bg-blue-900 text-white shadow-2xs{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+                    {{ vyr.nazov_vyrobcu }}{% if vyr.pocet %} ({{ vyr.pocet }}){% endif %}
+                </a>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if dostupne_sluzby %}
+            <div class="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
+                <span class="text-xs font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap mr-1">🛠️ Rozsah prác:</span>
+                <a href="?{% if aktivna_kategoria %}kategoria={{ aktivna_kategoria }}&{% endif %}{% if aktivny_vyrobca %}vyrobca={{ aktivny_vyrobca }}&{% endif %}{% if is_preview %}preview=ai_draft{% endif %}" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap {% if not aktivna_sluzba %}bg-brand text-white shadow-2xs{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+                    Všetky úkony
+                </a>
+                {% for sluzba in dostupne_sluzby %}
+                <a href="?sluzba={{ sluzba.slug }}{% if aktivna_kategoria %}&kategoria={{ aktivna_kategoria }}{% endif %}{% if aktivny_vyrobca %}&vyrobca={{ aktivny_vyrobca }}{% endif %}{% if is_preview %}&preview=ai_draft{% endif %}" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap {% if aktivna_sluzba == sluzba.slug %}bg-brand text-white shadow-2xs{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+                    {{ sluzba.nazov }}{% if sluzba.pocet %} ({{ sluzba.pocet }}){% endif %}
+                </a>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {% for ref in referencie %}
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-xl transition duration-300 group flex flex-col">
+                {% if not ref.foto_pred and not ref.foto_po and ref.video and ref.video.name %}
+                <div class="relative h-56 sm:h-64 w-full bg-slate-900 flex items-center justify-center group-hover:bg-slate-800 transition duration-500">
+                    <div class="text-center p-4">
+                        <div class="w-12 h-12 mx-auto mb-2 rounded-full bg-white/10 flex items-center justify-center text-white text-xl shadow-inner group-hover:scale-110 transition duration-300">
+                            ▶️
+                        </div>
+                        <span class="text-xs font-extrabold text-white tracking-wider uppercase block">Videozáznam realizácie</span>
+                    </div>
+                    <div class="absolute top-2 right-2 sm:top-3 sm:right-3 bg-indigo-600 text-white text-[10px] sm:text-xs font-extrabold px-2 sm:px-2.5 py-0.5 sm:py-1 rounded uppercase tracking-wider shadow-sm">Video</div>
+                </div>
+                {% else %}
+                <div class="flex h-56 sm:h-64 w-full overflow-hidden">
+                    <div class="w-1/2 relative border-r border-gray-200 overflow-hidden bg-gray-50 flex items-center justify-center">
+                        {% if ref.foto_pred and ref.foto_pred.name %}
+                            <img src="{{ ref.foto_pred.url }}" alt="{{ ref.verejny_popis_referencie|default:'Servisný zásah' }} - Stav pred" loading="lazy" class="w-full h-full object-cover grayscale-[30%] group-hover:grayscale-0 transition duration-500">
+                        {% else %}
+                            <span class="text-gray-400 text-xs">Bez foto</span>
+                        {% endif %}
+                        <div class="absolute top-2 left-2 sm:top-3 sm:left-3 bg-red-500/90 backdrop-blur-sm text-white text-[10px] sm:text-xs font-extrabold px-2 sm:px-2.5 py-0.5 sm:py-1 rounded uppercase tracking-wider shadow-sm">Pred</div>
+                    </div>
+                    <div class="w-1/2 relative overflow-hidden bg-gray-50 flex items-center justify-center">
+                        {% if ref.foto_po and ref.foto_po.name %}
+                            <img src="{{ ref.foto_po.url }}" alt="{{ ref.verejny_popis_referencie|default:'Servisný zásah' }} - Stav po" loading="lazy" class="w-full h-full object-cover transition duration-500 group-hover:scale-110">
+                        {% else %}
+                            <span class="text-gray-400 text-xs">Bez foto</span>
+                        {% endif %}
+                        <div class="absolute top-2 right-2 sm:top-3 sm:right-3 bg-green-500/90 backdrop-blur-sm text-white text-[10px] sm:text-xs font-extrabold px-2 sm:px-2.5 py-0.5 sm:py-1 rounded uppercase tracking-wider shadow-sm">Po</div>
+                    </div>
+                </div>
+                {% endif %}
+                <div class="p-6 flex-grow flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between text-[11px] text-gray-400 mb-2 flex-wrap gap-1">
+                            {% if ref.zariadenie %}
+                            <span class="font-extrabold text-brand uppercase tracking-wider truncate max-w-[55%]" title="{{ ref.zariadenie.verejny_nazov }}">⚙️ {{ ref.zariadenie.verejny_nazov }}</span>
+                            {% else %}
+                            <span class="font-extrabold text-gray-500 uppercase tracking-wider text-[10px]">🛠️ Servisný zásah</span>
+                            {% endif %}
+                            <div class="flex items-center gap-1 flex-wrap justify-end">
+                                {% if ref.vytvorene %}
+                                <span class="font-semibold text-gray-500 bg-gray-50 border border-gray-200/70 px-1.5 py-0.5 rounded text-[10px]" title="Dátum realizácie">📅 {{ ref.vytvorene|date:"m/Y" }}</span>
+                                {% endif %}
+                                {% if ref.zariadenie and ref.zariadenie.je_v_zaruke %}
+                                <span class="font-extrabold text-emerald-800 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded text-[9px]" title="Zariadenie v záručnom krytí">🛡️ V záruke</span>
+                                {% endif %}
+                                {% if ref.zmena_hardveru %}
+                                <span class="font-extrabold text-indigo-900 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded text-[9px]" title="Technologický retrofit / Modernizácia">🚀 Retrofit</span>
+                                {% endif %}
+                                {% if ref.zariadenie and ref.zariadenie.bezpecnostny_kluc %}
+                                <a href="{% url 'webbuilder:machine_passport' ref.zariadenie.bezpecnostny_kluc %}{% if is_preview %}?preview=ai_draft{% endif %}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-0.5 font-bold text-gray-700 hover:text-brand bg-white border border-gray-300 hover:border-brand px-1.5 py-0.5 rounded text-[9px] shadow-2xs transition" title="Zobraziť overený {{ industry_terms.pas_title|default:'digitálny pas'|lower }} a históriu zariadenia">
+                                    <span>📑</span> Pas
+                                </a>
+                                {% endif %}
+                                {% if ref.meter_display != '—' %}
+                                <span class="font-semibold text-gray-600 bg-gray-100 px-2 py-0.5 rounded text-[10px]" title="{{ ref.meter_label }}">{{ ref.meter_display }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% if ref.zakaznik and ref.zakaznik.zobrazit_ako_referenciu %}
+                        <p class="text-xs font-extrabold text-emerald-800 mb-1 flex items-center gap-1 truncate">
+                            <span>🏢</span> {{ ref.zakaznik.Nazov_spolocnosti }}{% if ref.zakaznik.mesto %} ({{ ref.zakaznik.mesto }}){% endif %}
+                        </p>
+                        {% elif ref.zakaznik and ref.zakaznik.mesto %}
+                        <p class="text-xs font-bold text-gray-500 mb-1 flex items-center gap-1 truncate">
+                            <span>📍</span> Lokalita: {{ ref.zakaznik.mesto }}
+                        </p>
+                        {% endif %}
+                        <p class="text-gray-800 font-bold text-base line-clamp-2 mb-2">{{ ref.verejny_popis_referencie|default:"Profesionálny servisný zásah." }}</p>
+                        {% if ref.typ_servisu.all %}
+                        <div class="flex flex-wrap gap-1 mb-3">
+                            {% for sluzba in ref.typ_servisu.all %}
+                            <span class="inline-flex items-center gap-1 text-[10px] font-semibold bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
+                                <span>🛠️ {{ sluzba.nazov }}</span>
+                                {% if sluzba.zaruka_mesiace > 0 %}
+                                <span class="inline-flex items-center text-[9px] font-extrabold bg-emerald-50 text-emerald-800 border border-emerald-200 px-1 py-0.2 rounded" title="Záruka na prácu">🛡️ {{ sluzba.zaruka_mesiace }}m</span>
+                                {% endif %}
+                            </span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="pt-3 border-t border-gray-100 mt-2 flex items-center justify-between gap-2">
+                        {% if ref.hodnotenie_zakaznika %}
+                        <span class="font-bold text-amber-600 text-xs bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">⭐ {{ ref.hodnotenie_zakaznika }}/5</span>
+                        {% elif ref.protokol_uzavrety %}
+                        <span class="text-[10px] font-extrabold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">🔒 Zapečatený audit</span>
+                        {% else %}
+                        <span></span>
+                        {% endif %}
+                        <a href="{% url 'webbuilder:referencia_detail' ref.slug %}{% if is_preview %}?preview=ai_draft{% endif %}" class="text-center bg-gray-50 hover:bg-brand hover:text-white text-gray-900 font-bold py-2 px-4 rounded-xl transition duration-300 text-xs">Celá prípadová štúdia &rarr;</a>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-span-full text-center py-12 bg-gray-50 rounded-2xl border border-gray-100">
+                <span class="text-5xl opacity-20 block mb-4">📸</span>
+                {% if aktivna_sluzba or aktivna_kategoria or aktivny_vyrobca %}
+                <p class="text-gray-800 font-bold text-lg mb-2">Pre zvolené kritériá filtrovania zatiaľ nebola publikovaná žiadna prípadová štúdia.</p>
+                <p class="text-gray-500 text-sm mb-6 max-w-md mx-auto">Všetky naše servisné zásahy a realizácie vykonávame v súlade s predpismi výrobcu a s certifikovanou zárukou na prácu.</p>
+                <div class="flex items-center justify-center gap-3 flex-wrap">
+                    <a href="{% url 'webbuilder:referencie_list' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="px-4 py-2 bg-white border border-gray-300 hover:border-gray-400 text-gray-700 font-bold text-xs rounded-xl shadow-2xs transition">
+                        Zobraziť všetky realizácie
+                    </a>
+                    <a href="{% url 'webbuilder:home' %}#kontakt{% if is_preview %}?preview=ai_draft{% endif %}" class="px-4 py-2 bg-brand hover-bg-brand text-white font-bold text-xs rounded-xl shadow-2xs transition">
+                        Dopytovať realizáciu &rarr;
+                    </a>
+                </div>
+                {% else %}
+                <p class="text-gray-500 font-medium text-lg">Zatiaľ neboli pridané žiadne referencie.</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Stránkovanie -->
+        {% if is_paginated %}
+        <div class="mt-12 flex justify-center gap-2">
+            {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}{% if aktivna_sluzba %}&sluzba={{ aktivna_sluzba }}{% endif %}{% if aktivna_kategoria %}&kategoria={{ aktivna_kategoria }}{% endif %}{% if aktivny_vyrobca %}&vyrobca={{ aktivny_vyrobca }}{% endif %}{% if is_preview %}&preview=ai_draft{% endif %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-bold transition">&larr; Predchádzajúca</a>
+            {% endif %}
+            <span class="px-4 py-2 bg-brand text-white rounded-lg font-bold shadow-md">Strana {{ page_obj.number }} z {{ page_obj.paginator.num_pages }}</span>
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}{% if aktivna_sluzba %}&sluzba={{ aktivna_sluzba }}{% endif %}{% if aktivna_kategoria %}&kategoria={{ aktivna_kategoria }}{% endif %}{% if aktivny_vyrobca %}&vyrobca={{ aktivny_vyrobca }}{% endif %}{% if is_preview %}&preview=ai_draft{% endif %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-bold transition">Ďalšia &rarr;</a>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- 🎯 DATA-DRIVEN KONVERZNÝ CTA BLOK S TELEMETRIOU -->
+        <div class="mt-16 bg-gray-900 text-white rounded-3xl p-8 md:p-12 shadow-xl flex flex-col md:flex-row items-center justify-between gap-6">
+            <div class="max-w-2xl">
+                {% if sla_telemetria %}
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-lg text-xs font-bold mb-3 {% if sla_telemetria.status == 'OPTIMALNA' %}bg-emerald-500/20 text-emerald-300 border border-emerald-500/30{% elif sla_telemetria.status == 'ZVYSENA' %}bg-amber-500/20 text-amber-300 border border-amber-500/30{% else %}bg-blue-500/20 text-blue-300 border border-blue-500/30{% endif %}">
+                    <span class="w-2 h-2 rounded-full {% if sla_telemetria.status == 'OPTIMALNA' %}bg-emerald-400 animate-pulse{% elif sla_telemetria.status == 'ZVYSENA' %}bg-amber-400{% else %}bg-blue-400{% endif %}"></span>
+                    {{ sla_telemetria.sprava }}
+                </div>
+                {% endif %}
+                <h2 class="text-2xl md:text-3xl font-extrabold">Riešite údržbu, diagnostiku alebo servis technológie?</h2>
+                <p class="text-gray-400 text-sm mt-2">Náš certifikovaný servisný tím zabezpečí profesionálnu realizáciu s minimálnym prestojom vašej prevádzky.</p>
+                {% if servisne_strediska %}
+                <div class="mt-4 flex flex-wrap gap-2 items-center text-xs text-gray-300">
+                    <span class="inline-flex items-center gap-1.5 bg-white/10 px-2.5 py-1 rounded-lg border border-white/10">
+                        <span>🏢</span> <strong>{{ servisne_strediska|length }}</strong> {% if servisne_strediska|length == 1 %}servisné stredisko{% else %}servisných stredísk{% endif %}
+                    </span>
+                    <span class="text-gray-400">&bull; Mobilné výjazdové tímy a plná technická podpora</span>
+                </div>
+                {% endif %}
+            </div>
+            <div class="w-full md:w-auto flex items-center justify-start md:justify-end">
+                <a href="{% url 'webbuilder:home' %}#kontakt{% if is_preview %}?preview=ai_draft{% endif %}" class="w-full sm:w-auto text-center px-6 py-3.5 bg-brand hover-bg-brand text-white font-extrabold rounded-xl transition shadow-lg whitespace-nowrap">
+                    Kontaktovať dispečing &rarr;
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

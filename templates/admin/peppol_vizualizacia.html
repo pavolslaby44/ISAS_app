@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <title>Peppol Vizualizácia - {{ xml_data.cislo_faktury|default:"Faktúra" }}</title>
+    {% include "documents/document_design_system.html" %}
+</head>
+<body>
+
+    <div class="header">
+        <div>
+            <h1 class="doc-title">Faktúra č. {{ xml_data.cislo_faktury|default:"Nezistené" }}</h1>
+            <div class="doc-meta">Prijaté cez sieť Peppol</div>
+        </div>
+        <div style="text-align: right;">
+            <div class="doc-meta">Dátum vystavenia: <strong style="color: var(--slate-900);">{{ xml_data.datum_vystavenia|default:"Neuvedený" }}</strong></div>
+            {% if xml_data.datum_dodania %}
+            <div class="doc-meta">Dátum dodania: <strong style="color: var(--slate-900);">{{ xml_data.datum_dodania }}</strong></div>
+            {% endif %}
+            <div class="doc-meta">Dátum splatnosti: <strong style="color: #e11d48;">{{ xml_data.datum_splatnosti|default:"Neuvedený" }}</strong></div>
+        </div>
+    </div>
+
+    <div class="info-grid avoid-break">
+        <div class="info-card">
+            <div class="info-header">🏢 Dodávateľ (Odosielateľ)</div>
+            <div class="info-val">{{ xml_data.nazov_dodavatela|default:"Neznámy dodávateľ" }}</div>
+            {% if xml_data.ico %}<div class="meta-line"><strong>IČO:</strong> <span>{{ xml_data.ico }}</span></div>{% endif %}
+            {% if xml_data.dic %}<div class="meta-line"><strong>DIČ:</strong> <span>{{ xml_data.dic }}</span></div>{% endif %}
+            {% if xml_data.ic_dph %}<div class="meta-line"><strong>IČ DPH:</strong> <span>{{ xml_data.ic_dph }}</span></div>{% endif %}
+            {% if xml_data.sidlo_dodavatela or xml_data.adresa_dodavatela %}
+            <div class="meta-line"><strong>Sídlo:</strong> <span>{{ xml_data.sidlo_dodavatela|default:xml_data.adresa_dodavatela }}</span></div>
+            {% endif %}
+        </div>
+        <div class="info-card">
+            <div class="info-header">👤 Odberateľ (Príjemca)</div>
+            <div class="info-val">{{ identita.nazov_spolocnosti|default:"Naša spoločnosť" }}</div>
+            <div class="meta-line"><strong>IČO:</strong> <span>{{ identita.ico|default:"-" }}</span></div>
+            <div class="meta-line"><strong>DIČ:</strong> <span>{{ identita.dic|default:"-" }}</span></div>
+            {% if identita.je_platca_dph or identita.ic_dph %}
+            <div class="meta-line"><strong>IČ DPH:</strong> <span>{{ identita.ic_dph|default:"-" }}</span></div>
+            {% endif %}
+            {% if identita.sidlo_ulica or identita.sidlo_mesto %}
+            <div class="meta-line"><strong>Sídlo:</strong> <span>{{ identita.sidlo_ulica|default:"" }}{% if identita.sidlo_cislo %} {{ identita.sidlo_cislo }}{% endif %}{% if identita.sidlo_psc or identita.sidlo_mesto %}, {{ identita.sidlo_psc|default:"" }} {{ identita.sidlo_mesto|default:"" }}{% endif %}</span></div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="payment-strip avoid-break">
+        <div class="pay-item">
+            <span class="pay-label">Variabilný symbol</span>
+            <span class="pay-val">{{ xml_data.variabilny_symbol|default:xml_data.cislo_faktury|default:"Neuvedený" }}</span>
+        </div>
+        {% if xml_data.iban or xml_data.bankovy_ucet %}
+        <div class="pay-item">
+            <span class="pay-label">IBAN / Bankový účet</span>
+            <span class="pay-val" style="font-family: 'JetBrains Mono', monospace; font-size: 12px;">{{ xml_data.iban|default:xml_data.bankovy_ucet|default:"Neuvedený" }}</span>
+        </div>
+        {% endif %}
+        <div class="pay-item" style="text-align: right;">
+            <span class="pay-label">Suma na úhradu</span>
+            <span class="pay-val" style="color: var(--primary); font-size: 15px;">{{ xml_data.suma_na_uhradu|default:"0.00" }} {{ xml_data.mena|default:identita.predvolena_mena|default:mena }}</span>
+        </div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 50%;">Popis položky</th>
+                <th class="right" style="width: 15%;">Množstvo</th>
+                <th class="right" style="width: 15%;">Cena bez DPH</th>
+                <th class="right" style="width: 20%;">DPH</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in polozky %}
+            <tr>
+                <td>
+                    <span class="item-name">{{ p.nazov }}</span>
+                    {% if p.kod or p.ean %}
+                    <span class="item-code">Kód: {{ p.kod|default:"-" }} | EAN: {{ p.ean|default:"-" }}</span>
+                    {% endif %}
+                </td>
+                <td class="right"><b>{{ p.mnozstvo|default:"0" }}</b> {{ p.merna_jednotka|default:"" }}</td>
+                <td class="right">{{ p.cena_bez_dph|default:"0.00" }} {{ xml_data.mena|default:identita.predvolena_mena|default:mena }}</td>
+                <td class="right">{% if p.sadzba_dph and p.sadzba_dph != 'None' %}{{ p.sadzba_dph }}{% else %}0{% endif %} %</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="totals avoid-break">
+        {% if xml_data.zaklad_dph != None and xml_data.zaklad_dph != '' %}
+        <div class="total-line">
+            <span>Základ dane:</span>
+            <strong>{{ xml_data.zaklad_dph }} {{ xml_data.mena|default:identita.predvolena_mena|default:mena }}</strong>
+        </div>
+        {% endif %}
+        {% if xml_data.suma_dph != None and xml_data.suma_dph != '' %}
+        <div class="total-line">
+            <span>DPH celkom:</span>
+            <strong>{{ xml_data.suma_dph }} {{ xml_data.mena|default:identita.predvolena_mena|default:mena }}</strong>
+        </div>
+        {% endif %}
+        <div class="total-final">
+            <span>Spolu k úhrade:</span>
+            <span>{{ xml_data.suma_na_uhradu|default:"0.00" }} {{ xml_data.mena|default:identita.predvolena_mena|default:mena }}</span>
+        </div>
+    </div>
+
+    <div class="legal-alert-info">
+        <strong>ℹ️ Informácia o dokumente:</strong> Tento dokument bol automaticky vygenerovaný systémom ISAS CORE z originálneho štruktúrovaného XML súboru doručeného cez sieť Peppol. Slúži výhradne ako ľudsky čitateľná vizualizácia. Jediným platným daňovým dokladom je priložený XML súbor.
+    </div>
+
+</body>
+</html>

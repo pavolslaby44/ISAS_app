@@ -1,0 +1,630 @@
+{% extends 'web/base.html' %}
+
+{% block title %}{{ industry_terms.hub_page_title|default:"Inžinierske & Diagnostické Centrum" }} | {{ identita.nazov_spolocnosti }}{% endblock %}
+
+{% block og_url %}{{ request.scheme }}://{{ request.get_host }}{% url 'webbuilder:nastroje' %}{% endblock %}
+
+{% block extra_head %}
+    <link rel="canonical" href="{{ request.scheme }}://{{ request.get_host }}{% url 'webbuilder:nastroje' %}">
+{% endblock %}
+
+{% block content %}
+<section class="py-16 md:py-24 bg-white px-6" id="engineering-hub">
+    {% csrf_token %}
+    <div class="max-w-7xl mx-auto">
+        <!-- HLAVIČKA PODSTRÁNKY -->
+        <div class="text-center mb-14">
+            <div class="inline-flex items-center justify-center p-4 bg-gray-900 text-white rounded-2xl mb-6 shadow-lg">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+            </div>
+            <h1 class="text-3xl sm:text-5xl font-extrabold mb-4 text-gray-900">{{ industry_terms.hub_page_title|default:"Inžinierske & Diagnostické Centrum" }}</h1>
+            <p class="text-lg text-gray-600 max-w-3xl mx-auto">{{ industry_terms.hub_page_subtitle|default:"Využite naše bezplatné B2B nástroje pre optimalizáciu prevádzky, kontrolu legislatívy a technickú diagnostiku technológií." }}</p>
+        </div>
+
+        <!-- TABS NAVIGÁCIA -->
+        <div class="flex flex-col sm:flex-row justify-center gap-2 md:gap-4 mb-12">
+            {% if has_esg_audit or has_rekuperacia or has_tco %}
+            <button onclick="switchHubTab('esg')" id="tab-btn-esg" class="hub-tab-btn w-full sm:w-auto px-6 py-3.5 rounded-xl font-bold text-sm md:text-base transition-all duration-300 {% if active_hub_tab == 'esg' %}active bg-gray-900 text-white shadow-md{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">{{ industry_terms.hub_tab_esg|default:"⚡ Úspora energie & ESG" }}</button>
+            {% endif %}
+            {% if has_vtz or has_fplyny %}
+            <button onclick="switchHubTab('law')" id="tab-btn-law" class="hub-tab-btn w-full sm:w-auto px-6 py-3.5 rounded-xl font-bold text-sm md:text-base transition-all duration-300 {% if active_hub_tab == 'law' %}active bg-gray-900 text-white shadow-md{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">{{ industry_terms.hub_tab_law|default:"⚖️ Zákony & Revízie" }}</button>
+            {% endif %}
+            {% if has_media_quality or has_vibro or has_capex %}
+            <button onclick="switchHubTab('diag')" id="tab-btn-diag" class="hub-tab-btn w-full sm:w-auto px-6 py-3.5 rounded-xl font-bold text-sm md:text-base transition-all duration-300 {% if active_hub_tab == 'diag' %}active bg-gray-900 text-white shadow-md{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">{{ industry_terms.hub_tab_diag|default:"🔬 Diagnostika & Dimenzovanie" }}</button>
+            {% endif %}
+        </div>
+
+        <!-- OBSAH TABOV -->
+        <div class="relative min-h-[500px]">
+            
+            <!-- ⚡ PILIER 1: ESG & ENERGIE -->
+            {% if has_esg_audit or has_rekuperacia or has_tco %}
+            <div id="tab-content-esg" class="hub-tab-content {% if active_hub_tab != 'esg' %}hidden{% endif %} grid grid-cols-1 {% if esg_card_count == 3 %}lg:grid-cols-3{% elif esg_card_count == 2 %}md:grid-cols-2 max-w-4xl mx-auto{% else %}max-w-xl mx-auto{% endif %} gap-6 transition-opacity duration-500">
+                {% if has_esg_audit %}
+                <!-- Nástroj 1.1: Chod bez záťaže -->
+                <div class="bg-gray-50 rounded-3xl p-6 border border-gray-200 shadow-sm flex flex-col justify-between">
+                    <div>
+                        <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2"><span class="text-2xl">💸</span> {{ industry_terms.esg_idle_title|default:"Chod bez záťaže & CO₂" }}</h2>
+                        <div class="space-y-4">
+                            <div><label class="text-xs font-bold text-gray-500 uppercase">{{ industry_terms.esg_audit_stroj_label|default:"Príkon zariadenia (kW)" }}</label><input type="number" id="esg-kw" class="w-full mt-1 p-2 rounded-lg border border-gray-300" value="{{ hub_config.esg_default_kw|default:'' }}"></div>
+                            <div><label class="text-xs font-bold text-gray-500 uppercase">{{ industry_terms.esg_audit_podiel_label|default:"Chod bez záťaže / naprázdno (%)" }}</label><input type="number" id="esg-percent" class="w-full mt-1 p-2 rounded-lg border border-gray-300" value="{{ hub_config.esg_default_percent|default:'' }}"></div>
+                            <div><label class="text-xs font-bold text-gray-500 uppercase flex items-center justify-between"><span>{{ industry_terms.esg_energy_price_label|default:"Cena energie" }} ({{ mena }}/kWh)</span>{% if request.user.is_authenticated and request.user.zakaznik_profil.cena_za_kwh_eur %}<span class="text-[10px] text-emerald-600 font-extrabold normal-case">✓ Zo zmluvy</span>{% endif %}</label><input type="number" id="esg-price" step="0.01" class="w-full mt-1 p-2 rounded-lg border border-gray-300" value="{{ hub_config.esg_default_price|default:'' }}"></div>
+                            <button onclick="calcEsg()" class="w-full bg-brand text-white font-bold py-2.5 rounded-lg hover-bg-brand transition">Vypočítať stratu</button>
+                            <div id="esg-result" class="hidden mt-4 p-4 bg-red-50 border border-red-100 rounded-xl text-center">
+                                <p class="text-xs text-red-600 font-bold uppercase">{{ industry_terms.kpi_strata_label|default:"Ročná finančná strata" }}</p>
+                                <p class="text-2xl font-extrabold text-red-700" id="esg-res-eur">0 {{ mena }}</p>
+                                <p class="text-xs text-gray-500 mt-2 mb-4">Zbytočná uhlíková stopa: <b id="esg-res-co2" class="text-gray-900">0 t CO₂</b></p>
+                                
+                                <!-- 📥 LEAD MAGNET -->
+                                <div class="border-t border-red-200 pt-4 mt-2">
+                                    <p class="text-xs font-bold text-gray-700 mb-2">Stiahnuť detailný report v PDF:</p>
+                                    <div class="flex gap-2">
+                                        <input type="email" id="esg-lead-email" placeholder="Váš e-mail" class="w-full text-sm p-2 rounded-lg border border-gray-300 focus:ring-2 ring-brand outline-none">
+                                        <button onclick="downloadEsgPdf()" id="esg-pdf-btn" class="bg-gray-900 hover:bg-brand text-white px-3 py-2 rounded-lg font-bold text-sm transition whitespace-nowrap">📥 PDF</button>
+                                    </div>
+                                    <p id="esg-lead-msg" class="text-xs mt-2 font-bold hidden"></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if has_rekuperacia %}
+                <!-- Nástroj 1.2: Rekuperácia -->
+                <div class="bg-gray-50 rounded-3xl p-6 border border-gray-200 shadow-sm flex flex-col justify-between">
+                    <div>
+                        <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2"><span class="text-2xl">🔥</span> {{ industry_terms.rekuperacia_title|default:"Rekuperácia tepla" }}</h2>
+                        <div class="space-y-4">
+                            <div><label class="text-xs font-bold text-gray-500 uppercase">{{ industry_terms.esg_audit_stroj_label|default:"Menovitý výkon zariadenia (kW)" }}</label><input type="number" id="rek-kw" class="w-full mt-1 p-2 rounded-lg border border-gray-300" value="{{ hub_config.rekuperacia_default_kw|default:'' }}"></div>
+                            <div><label class="text-xs font-bold text-gray-500 uppercase">Prevádzka (hod/rok)</label><input type="number" id="rek-hours" class="w-full mt-1 p-2 rounded-lg border border-gray-300" value="{{ hub_config.rekuperacia_default_hours|default:'' }}"></div>
+                            <div><label class="text-xs font-bold text-gray-500 uppercase">{{ industry_terms.rekuperacia_fuel_label|default:"Cena nahrádzanej energie" }} ({{ mena }}/kWh)</label><input type="number" id="rek-price" step="0.01" class="w-full mt-1 p-2 rounded-lg border border-gray-300" value="{{ hub_config.rekuperacia_default_price|default:'' }}"></div>
+                            <button onclick="calcRekuperacia()" class="w-full bg-brand text-white font-bold py-2.5 rounded-lg hover-bg-brand transition">Vypočítať úsporu</button>
+                            <div id="rek-result" class="hidden mt-4 p-4 bg-emerald-50 border border-emerald-100 rounded-xl text-center">
+                                <p class="text-xs text-emerald-600 font-bold uppercase">Potenciálna ročná úspora</p>
+                                <p class="text-2xl font-extrabold text-emerald-700" id="rek-res-eur">0 {{ mena }}</p>
+                                <p class="text-xs text-gray-500 mt-2">Využiteľný tepelný výkon: <b id="rek-res-kw" class="text-gray-900">0 kW</b></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if has_tco and tco_profiles %}
+                <!-- Nástroj 1.3: TCO -->
+                <div class="bg-gray-50 rounded-3xl p-6 border border-gray-200 shadow-sm flex flex-col justify-between">
+                    <div>
+                        <h2 class="text-lg font-bold text-gray-900 mb-2 flex items-center gap-2"><span class="text-2xl">📊</span> {{ industry_terms.tco_title|default:"TCO kalkulátor" }}{% if hub_config.tco_years %} ({{ hub_config.tco_years }} r.){% endif %}</h2>
+                        <p class="text-xs text-gray-500 mb-4">{{ industry_terms.tco_desc|default:"Rozpad celkových nákladov na vlastníctvo podľa profilu prevádzky a technológie." }}</p>
+                        
+                        <div class="mb-4">
+                            <label class="text-[11px] font-extrabold text-gray-500 uppercase tracking-wider block mb-1">{{ industry_terms.tco_profile_label|default:"Typ prevádzky / Technológia" }}</label>
+                            <select id="tco-profile" onchange="calcTcoProfile()" class="w-full text-xs font-bold bg-white border border-gray-300 rounded-xl p-2.5 outline-none focus:ring-2 ring-brand text-gray-900 shadow-sm">
+                                {% for key, item in tco_profiles.items %}
+                                <option value="{{ key }}" {% if forloop.first %}selected{% endif %}>{{ item.label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        {% with first_tco=tco_profiles.values|first %}
+                        <div class="space-y-3 my-2">
+                            <div>
+                                <div class="flex justify-between text-xs font-bold mb-1">
+                                    <span class="text-red-600">{{ industry_terms.tco_energy_label|default:"Spotreba energie / médií" }}</span>
+                                    <span id="tco-val-energy" class="font-extrabold text-gray-900">{{ first_tco.energy|default:0 }} %</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                                    <div id="tco-bar-energy" class="bg-red-500 h-2.5 rounded-full transition-all duration-500" style="width: {{ first_tco.energy|default:0 }}%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-xs font-bold mb-1">
+                                    <span class="text-amber-600">{{ industry_terms.tco_service_label|default:"Servis a údržba" }}</span>
+                                    <span id="tco-val-service" class="font-extrabold text-gray-900">{{ first_tco.service|default:0 }} %</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                                    <div id="tco-bar-service" class="bg-amber-400 h-2.5 rounded-full transition-all duration-500" style="width: {{ first_tco.service|default:0 }}%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-xs font-bold mb-1">
+                                    <span class="text-blue-600">{{ industry_terms.tco_capex_label|default:"Nákupná cena (Investícia)" }}</span>
+                                    <span id="tco-val-capex" class="font-extrabold text-gray-900">{{ first_tco.capex|default:0 }} %</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                                    <div id="tco-bar-capex" class="bg-blue-500 h-2.5 rounded-full transition-all duration-500" style="width: {{ first_tco.capex|default:0 }}%"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="tco-tip-box" class="mt-4 p-3 bg-blue-50 rounded-xl border border-blue-100 text-xs text-blue-900 font-semibold text-center transition-all duration-300">
+                            {{ first_tco.tip|default:"" }}
+                        </div>
+                        {% endwith %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- ⚖️ PILIER 2: ZÁKONY & REVÍZIE -->
+            {% if has_vtz or has_fplyny %}
+            <div id="tab-content-law" class="hub-tab-content {% if active_hub_tab != 'law' %}hidden{% endif %} grid grid-cols-1 {% if law_card_count == 2 %}md:grid-cols-2{% else %}max-w-xl mx-auto{% endif %} gap-6 transition-opacity duration-500">
+                {% if has_vtz %}
+                <!-- Nástroj 2.1: Revízie VTZ -->
+                <div class="bg-gray-50 rounded-3xl p-6 border border-gray-200 shadow-sm">
+                    <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2"><span class="text-2xl">🛡️</span> {{ industry_terms.revizie_title|default:"Strážca revízií a odborných prehliadok" }}</h2>
+                    <p class="text-sm text-gray-500 mb-4">{{ industry_terms.revizie_desc|default:"Zistite termíny povinných periodických skúšok a inšpekcií zariadenia." }}</p>
+                    <div class="space-y-4">
+                        <div><label class="text-xs font-bold text-gray-500 uppercase">{{ industry_terms.revizie_date_label|default:"Dátum uvedenia do prevádzky" }}</label><input type="date" id="vtz-date" class="w-full mt-1 p-2 rounded-lg border border-gray-300"></div>
+                        <button onclick="calcVTZ()" class="w-full bg-brand text-white font-bold py-2.5 rounded-lg hover-bg-brand transition">Overiť termíny</button>
+                        <div id="vtz-result" class="hidden mt-4 grid {% if hub_config.revizia_perioda_1_roky and hub_config.revizia_perioda_2_roky %}grid-cols-2{% else %}grid-cols-1{% endif %} gap-2">
+                            {% if hub_config.revizia_perioda_1_roky %}
+                            <div class="p-3 bg-white border border-gray-200 rounded-xl text-center">
+                                <p class="text-[10px] text-gray-500 font-bold uppercase">{{ industry_terms.revizia_perioda_1_label|default:"Periodická inšpekcia" }}</p>
+                                <p class="text-lg font-extrabold text-gray-900 mt-1" id="vtz-res-p1">--</p>
+                            </div>
+                            {% endif %}
+                            {% if hub_config.revizia_perioda_2_roky %}
+                            <div class="p-3 bg-white border border-gray-200 rounded-xl text-center">
+                                <p class="text-[10px] text-gray-500 font-bold uppercase">{{ industry_terms.revizia_perioda_2_label|default:"Komplexná skúška" }}</p>
+                                <p class="text-lg font-extrabold text-gray-900 mt-1" id="vtz-res-p2">--</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if has_fplyny and fplyn_chladiva %}
+                <!-- Nástroj 2.2: F-plyny -->
+                <div class="bg-gray-50 rounded-3xl p-6 border border-gray-200 shadow-sm">
+                    <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2"><span class="text-2xl">❄️</span> {{ industry_terms.fplyny_title|default:"F-Plyny a Chladivá" }}</h2>
+                    <p class="text-sm text-gray-500 mb-4">{{ industry_terms.fplyny_desc|default:"Kontrola únikov chladiacich médií a periodicita podľa legislatívy." }}</p>
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="text-xs font-bold text-gray-500 uppercase">{{ industry_terms.fplyn_type_label|default:"Typ chladiva" }}</label>
+                                <select id="fplyn-type" class="w-full mt-1 p-2 rounded-lg border border-gray-300 bg-white">
+                                    {% for chladivo in fplyn_chladiva %}
+                                    <option value="{{ chladivo.gwp }}">{{ chladivo.nazov }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-xs font-bold text-gray-500 uppercase">{{ industry_terms.fplyn_amount_label|default:"Náplň (kg)" }}</label>
+                                <input type="number" id="fplyn-kg" step="0.1" class="w-full mt-1 p-2 rounded-lg border border-gray-300" value="{{ hub_config.fplyn_default_kg|default:'' }}">
+                            </div>
+                        </div>
+                        <button onclick="calcFPlyny()" class="w-full bg-brand text-white font-bold py-2.5 rounded-lg hover-bg-brand transition">Vyhodnotiť povinnosť</button>
+                        <div id="fplyn-result" class="hidden mt-4 p-4 bg-white border border-gray-200 rounded-xl text-center">
+                            <p class="text-xs text-gray-500 font-bold uppercase">Ekvivalent CO₂</p>
+                            <p class="text-2xl font-extrabold text-gray-900" id="fplyn-res-co2">0 t</p>
+                            <div id="fplyn-res-badge" class="mt-2 inline-block px-3 py-1 rounded-full text-xs font-bold"></div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- 🔬 PILIER 3: DIAGNOSTIKA & DIMENZOVANIE -->
+            {% if has_media_quality or has_vibro or has_capex %}
+            <div id="tab-content-diag" class="hub-tab-content {% if active_hub_tab != 'diag' %}hidden{% endif %} grid grid-cols-1 {% if diag_card_count == 3 %}lg:grid-cols-3{% elif diag_card_count == 2 %}md:grid-cols-2 max-w-4xl mx-auto{% else %}max-w-xl mx-auto{% endif %} gap-6 transition-opacity duration-500">
+                {% if has_media_quality and media_quality_apps %}
+                <!-- Nástroj 3.1: Norma čistoty ISO -->
+                <div class="bg-gray-50 rounded-3xl p-6 border border-gray-200 shadow-sm">
+                    <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2"><span class="text-2xl">🛡️</span> {{ industry_terms.cistota_title|default:"Norma čistoty a úpravy média" }}</h2>
+                    <p class="text-xs text-gray-500 mb-4">{{ industry_terms.cistota_desc|default:"Kvalitatívne požiadavky na úpravu pracovného média podľa aplikácie." }}</p>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="text-xs font-bold text-gray-500 uppercase">{{ industry_terms.cistota_select_label|default:"Odvetvie / Prevádzka" }}</label>
+                            <select id="iso-app" class="w-full mt-1 p-2 rounded-lg border border-gray-300 bg-white" onchange="calcISO()">
+                                <option value="">-- Vyberte aplikáciu --</option>
+                                {% for app in media_quality_apps %}
+                                <option value="{{ app.id }}">{{ app.label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div id="iso-result" class="hidden mt-4 space-y-2">
+                            <div class="p-3 bg-white border border-gray-200 rounded-xl">
+                                <p class="text-[10px] text-gray-500 font-bold uppercase">{{ industry_terms.cistota_level_label|default:"Požadovaná úroveň akosti" }}</p>
+                                <p class="text-lg font-extrabold text-brand" id="iso-res-class">--</p>
+                            </div>
+                            <div class="p-3 bg-white border border-gray-200 rounded-xl">
+                                <p class="text-[10px] text-gray-500 font-bold uppercase">{{ industry_terms.cistota_tech_label|default:"Doporučená technológia" }}</p>
+                                <p class="text-sm font-semibold text-gray-700 mt-1" id="iso-res-tech">--</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if has_vibro and hub_config.vibro_limits and hub_config.vibro_zones %}
+                <!-- Nástroj 3.2: Vibrodiagnostika -->
+                <div class="bg-gray-50 rounded-3xl p-6 border border-gray-200 shadow-sm">
+                    <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2"><span class="text-2xl">📈</span> {{ industry_terms.vibro_title|default:"Vibrodiagnostika pohonu" }}</h2>
+                    <p class="text-xs text-gray-500 mb-4">{{ industry_terms.vibro_desc|default:"Rýchle vyhodnotenie mechanického stavu ložísk a pohonu." }}</p>
+                    <div class="space-y-4">
+                        <div><label class="text-xs font-bold text-gray-500 uppercase">{{ industry_terms.vibro_input_label|default:"Nameraná hodnota RMS (mm/s)" }}</label><input type="number" id="vibro-rms" step="0.1" class="w-full mt-1 p-2 rounded-lg border border-gray-300" placeholder="{{ hub_config.vibro_limits.limit_b|default:'' }}"></div>
+                        <button onclick="calcVibro()" class="w-full bg-brand text-white font-bold py-2.5 rounded-lg hover-bg-brand transition">Vyhodnotiť stav</button>
+                        <div id="vibro-result" class="hidden mt-4 p-4 border rounded-xl text-center">
+                            <p class="text-xs font-bold uppercase mb-1" id="vibro-res-zone">Zóna</p>
+                            <p class="text-lg font-extrabold" id="vibro-res-text">--</p>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if has_capex and hub_config.capex_years %}
+                <!-- Nástroj 3.3: CAPEX vs OPEX -->
+                <div class="bg-gray-50 rounded-3xl p-6 border border-gray-200 shadow-sm">
+                    <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2"><span class="text-2xl">⚖️</span> {{ industry_terms.capex_title|default:"CAPEX vs OPEX" }}</h2>
+                    <p class="text-xs text-gray-500 mb-4">{{ industry_terms.capex_desc|default:"Porovnanie nákupu zariadenia vs. dlhodobý prenájom" }}{% if hub_config.capex_years %} ({{ hub_config.capex_years }} r.){% endif %}.</p>
+                    <div class="space-y-4">
+                        <div><label class="text-xs font-bold text-gray-500 uppercase">{{ industry_terms.capex_price_label|default:"Cena nového zariadenia" }} ({{ mena }})</label><input type="number" id="capex-price" class="w-full mt-1 p-2 rounded-lg border border-gray-300" value="{{ hub_config.capex_default_price|default:'' }}"></div>
+                        <div><label class="text-xs font-bold text-gray-500 uppercase">{{ industry_terms.capex_rent_label|default:"Mesačný prenájom" }} ({{ mena }})</label><input type="number" id="capex-rent" class="w-full mt-1 p-2 rounded-lg border border-gray-300" value="{{ hub_config.capex_default_rent|default:'' }}"></div>
+                        <button onclick="calcCapex()" class="w-full bg-brand text-white font-bold py-2.5 rounded-lg hover-bg-brand transition">Porovnať{% if hub_config.capex_years %} na {{ hub_config.capex_years }} r.{% endif %}</button>
+                        <div id="capex-result" class="hidden mt-4 grid grid-cols-2 gap-2">
+                            <div class="p-3 bg-white border border-gray-200 rounded-xl text-center">
+                                <p class="text-[10px] text-gray-500 font-bold uppercase">{{ industry_terms.capex_buy_label|default:"Nákup + Servis" }}</p>
+                                <p class="text-sm font-extrabold text-red-600 mt-1" id="capex-res-buy">0 {{ mena }}</p>
+                            </div>
+                            <div class="p-3 bg-white border border-gray-200 rounded-xl text-center">
+                                <p class="text-[10px] text-gray-500 font-bold uppercase">{{ industry_terms.capex_rent_summary_label|default:"Čistý prenájom" }}</p>
+                                <p class="text-sm font-extrabold text-emerald-600 mt-1" id="capex-res-rent">0 {{ mena }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+        </div>
+    </div>
+</section>
+
+{{ tco_profiles|json_script:"tco-data" }}
+{{ media_quality_apps|json_script:"media-quality-data" }}
+{{ hub_config|json_script:"hub-config-data" }}
+{{ industry_terms|json_script:"industry-terms-data" }}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    window.switchHubTab = function(tabId, updateUrl = true) {
+        const targetBtn = document.getElementById(`tab-btn-${tabId}`);
+        const targetContent = document.getElementById(`tab-content-${tabId}`);
+        if (!targetBtn || !targetContent) return;
+
+        document.querySelectorAll('.hub-tab-btn').forEach(btn => {
+            btn.classList.remove('bg-gray-900', 'text-white', 'shadow-md', 'active');
+            btn.classList.add('bg-gray-100', 'text-gray-600');
+        });
+        targetBtn.classList.remove('bg-gray-100', 'text-gray-600');
+        targetBtn.classList.add('bg-gray-900', 'text-white', 'shadow-md', 'active');
+
+        document.querySelectorAll('.hub-tab-content').forEach(content => {
+            content.classList.add('hidden');
+        });
+        targetContent.classList.remove('hidden');
+
+        // Dynamická aktualizácia URL kotvy bez skákania stránky
+        if (updateUrl && window.history && window.history.replaceState) {
+            const cleanUrl = window.location.pathname + window.location.search + '#' + tabId;
+            window.history.replaceState(null, '', cleanUrl);
+        }
+    };
+
+    function resolveInitialHubTab() {
+        const hash = window.location.hash ? window.location.hash.replace('#', '').trim() : '';
+        const requestedBtn = hash ? document.getElementById(`tab-btn-${hash}`) : null;
+
+        if (requestedBtn && typeof window.switchHubTab === 'function') {
+            window.switchHubTab(hash, false);
+            setTimeout(() => {
+                requestedBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 150);
+        } else {
+            const fallbackBtn = document.querySelector('.hub-tab-btn.active') || document.querySelector('.hub-tab-btn');
+            if (fallbackBtn && fallbackBtn.id) {
+                const tabMatch = fallbackBtn.id.replace('tab-btn-', '');
+                if (tabMatch && typeof window.switchHubTab === 'function') {
+                    window.switchHubTab(tabMatch, false);
+                }
+            }
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", resolveInitialHubTab);
+    window.addEventListener("hashchange", resolveInitialHubTab);
+
+    window.calcEsg = function() {
+        const kw = parseFloat(document.getElementById('esg-kw').value) || 0;
+        const percent = parseFloat(document.getElementById('esg-percent').value) || 0;
+        const price = parseFloat(document.getElementById('esg-price').value) || 0;
+        
+        const hubConfigEl = document.getElementById('hub-config-data');
+        const hubConfig = hubConfigEl ? JSON.parse(hubConfigEl.textContent) : {};
+        const idleFactor = parseFloat(hubConfig.esg_idle_factor) || 0;
+        const hours = parseFloat(hubConfig.esg_annual_hours) || 0;
+        const co2Factor = parseFloat(hubConfig.esg_co2_factor) || 0;
+
+        const kwhLost = (kw * idleFactor) * hours * (percent / 100);
+        const eurLost = kwhLost * price;
+        const co2Lost = (kwhLost * co2Factor) / 1000;
+
+        const currencyStr = hubConfig.mena ? ` ${hubConfig.mena}` : '';
+        document.getElementById('esg-res-eur').innerText = Math.round(eurLost).toLocaleString() + currencyStr;
+        document.getElementById('esg-res-co2').innerText = co2Lost.toFixed(1) + ' t CO₂';
+        document.getElementById('esg-result').classList.remove('hidden');
+    };
+
+    window.downloadEsgPdf = function() {
+        if (typeof window.calcEsg === 'function') {
+            window.calcEsg();
+        }
+        const email = document.getElementById('esg-lead-email').value;
+        const msg = document.getElementById('esg-lead-msg');
+        const btn = document.getElementById('esg-pdf-btn');
+        
+        if(!email || !email.includes('@')) {
+            msg.innerText = "Zadajte platný e-mail.";
+            msg.className = "text-xs mt-2 font-bold text-red-600 block";
+            return;
+        }
+        
+        btn.disabled = true;
+        btn.innerText = "⏳";
+        
+        const formData = new FormData();
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+        formData.append('csrfmiddlewaretoken', csrfToken);
+        formData.append('email', email);
+        formData.append('kw', document.getElementById('esg-kw').value);
+        formData.append('strata_eur', document.getElementById('esg-res-eur').innerText);
+        formData.append('strata_co2', document.getElementById('esg-res-co2').innerText);
+        formData.append('cena_kwh', document.getElementById('esg-price')?.value || '');
+        formData.append('percent', document.getElementById('esg-percent')?.value || '');
+        
+        fetch('{% url "webbuilder:generate_esg_audit" %}', {
+            method: 'POST', body: formData, headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(res => res.json())
+        .then(data => {
+            msg.className = "text-xs mt-2 font-bold block " + (data.status === 'success' ? "text-emerald-600" : "text-red-600");
+            msg.innerText = data.message;
+        })
+        .catch(() => {
+            msg.className = "text-xs mt-2 font-bold text-red-600 block";
+            msg.innerText = "Chyba servera.";
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerText = "📥 PDF";
+        });
+    };
+
+    window.calcRekuperacia = function() {
+        const kw = parseFloat(document.getElementById('rek-kw').value) || 0;
+        const hours = parseFloat(document.getElementById('rek-hours').value) || 0;
+        const price = parseFloat(document.getElementById('rek-price').value) || 0;
+        
+        const hubConfigEl = document.getElementById('hub-config-data');
+        const hubConfig = hubConfigEl ? JSON.parse(hubConfigEl.textContent) : {};
+        const heatFactor = parseFloat(hubConfig.rekuperacia_factor) || 0;
+
+        const heatKw = kw * heatFactor;
+        const eurSaved = heatKw * hours * price;
+
+        const currencyStr = hubConfig.mena ? ` ${hubConfig.mena}` : '';
+        document.getElementById('rek-res-kw').innerText = heatKw.toFixed(1) + ' kW';
+        document.getElementById('rek-res-eur').innerText = Math.round(eurSaved).toLocaleString() + currencyStr;
+        document.getElementById('rek-result').classList.remove('hidden');
+    };
+
+    window.calcTcoProfile = function() {
+        const dataEl = document.getElementById('tco-data');
+        if (!dataEl) return;
+        let profilesData = {};
+        try {
+            profilesData = JSON.parse(dataEl.textContent);
+        } catch (e) {
+            return;
+        }
+        if (!profilesData || Object.keys(profilesData).length === 0) return;
+        const selectEl = document.getElementById('tco-profile');
+        const profileKey = selectEl ? selectEl.value : null;
+        const fallbackKey = Object.keys(profilesData)[0];
+        const data = (profileKey && profilesData[profileKey]) ? profilesData[profileKey] : (profilesData[fallbackKey] || { energy: 0, service: 0, capex: 0, tip: '' });
+
+        const elEnergy = document.getElementById('tco-val-energy');
+        const barEnergy = document.getElementById('tco-bar-energy');
+        if (elEnergy) elEnergy.innerText = `${data.energy} %`;
+        if (barEnergy) barEnergy.style.width = `${data.energy}%`;
+
+        const elService = document.getElementById('tco-val-service');
+        const barService = document.getElementById('tco-bar-service');
+        if (elService) elService.innerText = `${data.service} %`;
+        if (barService) barService.style.width = `${data.service}%`;
+
+        const elCapex = document.getElementById('tco-val-capex');
+        const barCapex = document.getElementById('tco-bar-capex');
+        if (elCapex) elCapex.innerText = `${data.capex} %`;
+        if (barCapex) barCapex.style.width = `${data.capex}%`;
+
+        const tipBox = document.getElementById('tco-tip-box');
+        if (tipBox) tipBox.innerText = data.tip || '';
+    };
+
+    window.calcVTZ = function() {
+        const dateInput = document.getElementById('vtz-date')?.value;
+        if (!dateInput) return;
+        
+        const hubConfigEl = document.getElementById('hub-config-data');
+        const hubConfig = hubConfigEl ? JSON.parse(hubConfigEl.textContent) : {};
+        const p1 = parseInt(hubConfig.revizia_perioda_1_roky, 10) || 0;
+        const p2 = parseInt(hubConfig.revizia_perioda_2_roky, 10) || 0;
+
+        const dParts = dateInput.split('-');
+        if (dParts.length !== 3) return;
+        const date = new Date(parseInt(dParts[0], 10), parseInt(dParts[1], 10) - 1, parseInt(dParts[2], 10));
+        if (isNaN(date.getTime())) return;
+        const addYears = (baseDate, years) => {
+            const targetYear = baseDate.getFullYear() + years;
+            const targetMonth = baseDate.getMonth();
+            const maxDays = new Date(targetYear, targetMonth + 1, 0).getDate();
+            const targetDay = Math.min(baseDate.getDate(), maxDays);
+            return new Date(targetYear, targetMonth, targetDay);
+        };
+        const dateP1 = addYears(date, p1);
+        const dateP2 = addYears(date, p2);
+        
+        const format = (d) => d.toLocaleDateString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit' });
+        const elP1 = document.getElementById('vtz-res-p1');
+        const elP2 = document.getElementById('vtz-res-p2');
+        if (elP1 && p1 > 0) elP1.innerText = format(dateP1);
+        if (elP2 && p2 > 0) elP2.innerText = format(dateP2);
+        const resEl = document.getElementById('vtz-result');
+        if (resEl) resEl.classList.remove('hidden');
+    };
+
+    window.calcFPlyny = function() {
+        const typeEl = document.getElementById('fplyn-type');
+        const kgEl = document.getElementById('fplyn-kg');
+        if (!typeEl || !kgEl) return;
+        const gwp = parseFloat(typeEl.value) || 0;
+        const kg = parseFloat(kgEl.value) || 0;
+        
+        const hubConfigEl = document.getElementById('hub-config-data');
+        const hubConfig = hubConfigEl ? JSON.parse(hubConfigEl.textContent) : {};
+        const limits = hubConfig.fplyn_limits || {};
+        const limSmall = parseFloat(limits.small) || 0;
+        const limMedium = parseFloat(limits.medium) || 0;
+        const limLarge = parseFloat(limits.large) || 0;
+
+        const co2eq = (gwp * kg) / 1000;
+        const co2ResEl = document.getElementById('fplyn-res-co2');
+        if (co2ResEl) co2ResEl.innerText = co2eq.toFixed(2) + ' t';
+        
+        const badge = document.getElementById('fplyn-res-badge');
+        if (badge) {
+            const mSmall = parseInt(hubConfig.fplyn_male_mesiace, 10) || 0;
+            const mMed = parseInt(hubConfig.fplyn_stredne_mesiace, 10) || 0;
+            const mLarge = parseInt(hubConfig.fplyn_velke_mesiace, 10) || 0;
+            const termsDataEl = document.getElementById('industry-terms-data');
+            const indTerms = termsDataEl ? JSON.parse(termsDataEl.textContent) : {};
+            const checkLabelTemplate = indTerms.fplyn_check_period_label || "Kontrola 1x za {months} mes.";
+            if (co2eq <= 0 || (limSmall > 0 && co2eq < limSmall)) {
+                badge.className = "mt-2 inline-block px-3 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-600";
+                badge.innerText = hubConfig.fplyn_label_none || indTerms.fplyn_label_none || "Bez povinnej kontroly";
+            } else if (co2eq < limMedium) {
+                badge.className = "mt-2 inline-block px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700";
+                badge.innerText = checkLabelTemplate.replace('{months}', mSmall);
+            } else if (co2eq < limLarge) {
+                badge.className = "mt-2 inline-block px-3 py-1 rounded-full text-xs font-bold bg-orange-100 text-orange-700";
+                badge.innerText = checkLabelTemplate.replace('{months}', mMed);
+            } else {
+                badge.className = "mt-2 inline-block px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700";
+                badge.innerText = checkLabelTemplate.replace('{months}', mLarge);
+            }
+        }
+        const resEl = document.getElementById('fplyn-result');
+        if (resEl) resEl.classList.remove('hidden');
+    };
+
+    window.calcISO = function() {
+        const appSelect = document.getElementById('iso-app');
+        if (!appSelect) return;
+        const appId = appSelect.value;
+        const resEl = document.getElementById('iso-result');
+        if (!appId) { 
+            if (resEl) resEl.classList.add('hidden'); 
+            return; 
+        }
+        
+        const qualityEl = document.getElementById('media-quality-data');
+        if (!qualityEl) return;
+        let qualityData = [];
+        try {
+            qualityData = JSON.parse(qualityEl.textContent);
+        } catch (e) {
+            return;
+        }
+        if (!Array.isArray(qualityData)) return;
+        const selected = qualityData.find(item => item.id === appId);
+        
+        if (selected) {
+            const classEl = document.getElementById('iso-res-class');
+            const techEl = document.getElementById('iso-res-tech');
+            if (classEl) classEl.innerText = selected.class_label || '';
+            if (techEl) techEl.innerText = selected.tech_recommendation || '';
+            if (resEl) resEl.classList.remove('hidden');
+        }
+    };
+
+    window.calcVibro = function() {
+        const inputEl = document.getElementById('vibro-rms');
+        if (!inputEl) return;
+        const rms = parseFloat(inputEl.value);
+        if (isNaN(rms)) return;
+        
+        const resDiv = document.getElementById('vibro-result');
+        if (!resDiv) return;
+        const zoneText = document.getElementById('vibro-res-zone');
+        const mainText = document.getElementById('vibro-res-text');
+        
+        const hubConfigEl = document.getElementById('hub-config-data');
+        const hubConfig = hubConfigEl ? JSON.parse(hubConfigEl.textContent) : {};
+        const vLimits = hubConfig.vibro_limits || {};
+        const limitA = parseFloat(vLimits.limit_a) || 0;
+        const limitB = parseFloat(vLimits.limit_b) || 0;
+        const limitC = parseFloat(vLimits.limit_c) || 0;
+
+        resDiv.classList.remove('hidden', 'bg-emerald-50', 'border-emerald-200', 'text-emerald-700', 'bg-amber-50', 'border-amber-200', 'text-amber-700', 'bg-orange-50', 'border-orange-200', 'text-orange-700', 'bg-red-50', 'border-red-200', 'text-red-700');
+        
+        const vZones = hubConfig.vibro_zones || {};
+        const zA = vZones.a || { zone: '', text: '' };
+        const zB = vZones.b || { zone: '', text: '' };
+        const zC = vZones.c || { zone: '', text: '' };
+        const zD = vZones.d || { zone: '', text: '' };
+
+        if (rms < limitA) {
+            resDiv.classList.add('bg-emerald-50', 'border-emerald-200', 'text-emerald-700');
+            if (zoneText) zoneText.innerText = zA.zone; 
+            if (mainText) mainText.innerText = zA.text;
+        } else if (rms <= limitB) {
+            resDiv.classList.add('bg-amber-50', 'border-amber-200', 'text-amber-700');
+            if (zoneText) zoneText.innerText = zB.zone; 
+            if (mainText) mainText.innerText = zB.text;
+        } else if (rms <= limitC) {
+            resDiv.classList.add('bg-orange-50', 'border-orange-200', 'text-orange-700');
+            if (zoneText) zoneText.innerText = zC.zone; 
+            if (mainText) mainText.innerText = zC.text;
+        } else {
+            resDiv.classList.add('bg-red-50', 'border-red-200', 'text-red-700');
+            if (zoneText) zoneText.innerText = zD.zone; 
+            if (mainText) mainText.innerText = zD.text;
+        }
+    };
+
+    window.calcCapex = function() {
+        const price = parseFloat(document.getElementById('capex-price').value) || 0;
+        const rent = parseFloat(document.getElementById('capex-rent').value) || 0;
+        
+        const hubConfigEl = document.getElementById('hub-config-data');
+        const hubConfig = hubConfigEl ? JSON.parse(hubConfigEl.textContent) : {};
+        const maintFactor = parseFloat(hubConfig.capex_maintenance_factor) || 0;
+        const years = parseInt(hubConfig.capex_years, 10) || 0;
+
+        const capexTotal = price + (price * maintFactor * years);
+        const opexTotal = rent * (years * 12);
+        
+        const currencyStr = hubConfig.mena ? ` ${hubConfig.mena}` : '';
+        document.getElementById('capex-res-buy').innerText = Math.round(capexTotal).toLocaleString() + currencyStr;
+        document.getElementById('capex-res-rent').innerText = Math.round(opexTotal).toLocaleString() + currencyStr;
+        document.getElementById('capex-result').classList.remove('hidden');
+    };
+</script>
+{% endblock %}

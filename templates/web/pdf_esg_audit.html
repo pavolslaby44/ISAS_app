@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Energetický a ESG Audit | {{ identita.nazov_spolocnosti|default:"" }}</title>
+    
+    {% include "documents/document_design_system.html" %}
+</head>
+<body>
+    <div class="header">
+        <table style="width: 100%; margin: 0 0 12px 0; border-collapse: collapse;">
+            <tr>
+                <td style="vertical-align: middle;">
+                    <h1 class="title" style="margin: 0;">Energetický a ESG Audit</h1>
+                </td>
+                <td style="text-align: right; vertical-align: middle;">
+                    {% if identita.logo %}
+                        <img src="{{ identita.logo.url }}" alt="{{ identita.nazov_spolocnosti|default:'' }}" style="max-height: 50px;">
+                    {% endif %}
+                </td>
+            </tr>
+        </table>
+        <table style="width: 100%; margin: 0 0 12px 0; font-size: 13px; color: #64748b; border-collapse: collapse;">
+            <tr>
+                <td style="text-align: left;">{% if cislo_auditu %}Evidenčné číslo auditu: <strong style="color: #0f172a;">{{ cislo_auditu }}</strong>{% endif %}</td>
+                <td style="text-align: right;">Čas vyhotovenia: <strong style="color: #0f172a;">{% if cas_vyhotovenia %}{{ cas_vyhotovenia|date:"d.m.Y H:i" }}{% elif datum_vyhotovenia %}{{ datum_vyhotovenia|date:"d.m.Y" }}{% endif %}</strong></td>
+            </tr>
+            {% if auditor_meno %}
+            <tr>
+                <td colspan="2" style="padding-top: 3px; font-size: 12px;">Technický audítor / Garant: <strong style="color: #0f172a;">{{ auditor_meno }}</strong>{% if auditor_rola %} ({{ auditor_rola }}){% endif %}</td>
+            </tr>
+            {% endif %}
+        </table>
+        <table style="width: 100%; margin-bottom: 15px; border-collapse: collapse; font-size: 13px;">
+            <tr>
+                <td style="width: 50%; vertical-align: top; padding-right: 15px;">
+                    {% if zakaznik and zakaznik.Nazov_spolocnosti and zakaznik.Nazov_spolocnosti|slice:":5" != "Lead " %}
+                        <strong style="color: #0f172a; text-transform: uppercase; font-size: 11px;">Odberateľ:</strong><br>
+                        <strong>{{ zakaznik.Nazov_spolocnosti }}</strong>
+                        {% if zakaznik.kontaktna_osoba %}<br>Kontaktná osoba: <strong>{{ zakaznik.kontaktna_osoba }}</strong>{% endif %}
+                        {% if zakaznik.email or email %}<br>E-mail: <strong>{{ zakaznik.email|default:email }}</strong>{% endif %}
+                        {% if zakaznik.telefon %}<br>Tel: {{ zakaznik.telefon }}{% endif %}
+                        {% if zakaznik.domena %}<br>Web: {{ zakaznik.domena }}{% endif %}
+                        {% if zakaznik.ulica_a_cislo or zakaznik.mesto %}<br>{% if zakaznik.ulica_a_cislo %}{{ zakaznik.ulica_a_cislo }}{% if zakaznik.mesto %}, {% endif %}{% endif %}{% if zakaznik.psc %}{{ zakaznik.psc }} {% endif %}{{ zakaznik.mesto|default:"" }}{% if zakaznik.stat %}, {{ zakaznik.stat }}{% endif %}{% endif %}
+                        {% if zakaznik.ico or zakaznik.dic or zakaznik.ic_dph %}<br>{% if zakaznik.ico %}IČO: {{ zakaznik.ico }}{% endif %}{% if zakaznik.dic %}{% if zakaznik.ico %} | {% endif %}DIČ: {{ zakaznik.dic }}{% endif %}{% if zakaznik.ic_dph %}{% if zakaznik.ico or zakaznik.dic %} | {% endif %}IČ DPH: {{ zakaznik.ic_dph }}{% endif %}{% endif %}
+                    {% else %}
+                        <strong style="color: #0f172a; text-transform: uppercase; font-size: 11px;">Žiadateľ auditu:</strong><br>
+                        E-mail: <strong>{{ email|default:"" }}</strong><br>
+                        <span style="font-size: 11px; color: #64748b;">Typ požiadavky: Webová kalkulácia & Technický audit</span>
+                    {% endif %}
+                </td>
+                <td style="width: 50%; vertical-align: top; padding-left: 15px;">
+                    <strong style="color: #0f172a; text-transform: uppercase; font-size: 11px;">Dodávateľ:</strong><br>
+                    <strong>{{ identita.nazov_spolocnosti|default:"" }}</strong>
+                    {% if identita.sidlo_ulica or identita.sidlo_mesto %}<br>{% if identita.sidlo_ulica %}{{ identita.sidlo_ulica }}{% endif %}{% if identita.sidlo_cislo %} {{ identita.sidlo_cislo }}{% endif %}{% if identita.sidlo_ulica or identita.sidlo_cislo %}, {% endif %}{% if identita.sidlo_psc %}{{ identita.sidlo_psc }} {% endif %}{{ identita.sidlo_mesto|default:"" }}{% if identita.sidlo_stat %}, {{ identita.sidlo_stat }}{% endif %}{% endif %}
+                    {% if identita.ico or identita.dic or identita.ic_dph %}<br>{% if identita.ico %}IČO: {{ identita.ico }}{% endif %}{% if identita.dic %}{% if identita.ico %} | {% endif %}DIČ: {{ identita.dic }}{% endif %}{% if identita.ic_dph %}{% if identita.ico or identita.dic %} | {% endif %}IČ DPH: {{ identita.ic_dph }}{% endif %}{% endif %}
+                    {% if identita.telefon or identita.email_vseobecny %}<br>{% if identita.telefon %}Tel: {{ identita.telefon }}{% endif %}{% if identita.email_vseobecny %}{% if identita.telefon %} | {% endif %}E-mail: {{ identita.email_vseobecny }}{% endif %}{% endif %}
+                    {% if identita.web %}<br>Web: {{ identita.web }}{% endif %}
+                    {% if identita.iban %}<br>IBAN: {{ identita.iban }}{% if identita.swift %} | BIC/SWIFT: {{ identita.swift }}{% endif %}{% if identita.nazov_banky %} ({{ identita.nazov_banky }}){% endif %}{% endif %}
+                </td>
+            </tr>
+        </table>
+        <div style="clear: both;"></div>
+    </div>
+    
+    <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 14px; margin-bottom: 16px; page-break-inside: avoid;">
+        <span style="font-size: 10px; font-weight: bold; text-transform: uppercase; color: #64748b; letter-spacing: 0.5px; display: block; margin-bottom: 6px;">Vstupné technicko-ekonomické parametre (Audit Baseline):</span>
+        <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+            <tr>
+                <td style="width: 25%; padding: 2px 8px 2px 0; color: #475569;">{{ stroj_label|default:"Menovitý výkon" }}: <strong style="color: #0f172a;">{% if kw and kw > 0 %}{{ kw|floatformat:2 }} kW{% else %}—{% endif %}</strong></td>
+                <td style="width: 25%; padding: 2px 8px; color: #475569;">Sadzba elektriny: <strong style="color: #0f172a;">{% if cena_kwh %}{{ cena_kwh|floatformat:4 }}{% if mena %} {{ mena }}{% endif %}/kWh{% else %}—{% endif %}</strong></td>
+                <td style="width: 25%; padding: 2px 8px; color: #475569;">{{ podiel_label|default:"Chod bez záťaže / neproduktívny čas" }}: <strong style="color: #0f172a;">{% if podiel_naprazdno_percent or podiel_naprazdno_percent == 0 %}{{ podiel_naprazdno_percent|floatformat:1 }} %{% else %}—{% endif %}</strong></td>
+                <td style="width: 25%; padding: 2px 0 2px 8px; color: #475569;">Emisný faktor: <strong style="color: #0f172a;">{% if emisny_faktor %}{{ emisny_faktor|floatformat:4 }} kg CO₂/kWh{% else %}—{% endif %}</strong></td>
+            </tr>
+        </table>
+        {% if kpi_strata_tooltip %}
+        <p style="margin: 6px 0 0 0; font-size: 10px; color: #64748b; line-height: 1.4; border-top: 1px dashed #cbd5e1; padding-top: 4px;">Metodická báza: {{ kpi_strata_tooltip }}</p>
+        {% endif %}
+    </div>
+    
+    <table style="width: 100%; margin-bottom: 16px; border-collapse: separate; border-spacing: 8px 0; page-break-inside: avoid;">
+        <tr>
+            <td style="width: 25%; background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 10px; text-align: center; vertical-align: top;">
+                <p style="margin: 0 0 4px 0; font-size: 10px; text-transform: uppercase; font-weight: bold; color: #991b1b;">{{ kpi_strata_label|default:"Súčasná ročná strata" }}{% if identita.je_platca_dph %} (bez DPH){% endif %}</p>
+                <p style="margin: 0; font-size: 16px; font-weight: bold; color: #b91c1c;">{{ strata_eur|floatformat:2 }}{% if mena %} {{ mena }}{% endif %}</p>
+            </td>
+            <td style="width: 25%; background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 10px; text-align: center; vertical-align: top;">
+                <p style="margin: 0 0 4px 0; font-size: 10px; text-transform: uppercase; font-weight: bold; color: #166534;">Kalkulovaná ročná úspora{% if identita.je_platca_dph %} (bez DPH){% endif %}</p>
+                <p style="margin: 0; font-size: 16px; font-weight: bold; color: #15803d;">+{{ uspora_eur|floatformat:2 }}{% if mena %} {{ mena }}{% endif %}</p>
+            </td>
+            <td style="width: 25%; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px; text-align: center; vertical-align: top;">
+                <p style="margin: 0 0 4px 0; font-size: 10px; text-transform: uppercase; font-weight: bold; color: #475569;">Uhlíková stopa (Scope 2)</p>
+                <p style="margin: 0; font-size: 16px; font-weight: bold; color: #0f172a;">{{ strata_co2|floatformat:1 }} t CO₂/rok</p>
+            </td>
+            <td style="width: 25%; background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 10px; text-align: center; vertical-align: top;">
+                <p style="margin: 0 0 4px 0; font-size: 10px; text-transform: uppercase; font-weight: bold; color: #166534;">Redukcia emisií (Benefit)</p>
+                <p style="margin: 0; font-size: 16px; font-weight: bold; color: #15803d;">-{{ uspora_co2|floatformat:1 }} t CO₂/rok</p>
+            </td>
+        </tr>
+    </table>
+
+    <table style="width: 100%; margin: 18px 0; border-collapse: collapse; font-size: 12px; border: 1px solid #e2e8f0; page-break-inside: avoid;">
+        <thead>
+            <tr style="background-color: #f1f5f9; text-align: left;">
+                <th style="padding: 8px; border: 1px solid #cbd5e1;">Technicko-ekonomické vyhodnotenie</th>
+                <th style="padding: 8px; border: 1px solid #cbd5e1; text-align: right;">Súčasný stav</th>
+                <th style="padding: 8px; border: 1px solid #cbd5e1; text-align: right;">Optimalizovaný stav</th>
+                <th style="padding: 8px; border: 1px solid #cbd5e1; text-align: right; color: #166534;">Kalkulovaný benefit</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td style="padding: 8px; border: 1px solid #e2e8f0;">{{ kpi_strata_label|default:"Finančné prevádzkové straty" }}{% if identita.je_platca_dph %} (bez DPH){% endif %}</td>
+                <td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; color: #b91c1c; font-weight: bold;">{{ strata_eur|floatformat:2 }}{% if mena %} {{ mena }}{% endif %} / rok</td>
+                <td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">{{ nova_strata_eur|floatformat:2 }}{% if mena %} {{ mena }}{% endif %} / rok</td>
+                <td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: #166534;">+{{ uspora_eur|floatformat:2 }}{% if mena %} {{ mena }}{% endif %} / rok</td>
+            </tr>
+            <tr style="background-color: #fafafa;">
+                <td style="padding: 8px; border: 1px solid #e2e8f0;">Emisie skleníkových plynov (ESG Scope 2 / GHG Protocol)</td>
+                <td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; color: #b91c1c; font-weight: bold;">{{ strata_co2|floatformat:1 }} t CO₂ / rok</td>
+                <td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">{{ nova_strata_co2|floatformat:1 }} t CO₂ / rok</td>
+                <td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: #166534;">-{{ uspora_co2|floatformat:1 }} t CO₂ / rok</td>
+            </tr>
+            {% if uspora_3_roky %}
+            <tr>
+                <td style="padding: 8px; border: 1px solid #e2e8f0;">Strednodobá kumulatívna bilancia (3-ročný investičný horizont{% if identita.je_platca_dph %}, bez DPH{% endif %})</td>
+                <td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; color: #b91c1c; font-weight: bold;">{{ strata_3_roky|floatformat:2 }}{% if mena %} {{ mena }}{% endif %} / 3 roky</td>
+                <td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">{{ nova_strata_3_roky|floatformat:2 }}{% if mena %} {{ mena }}{% endif %} / 3 roky</td>
+                <td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: #166534;">+{{ uspora_3_roky|floatformat:2 }}{% if mena %} {{ mena }}{% endif %} / 3 roky</td>
+            </tr>
+            {% endif %}
+            {% if uspora_5_rokov %}
+            <tr style="background-color: #fafafa;">
+                <td style="padding: 8px; border: 1px solid #e2e8f0;">Dlhodobá kumulatívna bilancia (5-ročný cyklus TCO{% if identita.je_platca_dph %}, bez DPH{% endif %})</td>
+                <td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; color: #b91c1c; font-weight: bold;">{{ strata_5_rokov|floatformat:2 }}{% if mena %} {{ mena }}{% endif %} / 5 rokov</td>
+                <td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">{{ nova_strata_5_rokov|floatformat:2 }}{% if mena %} {{ mena }}{% endif %} / 5 rokov</td>
+                <td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: #166534;">+{{ uspora_5_rokov|floatformat:2 }}{% if mena %} {{ mena }}{% endif %} / 5 rokov</td>
+            </tr>
+            {% endif %}
+        </tbody>
+    </table>
+    
+    <div style="background-color: #f8fafc; border-left: 4px solid #0284c7; padding: 12px 14px; margin: 18px 0; border-radius: 0 6px 6px 0; page-break-inside: avoid;">
+        <strong style="color: #0f172a; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 4px;">Odporúčanie technického špecialistu & Opatrenia na dekarbonizáciu:</strong>
+        <p style="margin: 0; font-size: 12px; line-height: 1.5; color: #334155;">{{ odporucanie_text|default:"Optimalizáciou prevádzky, modernizáciou technológie alebo inštaláciou nadradeného inteligentného riadenia dokážete túto prevádzkovú stratu výrazne minimalizovať." }}</p>
+    </div>
+    
+    <table style="width: 100%; margin-top: 25px; border-collapse: collapse; page-break-inside: avoid;">
+        <tr>
+            <td style="width: 50%; vertical-align: bottom; font-size: 11px; color: #64748b;">
+                Metodika auditu: <strong style="color: #0f172a;">{{ metodika_label|default:"GHG Protocol (Scope 2) / EN 16247" }}</strong><br>
+                Zodpovedný garant: <strong style="color: #0f172a;">{{ auditor_meno }}</strong>{% if auditor_rola %} ({{ auditor_rola }}){% endif %}
+            </td>
+            <td style="width: 50%; vertical-align: bottom; text-align: right;">
+                {% if identita.peciatka_podpis %}
+                    <img src="{{ identita.peciatka_podpis.url }}" alt="Autorizácia auditu" style="max-height: 65px;"><br>
+                {% endif %}
+                <p style="margin: 4px 0 0 0; font-size: 11px; color: #64748b;">
+                    Schválil za dodávateľa: <strong style="color: #0f172a;">{% if identita.konatel %}{{ identita.konatel }}{% elif auditor_meno %}{{ auditor_meno }}{% else %}{{ identita.nazov_spolocnosti|default:"" }}{% endif %}</strong>{% if identita.konatel %}<br><span style="font-size: 10px;">Konateľ / Štatutárny zástupca</span>{% elif auditor_rola %}<br><span style="font-size: 10px;">{{ auditor_rola }}</span>{% endif %}
+                </p>
+            </td>
+        </tr>
+    </table>
+
+    <div class="footer">
+        {% if identita.zapis_v_registri %}<p style="margin: 0 0 4px 0;">{{ identita.zapis_v_registri }}</p>{% endif %}
+        {% if identita.email_vseobecny or identita.telefon or identita.web %}
+        <p style="margin: 0 0 6px 0;">Kontaktné údaje: {% if identita.email_vseobecny %}{{ identita.email_vseobecny }}{% endif %}{% if identita.telefon %}{% if identita.email_vseobecny %} | {% endif %}Tel: {{ identita.telefon }}{% endif %}{% if identita.web %}{% if identita.email_vseobecny or identita.telefon %} | {% endif %}Web: {{ identita.web }}{% endif %}</p>
+        {% endif %}
+        {% if disclaimer %}<p style="font-size: 9px; color: #94a3b8; text-align: justify; margin-top: 8px;">{{ disclaimer }}</p>{% endif %}
+    </div>
+</body>
+</html>

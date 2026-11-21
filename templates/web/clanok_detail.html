@@ -1,0 +1,461 @@
+{% extends 'web/base.html' %}
+
+{% block title %}{{ clanok.seo_titulok|default:clanok.nadpis }} | Blog | {{ nastavenia.titulok_webu|default:identita.nazov_spolocnosti }}{% endblock %}
+{% block description %}{{ clanok.meta_popis|default:clanok.perex|default:clanok.obsah|striptags|truncatechars:150 }}{% endblock %}
+
+{% block og_type %}article{% endblock %}
+{% block og_url %}{{ request.scheme }}://{{ request.get_host }}{% url 'webbuilder:blog_detail' clanok.slug %}{% endblock %}
+{% block og_title %}{{ clanok.seo_titulok|default:clanok.nadpis }}{% endblock %}
+{% block og_description %}{{ clanok.meta_popis|default:clanok.perex|default:clanok.obsah|striptags|truncatechars:150 }}{% endblock %}
+{% block og_image_tag %}
+    {% if clanok.obrazok and clanok.obrazok.name %}
+    <meta property="og:image" content="{% if '://' in clanok.obrazok.url %}{{ clanok.obrazok.url }}{% else %}{{ request.scheme }}://{{ request.get_host }}{{ clanok.obrazok.url }}{% endif %}">
+    {% else %}
+    {{ block.super }}
+    {% endif %}
+{% endblock %}
+
+{% block extra_head %}
+    <link rel="canonical" href="{{ request.scheme }}://{{ request.get_host }}{% url 'webbuilder:blog_detail' clanok.slug %}">
+    <meta name="twitter:card" content="summary_large_image">
+    {% if not clanok.je_aktivny or is_preview %}
+    <meta name="robots" content="noindex, nofollow">
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+<!-- Indikátor čítania (Reading progress bar): Z-index zvýšený na 60 pre prekrytie sticky navbaru, pri tlači skrytý -->
+<div id="readingProgressBar" role="progressbar" aria-label="Priebeh čítania článku" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" class="fixed top-0 left-0 h-1.5 bg-brand z-[60] transition-all duration-150 print:hidden" style="width: 0%;"></div>
+
+<nav aria-label="Omrvinková navigácia" class="bg-gray-100 py-4 border-b border-gray-200 print:hidden">
+    <div class="max-w-7xl mx-auto px-6 text-sm text-gray-500 font-medium">
+        <ol class="flex items-center flex-wrap gap-2">
+            <li>
+                <a href="{% url 'webbuilder:home' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="hover:text-brand transition">Domov</a>
+            </li>
+            <li aria-hidden="true" class="text-gray-400">/</li>
+            <li>
+                <a href="{% url 'webbuilder:blog_list' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="hover:text-brand transition">Blog</a>
+            </li>
+            {% if clanok.kategoria %}
+            <li aria-hidden="true" class="text-gray-400">/</li>
+            <li>
+                <a href="{% url 'webbuilder:blog_list' %}?kategoria={{ clanok.kategoria|urlencode }}{% if is_preview %}&preview=ai_draft{% endif %}" class="hover:text-brand transition">{{ clanok.get_kategoria_display }}</a>
+            </li>
+            {% endif %}
+            <li aria-hidden="true" class="text-gray-400">/</li>
+            <li aria-current="page" class="text-gray-900 font-bold line-clamp-1 max-w-xs md:max-w-md">{{ clanok.nadpis }}</li>
+        </ol>
+    </div>
+</nav>
+
+<article class="py-16 bg-white px-6">
+    <div class="max-w-3xl mx-auto">
+        <div class="mb-8 text-center">
+            <div class="flex items-center justify-center gap-3 mb-6">
+                {% if clanok.kategoria %}
+                <span class="bg-brand/10 text-brand text-xs font-extrabold px-3 py-1 rounded-full uppercase tracking-wider">{{ clanok.get_kategoria_display }}</span>
+                {% endif %}
+                <span class="text-gray-400 text-sm font-medium">⏱️ {{ clanok.cas_citania|default:"3" }} min. čítania</span>
+            </div>
+            
+            <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 mb-6 leading-tight">{{ clanok.nadpis }}</h1>
+            {% if clanok.perex %}
+            <p class="text-xl text-gray-500 font-medium leading-relaxed mb-8">{{ clanok.perex|striptags }}</p>
+            {% endif %}
+            
+            {% if not clanok.je_aktivny %}
+            <div class="mb-6 p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs font-bold inline-flex items-center gap-2">
+                <span>⚠️ Tento článok je skrytý (neaktívny). Ako administrátor vidíte neverejný náhľad.</span>
+            </div>
+            {% endif %}
+
+            {% if clanok.autor and clanok.autor.zobrazit_na_webe and not clanok.autor.je_anonymizovany %}
+            <div class="flex items-center justify-center gap-4 pt-6 border-t border-gray-100">
+                {% if clanok.autor.profilova_fotka and clanok.autor.profilova_fotka.name %}
+                    <img src="{{ clanok.autor.profilova_fotka.url }}" alt="{{ clanok.autor.meno }} {{ clanok.autor.priezvisko }}" class="w-12 h-12 rounded-full object-cover border-2 border-gray-200">
+                {% else %}
+                    <div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-xl">👤</div>
+                {% endif %}
+                <div class="text-left">
+                    <p class="text-sm font-bold text-gray-900">{{ clanok.autor.meno }} {{ clanok.autor.priezvisko }}</p>
+                    <p class="text-xs text-gray-500">{{ clanok.autor.verejna_rola|default:"Špecialista" }} • {% if clanok.datum_vydania %}<time datetime="{{ clanok.datum_vydania|date:'Y-m-d' }}">{{ clanok.datum_vydania|date:"d.m.Y" }}</time>{% else %}<span class="text-amber-600 font-semibold italic">Koncept</span>{% endif %}</p>
+                </div>
+            </div>
+            {% else %}
+            <p class="text-sm text-gray-400 font-medium pt-6 border-t border-gray-100">Publikované: {% if clanok.datum_vydania %}<time datetime="{{ clanok.datum_vydania|date:'Y-m-d' }}">{{ clanok.datum_vydania|date:"d.m.Y" }}</time>{% else %}<span class="text-amber-600 font-semibold italic">Koncept (zatiaľ nepublikované)</span>{% endif %}</p>
+            {% endif %}
+        </div>
+
+        {% if clanok.obrazok and clanok.obrazok.name %}
+        <div class="rounded-3xl overflow-hidden shadow-xl mb-12 border border-gray-100 bg-gray-100 aspect-video max-h-[500px]">
+            <img src="{{ clanok.obrazok.url }}" alt="{{ clanok.obrazok_alt|default:clanok.nadpis }}" fetchpriority="high" class="w-full h-full object-cover">
+        </div>
+        {% endif %}
+
+        <!-- 📑 Automatický obsah článku (Table of Contents) pre dlhé technické články -->
+        <div id="articleTocContainer" class="hidden mb-10 p-6 bg-gray-50 border border-gray-200 rounded-2xl print:hidden">
+            <button type="button" id="tocToggleBtn" aria-expanded="false" aria-controls="articleTocList" class="w-full flex items-center justify-between cursor-pointer text-left focus:outline-none focus:ring-2 focus:ring-brand rounded-lg" onclick="toggleToc()">
+                <span class="text-sm font-extrabold text-gray-900 uppercase tracking-wider flex items-center gap-2">
+                    <span>📑</span> Obsah článku
+                </span>
+                <span id="tocToggleIcon" class="text-xs font-bold text-gray-500 hover:text-brand transition">Zobraziť</span>
+            </button>
+            <nav id="articleTocList" class="hidden mt-4 space-y-2 border-t border-gray-200 pt-4 text-sm font-medium text-gray-600"></nav>
+        </div>
+
+        <!-- 🚀 ISAS TYPOGRAPHY: 100% podpora pre technický obsah (tabuľky, citácie, zoznamy, kód a médiá) -->
+        <div id="articleContentBody" class="prose prose-lg prose-brand max-w-none text-gray-700 prose-headings:scroll-mt-24 prose-img:rounded-2xl prose-img:shadow-lg prose-img:mx-auto prose-a:text-brand prose-a:font-bold hover:prose-a:text-gray-900 transition-colors prose-table:border-collapse prose-table:w-full prose-th:bg-gray-50 prose-th:p-3 prose-th:border prose-th:border-gray-200 prose-td:p-3 prose-td:border prose-td:border-gray-200 prose-blockquote:border-l-4 prose-blockquote:border-brand prose-blockquote:bg-gray-50 prose-blockquote:py-2 prose-blockquote:px-4 prose-blockquote:rounded-r-xl prose-pre:bg-gray-900 prose-pre:text-gray-100 prose-pre:rounded-2xl prose-code:text-brand prose-code:bg-gray-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:before:content-none prose-code:after:content-none prose-video:rounded-2xl prose-video:mx-auto">
+            {{ clanok.obsah|safe }}
+        </div>
+        
+        <!-- 🔗 Zdieľanie článku -->
+        <div class="mt-12 pt-6 border-t border-gray-100 flex flex-wrap items-center justify-between gap-4 print:hidden">
+            <a href="{% url 'webbuilder:blog_list' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="text-sm font-bold text-gray-500 hover:text-brand transition flex items-center gap-1.5">
+                &larr; Späť na všetky články
+            </a>
+            <div class="flex items-center gap-2 relative">
+                <span class="text-xs font-semibold text-gray-400">Zdieľať:</span>
+                
+                <!-- Natívne mobilné zdieľanie (Web Share API) -->
+                <button type="button" id="nativeShareBtn" onclick="shareArticle()" class="hidden p-2 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-600 transition" title="Zdieľať">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
+                </button>
+
+                <!-- Kopírovanie odkazu s plynulým tooltipom -->
+                <button type="button" onclick="copyArticleLink(this)" aria-label="Kopírovať odkaz na článok" class="p-2 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-600 transition relative" title="Kopírovať odkaz">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                    <span id="copyToast" role="status" aria-live="polite" class="hidden absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[11px] font-bold px-2 py-1 rounded shadow pointer-events-none whitespace-nowrap">Skopírované!</span>
+                </button>
+
+                <!-- Tlač / Export do PDF -->
+                <button type="button" onclick="window.print()" aria-label="Vytlačiť článok alebo uložiť do PDF" class="p-2 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-600 transition" title="Tlačiť / PDF">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                </button>
+
+                {% url 'webbuilder:blog_detail' clanok.slug as detail_cesta %}
+                <!-- X (Twitter) -->
+                <a href="https://twitter.com/intent/tweet?url={{ request.scheme }}://{{ request.get_host }}{{ detail_cesta }}&text={{ clanok.nadpis|urlencode }}" target="_blank" rel="noopener noreferrer" class="p-2 rounded-xl bg-gray-50 hover:bg-gray-900 hover:text-white text-gray-600 transition" title="Zdieľať na X">
+                    <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                </a>
+
+                <!-- LinkedIn -->
+                <a href="https://www.linkedin.com/sharing/share-offsite/?url={{ request.scheme }}://{{ request.get_host }}{{ detail_cesta }}" target="_blank" rel="noopener noreferrer" class="p-2 rounded-xl bg-gray-50 hover:bg-blue-50 hover:text-blue-600 text-gray-600 transition" title="Zdieľať na LinkedIn">
+                    <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z"/></svg>
+                </a>
+
+                <!-- Facebook -->
+                <a href="https://www.facebook.com/sharer/sharer.php?u={{ request.scheme }}://{{ request.get_host }}{{ detail_cesta }}" target="_blank" rel="noopener noreferrer" class="p-2 rounded-xl bg-gray-50 hover:bg-blue-50 hover:text-blue-700 text-gray-600 transition" title="Zdieľať na Facebooku">
+                    <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                </a>
+            </div>
+        </div>
+
+        <!-- 👨‍💼 ISAS E-E-A-T AUTHOR BOX: Zvyšuje autoritu článku a dôveru klienta -->
+        {% if clanok.autor and clanok.autor.zobrazit_na_webe and not clanok.autor.je_anonymizovany %}
+        <div class="mt-12 p-6 bg-gray-50 rounded-3xl border border-gray-100 flex flex-col sm:flex-row items-center sm:items-start gap-5">
+            {% if clanok.autor.profilova_fotka and clanok.autor.profilova_fotka.name %}
+                <img src="{{ clanok.autor.profilova_fotka.url }}" alt="{{ clanok.autor.meno }} {{ clanok.autor.priezvisko }}" class="w-20 h-20 rounded-2xl object-cover border-2 border-white shadow-md flex-shrink-0">
+            {% else %}
+                <div class="w-20 h-20 rounded-2xl bg-white flex items-center justify-center text-3xl shadow-md flex-shrink-0">👤</div>
+            {% endif %}
+            <div class="text-center sm:text-left flex-grow">
+                <span class="text-[11px] font-extrabold uppercase text-brand tracking-wider">Autor článku & Garant obsahu</span>
+                <h4 class="text-lg font-extrabold text-gray-900 mt-0.5">{{ clanok.autor.meno }} {{ clanok.autor.priezvisko }}</h4>
+                <p class="text-sm text-gray-600 font-medium mt-1">{{ clanok.autor.verejna_rola|default:"Technický špecialista" }}</p>
+                {% if clanok.autor.certifikaty.exists %}
+                <p class="text-xs text-emerald-700 font-bold mt-1 inline-flex items-center gap-1 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">
+                    <span>📜 Odborná spôsobilosť: {{ clanok.autor.certifikaty.first.nazov }}</span>
+                </p>
+                {% endif %}
+            </div>
+        </div>
+        {% else %}
+        <div class="mt-12 p-6 bg-gray-50 rounded-3xl border border-gray-100 flex flex-col sm:flex-row items-center sm:items-start gap-5">
+            <div class="w-20 h-20 rounded-2xl bg-white flex items-center justify-center text-3xl shadow-md flex-shrink-0">🛡️</div>
+            <div class="text-center sm:text-left flex-grow">
+                <span class="text-[11px] font-extrabold uppercase text-brand tracking-wider">Odborný garant obsahu</span>
+                <h4 class="text-lg font-extrabold text-gray-900 mt-0.5">{{ identita.nazov_spolocnosti|default:nastavenia.titulok_webu|default:"Odborný tím" }}</h4>
+                <p class="text-sm text-gray-600 font-medium mt-1">Článok pripravil a odborne overil tím špecialistov {{ identita.nazov_spolocnosti|default:nastavenia.titulok_webu|default:"našej spoločnosti" }}.</p>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- 🧠 ISAS UX: Súvisiace články -->
+        {% if suvisiace_clanky %}
+        <div class="mt-16 pt-12 border-t border-gray-200 print:hidden">
+            <h3 class="text-2xl font-bold text-gray-900 mb-8">Mohlo by vás zaujímať</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {% for rel in suvisiace_clanky %}
+                {% if rel.slug %}
+                <a href="{% url 'webbuilder:blog_detail' rel.slug %}{% if is_preview %}?preview=ai_draft{% endif %}" class="flex flex-col group bg-gray-50 p-4 rounded-2xl border border-gray-100 hover:border-gray-200 transition">
+                    <div class="w-full h-36 flex-shrink-0 rounded-xl overflow-hidden bg-gray-200 flex items-center justify-center mb-3">
+                        {% if rel.obrazok and rel.obrazok.name %}
+                            <img src="{{ rel.obrazok.url }}" alt="{{ rel.obrazok_alt|default:rel.nadpis }}" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+                        {% else %}
+                            <span class="text-3xl opacity-30">📰</span>
+                        {% endif %}
+                    </div>
+                    <div class="flex flex-col flex-grow justify-between">
+                        {% if rel.kategoria %}
+                        <span class="text-[11px] text-brand font-extrabold uppercase mb-1">{{ rel.get_kategoria_display }}</span>
+                        {% endif %}
+                        <h4 class="text-sm font-bold text-gray-900 group-hover:text-brand transition line-clamp-2 mb-2">{{ rel.nadpis }}</h4>
+                        <span class="text-xs text-gray-400 font-medium">{{ rel.datum_vydania|date:"d.m.Y" }}</span>
+                    </div>
+                </a>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="mt-12 pt-8 border-t border-gray-200 text-center print:hidden">
+            <h3 class="text-2xl font-bold text-gray-900 mb-4">Potrebujete poradiť?</h3>
+            <p class="text-gray-500 mb-6">Naši špecialisti sú pripravení vám pomôcť s akýmkoľvek technickým problémom.</p>
+            <a href="{% url 'webbuilder:home' %}{% if is_preview %}?preview=ai_draft{% endif %}#kontakt" class="inline-block bg-brand hover-bg-brand text-white font-bold text-lg py-4 px-10 rounded-xl transition duration-300 shadow-lg">Kontaktujte nás</a>
+        </div>
+    </div>
+</article>
+
+<!-- 🚀 ISAS SEO ENGINE: Article & BreadcrumbList Schema pre Google -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Domov",
+          "item": "{{ request.scheme }}://{{ request.get_host }}{% url 'webbuilder:home' %}"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Blog",
+          "item": "{{ request.scheme }}://{{ request.get_host }}{% url 'webbuilder:blog_list' %}"
+        }{% if clanok.kategoria %},
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": "{{ clanok.get_kategoria_display|escapejs }}",
+          "item": "{{ request.scheme }}://{{ request.get_host }}{% url 'webbuilder:blog_list' %}?kategoria={{ clanok.kategoria|urlencode }}"
+        },
+        {
+          "@type": "ListItem",
+          "position": 4,
+          "name": "{{ clanok.nadpis|striptags|escapejs }}",
+          "item": "{{ request.scheme }}://{{ request.get_host }}{% url 'webbuilder:blog_detail' clanok.slug %}"
+        }{% else %},
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": "{{ clanok.nadpis|striptags|escapejs }}",
+          "item": "{{ request.scheme }}://{{ request.get_host }}{% url 'webbuilder:blog_detail' clanok.slug %}"
+        }{% endif %}
+      ]
+    },
+    {
+      "@type": "Article",
+      "headline": "{{ clanok.nadpis|striptags|escapejs }}",
+      {% if clanok.obrazok and clanok.obrazok.name %}
+      "image": [
+        "{% if '://' in clanok.obrazok.url %}{{ clanok.obrazok.url }}{% else %}{{ request.scheme }}://{{ request.get_host }}{{ clanok.obrazok.url }}{% endif %}"
+      ],
+      {% endif %}
+      {% if clanok.datum_vydania %}"datePublished": "{{ clanok.datum_vydania|date:'Y-m-d' }}",{% endif %}
+      {% if clanok.datum_vydania %}"dateModified": "{{ clanok.datum_vydania|date:'Y-m-d' }}",{% endif %}
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "{{ request.scheme }}://{{ request.get_host }}{% url 'webbuilder:blog_detail' clanok.slug %}"
+      },
+  "author": {
+    {% if clanok.autor and clanok.autor.zobrazit_na_webe and not clanok.autor.je_anonymizovany %}
+    "@type": "Person",
+    "name": "{{ clanok.autor.meno|escapejs }} {{ clanok.autor.priezvisko|escapejs }}"
+    {% else %}
+    "@type": "Organization",
+    "name": "{{ identita.nazov_spolocnosti|default:nastavenia.titulok_webu|default:'ISAS CORE'|escapejs }}"
+    {% endif %}
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "{{ identita.nazov_spolocnosti|default:nastavenia.titulok_webu|default:'ISAS CORE'|escapejs }}"{% if nastavenia.logo and nastavenia.logo.name %},
+    "logo": {
+      "@type": "ImageObject",
+      "url": "{% if '://' in nastavenia.logo.url %}{{ nastavenia.logo.url }}{% else %}{{ request.scheme }}://{{ request.get_host }}{{ nastavenia.logo.url }}{% endif %}"
+    }
+    {% endif %}
+  },
+  "description": "{{ clanok.meta_popis|default:clanok.perex|default:clanok.obsah|striptags|truncatechars:200|escapejs }}"
+    }
+  ]
+}
+</script>
+
+<script>
+    // 📖 Čítací progress bar (Ošetrený voči krátkym článkom, initial load a s aria aktualizáciou)
+    function updateReadingProgressBar() {
+        const article = document.querySelector('article');
+        const bar = document.getElementById('readingProgressBar');
+        if (!article || !bar) return;
+        const rect = article.getBoundingClientRect();
+        const articleTop = rect.top + window.scrollY;
+        const articleHeight = article.offsetHeight;
+        if (articleHeight <= 0) return;
+        const scrollPos = window.scrollY;
+        
+        let pct = 0;
+        if (scrollPos >= articleTop) {
+            const totalScrollable = articleHeight - window.innerHeight;
+            if (totalScrollable <= 0) {
+                const visiblePart = (window.innerHeight - rect.top) / articleHeight;
+                pct = Math.min(100, Math.max(0, visiblePart * 100));
+            } else {
+                const scrolled = scrollPos - articleTop;
+                pct = Math.max(0, Math.min(100, (scrolled / totalScrollable) * 100));
+            }
+        }
+        const rounded = Math.min(100, Math.max(0, Math.round(pct) || 0));
+        bar.style.width = rounded + '%';
+        bar.setAttribute('aria-valuenow', String(rounded));
+    }
+    window.addEventListener('scroll', updateReadingProgressBar, { passive: true });
+    window.addEventListener('resize', updateReadingProgressBar, { passive: true });
+    window.addEventListener('DOMContentLoaded', updateReadingProgressBar);
+    window.addEventListener('load', updateReadingProgressBar);
+    // 🔗 Bezpečné kopírovanie odkazu s garantovaným fallbackom pri zlyhaní Promise
+    function copyArticleLink(btn) {
+        const canonicalUrl = document.querySelector('link[rel="canonical"]')?.href || window.location.href;
+        const fallbackCopy = () => {
+            const ta = document.createElement('textarea');
+            ta.value = canonicalUrl;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            try { document.execCommand('copy'); showToast(); } catch (e) {}
+            document.body.removeChild(ta);
+        };
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(canonicalUrl).then(showToast).catch(fallbackCopy);
+        } else {
+            fallbackCopy();
+        }
+    }
+
+    let copyToastTimer = null;
+    function showToast() {
+        const toast = document.getElementById('copyToast');
+        if (!toast) return;
+        if (copyToastTimer) clearTimeout(copyToastTimer);
+        toast.classList.remove('hidden');
+        copyToastTimer = setTimeout(() => toast.classList.add('hidden'), 2000);
+    }
+
+    // 📑 Automatické generovanie Table of Contents a sanitácia externých linkov
+    document.addEventListener('DOMContentLoaded', () => {
+        const contentBody = document.getElementById('articleContentBody');
+        const tocContainer = document.getElementById('articleTocContainer');
+        const tocList = document.getElementById('articleTocList');
+
+        if (contentBody) {
+            // Bezpečné otváranie externých odkazov z článku v novom okne s RFC ochranou domény
+            contentBody.querySelectorAll('a[href^="http"]').forEach(link => {
+                if (link.hostname && link.hostname !== window.location.hostname) {
+                    link.setAttribute('target', '_blank');
+                    link.setAttribute('rel', 'noopener noreferrer');
+                }
+            });
+
+            // Obalenie tabuliek pre izolovaný responzívny posun bez deformácie odsekov
+            contentBody.querySelectorAll('table').forEach(table => {
+                if (!table.parentElement.classList.contains('overflow-x-auto')) {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'overflow-x-auto my-6 border border-gray-200 rounded-2xl shadow-sm';
+                    table.parentNode.insertBefore(wrapper, table);
+                    wrapper.appendChild(table);
+                }
+            });
+
+            // 🛡️ Ochrana pred prelomením mobilného layoutu vloženými videami (YouTube/Vimeo)
+            contentBody.querySelectorAll('iframe').forEach(iframe => {
+                if (!iframe.parentElement.classList.contains('aspect-video')) {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'aspect-video w-full my-6 rounded-2xl overflow-hidden shadow-lg';
+                    iframe.classList.add('w-full', 'h-full');
+                    iframe.parentNode.insertBefore(wrapper, iframe);
+                    wrapper.appendChild(iframe);
+                }
+            });
+
+            // 🚀 Bleskový rendering: automatické pridanie lazy-loadingu na obrázky v tele článku
+            contentBody.querySelectorAll('img').forEach(img => {
+                if (!img.hasAttribute('loading')) {
+                    img.setAttribute('loading', 'lazy');
+                }
+            });
+
+            // Vyhľadanie nadpisov h2 a h3 pre vytvorenie TOC s validáciou prázdneho textu
+            if (tocContainer && tocList) {
+                const headings = Array.from(contentBody.querySelectorAll('h2, h3')).filter(h => h.textContent.trim().length > 0);
+                if (headings.length >= 2) {
+                    const existingHeadingIds = new Set();
+                    headings.forEach((heading, idx) => {
+                        let hId = heading.id ? heading.id.trim() : '';
+                        if (!hId || existingHeadingIds.has(hId)) {
+                            hId = 'sekcia-' + (idx + 1);
+                            heading.id = hId;
+                        }
+                        existingHeadingIds.add(hId);
+                        const item = document.createElement('a');
+                        item.href = '#' + hId;
+                        item.className = 'block hover:text-brand transition ' + (heading.tagName === 'H3' ? 'pl-4 text-xs text-gray-500' : 'font-semibold');
+                        item.textContent = heading.textContent.trim();
+                        item.onclick = () => {
+                            if (window.innerWidth < 768) toggleToc();
+                        };
+                        tocList.appendChild(item);
+                    });
+                    tocContainer.classList.remove('hidden');
+                    if (window.innerWidth >= 768) {
+                        tocList.classList.remove('hidden');
+                        const tIcon = document.getElementById('tocToggleIcon');
+                        const tBtn = document.getElementById('tocToggleBtn');
+                        if (tIcon) tIcon.textContent = 'Skryť';
+                        if (tBtn) tBtn.setAttribute('aria-expanded', 'true');
+                    }
+                }
+            }
+        }
+    });
+
+    function toggleToc() {
+        const tocList = document.getElementById('articleTocList');
+        const tocIcon = document.getElementById('tocToggleIcon');
+        const tocBtn = document.getElementById('tocToggleBtn');
+        if (!tocList || !tocIcon) return;
+        const isHidden = tocList.classList.toggle('hidden');
+        tocIcon.textContent = isHidden ? 'Zobraziť' : 'Skryť';
+        if (tocBtn) tocBtn.setAttribute('aria-expanded', String(!isHidden));
+    }
+
+    // 📱 Natívne mobilné zdieľanie
+    if (navigator.share) {
+        const nBtn = document.getElementById('nativeShareBtn');
+        if (nBtn) nBtn.classList.remove('hidden');
+    }
+    function shareArticle() {
+        if (navigator.share) {
+            const canonicalUrl = document.querySelector('link[rel="canonical"]')?.href || window.location.href;
+            navigator.share({
+                title: document.title,
+                url: canonicalUrl
+            }).catch(() => {});
+        }
+    }
+</script>
+{% endblock %}

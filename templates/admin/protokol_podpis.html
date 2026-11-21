@@ -1,0 +1,674 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Servisný Protokol #{{ poradove_cislo|default:zaznam.id }}</title>
+    <script src="{% static 'js/admin_master.js' %}"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <style>
+        /* GLOBÁLNE NASTAVENIA Z PDF ŠABLÓNY */
+        :root {
+            --primary: #2563eb;       
+            --primary-dark: #1e40af;
+            --slate-900: #0f172a;     
+            --slate-700: #334155;     
+            --slate-500: #64748b;     
+            --slate-100: #f1f5f9;     
+            --success: #10b981;       
+            --bg-ai: #ecfdf5;         
+            --warning: #f59e0b;
+        }
+
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: #e2e8f0; /* Jemne tmavšie pozadie pre vyniknutie bieleho dokumentu */
+            color: var(--slate-900); 
+            margin: 0; 
+            padding: 20px 0; 
+            display: flex; 
+            justify-content: center; 
+            -webkit-font-smoothing: antialiased; 
+        }
+
+        .protocol-container { 
+            background: white; 
+            width: 100%; 
+            max-width: 800px; 
+            min-height: 100vh; 
+            padding: 40px; 
+            box-sizing: border-box; 
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.08); 
+        }
+
+        /* HLAVIČKA */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            border-bottom: 3px solid var(--primary);
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .header-left .logo-text { font-size: 24px; font-weight: 900; color: var(--slate-900); text-transform: uppercase; margin: 0; line-height: 1.2;}
+        .header-left .company-meta { font-size: 12px; color: var(--slate-500); margin-top: 4px; font-weight: 500;}
+        .header-right { text-align: right; }
+        .doc-type { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--slate-500); font-weight: 700; margin-bottom: 4px;}
+        .doc-number { font-size: 20px; font-weight: 800; color: var(--primary); font-variant-numeric: tabular-nums; background: #eff6ff; padding: 4px 12px; border-radius: 8px; border: 1px solid #bfdbfe; display: inline-block;}
+
+        /* INFORMAČNÉ KARTY */
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 35px; }
+        .info-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+        .info-card-header { font-size: 11px; font-weight: 800; color: var(--slate-500); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 12px; }
+        .info-value { font-size: 15px; font-weight: 800; color: var(--slate-900); margin-bottom: 6px; }
+        .info-meta { font-size: 13px; color: var(--slate-700); margin-bottom: 3px; }
+
+        /* NADPISY SEKCII */
+        .section-title { font-size: 14px; font-weight: 800; color: var(--primary-dark); text-transform: uppercase; letter-spacing: 0.5px; margin: 30px 0 15px 0; display: flex; align-items: center; gap: 10px; }
+        .section-title::after { content: ""; flex-grow: 1; height: 1px; background: #e2e8f0; }
+
+        /* FOTOGALÉRIA PRED / PO */
+        .photo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 30px; }
+        .photo-box { position: relative; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; background: var(--slate-100); text-align: center; height: 220px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);}
+        .photo-box img { width: 100%; height: 100%; object-fit: cover; }
+        .photo-label { position: absolute; bottom: 10px; left: 10px; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(4px); color: white; padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: 800; letter-spacing: 1px; }
+
+        /* BADGES (Kroky) */
+        .step-badge { display: inline-block; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 800; text-transform: uppercase; margin-bottom: 15px; letter-spacing: 0.5px;}
+        .step-1 { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+        .step-2 { display: none; background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+
+        /* AI TEXTAREA PRE TECHNIKA */
+        .ai-summary-editor { width: 100%; height: 180px; background: #f8fafc; border: 2px solid #cbd5e1; padding: 18px; border-radius: 12px; color: var(--slate-900); font-size: 14px; line-height: 1.6; font-family: 'Inter', sans-serif; resize: vertical; box-sizing: border-box; outline: none; transition: 0.2s;}
+        .ai-summary-editor:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1); background: #ffffff;}
+        
+        .ai-magic-btn { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border: none; padding: 10px 16px; border-radius: 8px; font-size: 12px; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 10px rgba(245, 158, 11, 0.3); transition: 0.2s;}
+        .ai-magic-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(245, 158, 11, 0.4); }
+
+        /* POHĽAD ZÁKAZNÍKA (Zhoda s PDF .ai-insight) */
+        .ai-summary-final { display: none; background: linear-gradient(135deg, var(--bg-ai) 0%, #ffffff 100%); border: 1px solid #a7f3d0; border-left: 4px solid var(--success); border-radius: 8px; padding: 25px; color: #065f46; font-size: 14px; line-height: 1.6; margin-bottom: 30px; white-space: pre-wrap; position: relative;}
+        .ai-summary-final::before { content: 'ISAS AI Zhodnotenie'; position: absolute; top: -10px; left: 15px; background: var(--success); color: white; font-size: 10px; font-weight: 800; padding: 4px 10px; border-radius: 10px; text-transform: uppercase; letter-spacing: 0.5px;}
+
+        /* PODPISOVÁ ČASŤ */
+        .legal-box { background: var(--slate-100); padding: 18px; border-radius: 10px; font-size: 12px; color: var(--slate-500); text-align: justify; margin-bottom: 30px; border-left: 4px solid var(--slate-500); line-height: 1.5;}
+
+        .signatures-wrapper { display: none; flex-direction: column; gap: 30px; animation: fadeIn 0.6s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .sign-box { border: 1px solid #cbd5e1; border-radius: 16px; padding: 25px; background: #ffffff; position: relative; box-shadow: 0 4px 6px rgba(0,0,0,0.02);}
+        .sign-box-title { font-size: 14px; font-weight: 800; color: var(--slate-900); margin: 0 0 15px 0; text-transform: uppercase;}
+        
+        .canvas-container { border: 2px dashed #cbd5e1; border-radius: 12px; background: #f8fafc; margin-bottom: 15px; overflow: hidden; touch-action: none; width: 100%; box-sizing: border-box;}
+        canvas { width: 100%; height: 200px; cursor: crosshair; display: block;}
+        
+        .clear-btn { background: var(--slate-100); color: var(--slate-700); border: 1px solid #cbd5e1; padding: 10px 20px; border-radius: 8px; font-weight: 800; font-size: 11px; cursor: pointer; text-transform: uppercase; transition: 0.2s;}
+        .clear-btn:hover { background: #e2e8f0; }
+        
+        .input-name { width: 100%; padding: 16px; border: 2px solid #cbd5e1; border-radius: 12px; font-size: 15px; font-weight: 700; box-sizing: border-box; text-align: center; margin-bottom: 20px; outline: none; transition: 0.2s; color: var(--slate-900);}
+        .input-name:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1); }
+
+        /* HVIEZDIČKY NPS */
+        .nps-box { background: linear-gradient(135deg, #f8fafc, #f1f5f9); border-radius: 12px; padding: 25px; margin-bottom: 25px; text-align: center; border: 1px solid #e2e8f0;}
+        .nps-title { font-size: 13px; font-weight: 800; color: var(--slate-700); text-transform: uppercase; margin-bottom: 15px; letter-spacing: 0.5px;}
+        .stars { display: inline-flex; flex-direction: row; gap: 10px; }
+        .star { font-size: 40px; color: #cbd5e1; cursor: pointer; transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1); line-height: 1; }
+        .star:hover, .star.active { color: var(--warning); transform: scale(1.15); text-shadow: 0 4px 15px rgba(245, 158, 11, 0.4); }
+
+        /* HLAVNÉ TLAČIDLÁ */
+        .submit-btn { width: 100%; color: white; border: none; padding: 22px; border-radius: 14px; font-size: 16px; font-weight: 900; text-transform: uppercase; cursor: pointer; transition: 0.3s; margin-top: 10px; letter-spacing: 1px;}
+        .submit-btn:hover { transform: translateY(-2px); }
+        .btn-primary { background: var(--primary); box-shadow: 0 10px 25px rgba(37, 99, 235, 0.3); }
+        .btn-green { background: linear-gradient(135deg, #10b981, #059669); box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3); }
+
+        @media (max-width: 600px) { 
+            body { padding: 0; background: white;}
+            .protocol-container { padding: 20px; border-radius: 0; box-shadow: none;} 
+            .info-grid, .photo-grid { grid-template-columns: 1fr; gap: 15px; } 
+            .header { flex-direction: column; align-items: flex-start; gap: 15px;}
+        }
+    </style>
+</head>
+<body>
+
+<div class="protocol-container">
+    
+    <!-- HLAVIČKA -->
+    <div class="header">
+        <div class="header-left">
+            <h1 class="logo-text">{{ identita.nazov_spolocnosti|default:"ISAS CORE" }}</h1>
+            <div class="company-meta">
+                {% if identita.podtitul %}{{ identita.podtitul }}<br>{% endif %}
+                {{ identita.sidlo_ulica|default:"" }} {{ identita.sidlo_cislo|default:"" }}{% if identita.sidlo_ulica or identita.sidlo_cislo %}, {% endif %}{{ identita.sidlo_psc|default:"" }} {{ identita.sidlo_mesto|default:"" }}{% if identita.sidlo_stat %}, {{ identita.sidlo_stat }}{% endif %}<br>
+                {% if identita.ico %}IČO: {{ identita.ico }}{% endif %}{% if identita.dic %}{% if identita.ico %} | {% endif %}DIČ: {{ identita.dic }}{% endif %}{% if identita.je_platca_dph and identita.ic_dph %}{% if identita.ico or identita.dic %} | {% endif %}IČ DPH: {{ identita.ic_dph }}{% elif not identita.je_platca_dph %}{% if identita.ico or identita.dic %} | {% endif %}Neplatca DPH{% endif %}
+                {% if identita.telefon or identita.email_vseobecny or identita.web %}<br>{% endif %}
+                {% if identita.telefon %}Tel: {{ identita.telefon }}{% endif %}
+                {% if identita.email_vseobecny %}{% if identita.telefon %} | {% endif %}Email: {{ identita.email_vseobecny }}{% endif %}
+                {% if identita.web %}{% if identita.telefon or identita.email_vseobecny %} | {% endif %}Web: {{ identita.web }}{% endif %}
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="doc-type">Servisný Výkaz</div>
+            <div class="doc-number">#{{ poradove_cislo|default:zaznam.id }}</div>
+            <div style="font-size: 12px; color: var(--slate-500); font-weight: 700; margin-top: 6px;">Dátum: {{ zaznam.vytvorene|date:"d.m.Y" }}</div>
+        </div>
+    </div>
+
+    <!-- INFORMAČNÉ KARTY -->
+    <div class="info-grid">
+        <!-- ZÁKAZNÍK -->
+        <div class="info-card">
+            <div class="info-card-header">
+                🏢 Objednávateľ (Zákazník)
+            </div>
+            <div class="info-value">{{ zaznam.zakaznik.Nazov_spolocnosti|default:"Neuvedený zákazník" }}</div>
+            
+            <!-- Adresa -->
+            <div class="info-meta">
+                Adresa: {% if zaznam.zakaznik.ulica_a_cislo %}{{ zaznam.zakaznik.ulica_a_cislo }}, {% endif %}
+                {{ zaznam.zakaznik.psc|default:"" }} {{ zaznam.zakaznik.mesto|default:"Adresa neuvedená" }}{% if zaznam.zakaznik.stat %}, {{ zaznam.zakaznik.stat }}{% endif %}
+            </div>
+            
+            <!-- Fakturačné údaje -->
+            <div class="info-meta">
+                {% if zaznam.zakaznik.ico %}IČO: <b>{{ zaznam.zakaznik.ico }}</b>{% endif %}
+                {% if zaznam.zakaznik.dic %}{% if zaznam.zakaznik.ico %} | {% endif %}DIČ: <b>{{ zaznam.zakaznik.dic }}</b>{% endif %}
+                {% if zaznam.zakaznik.ic_dph %}{% if zaznam.zakaznik.ico or zaznam.zakaznik.dic %} | {% endif %}IČ DPH: <b>{{ zaznam.zakaznik.ic_dph }}</b>{% endif %}
+                {% if not zaznam.zakaznik.ico and not zaznam.zakaznik.dic and not zaznam.zakaznik.ic_dph %}Identifikačné čísla neuvedené{% endif %}
+            </div>
+            
+            <!-- Kontaktná osoba (Oddelená jemnou čiarou pre prehľadnosť) -->
+            <div class="info-meta" style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e2e8f0;">
+                Kontakt: <b>{{ zaznam.zakaznik.kontaktna_osoba|default:"Kontaktná osoba neuvedená" }}</b><br>
+                Tel.: {{ zaznam.zakaznik.telefon|default:"-" }} | E-mail: {{ zaznam.zakaznik.email|default:"-" }}
+            </div>
+        </div>
+        
+        <!-- ZARIADENIE -->
+        <div class="info-card">
+            <div class="info-card-header">
+                ⚙️ Predmet Servisu
+            </div>
+            <div class="info-value">{{ zaznam.zariadenie.model_zariadenia|default:zaznam.zariadenie.get_kategoria_display|default:"Neznáme zariadenie" }}</div>
+            
+            <!-- Identifikácia stroja a Lokácia -->
+            <div class="info-meta">
+                Výrobca: <b>{{ zaznam.zariadenie.vyrobca.nazov_vyrobcu|default:"-" }}</b> | S/N: <b>{{ zaznam.zariadenie.vyrobne_cislo|default:"-" }}</b><br>
+                {% if zaznam.zariadenie.nazov or zaznam.zariadenie.umiestnenie %}
+                Pozícia: <b>{{ zaznam.zariadenie.nazov|default:"" }}</b> {% if zaznam.zariadenie.umiestnenie %}({{ zaznam.zariadenie.umiestnenie }}){% endif %}
+                {% endif %}
+            </div>
+            
+            <!-- Prevádzkový stav počítadla -->
+            <div class="info-meta" style="color: var(--primary); font-weight: 700; margin-top: 4px;">
+                {{ zaznam.meter_label }}: <b>{{ zaznam.meter_display }}</b>
+                {% if zaznam.motohodiny_v_zatazi is not None and zaznam.motohodiny_v_zatazi > 0 %}
+                | {{ zaznam.meter_load_label }}: <b>{{ zaznam.meter_load_display }}</b>
+                {% endif %}
+            </div>
+
+            {% if zaznam.namerane_hodnoty or zaznam.zmena_hardveru %}
+            <div class="info-meta" style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e2e8f0;">
+                {% if zaznam.namerane_hodnoty %}
+                    Namerané hodnoty: <i>{{ zaznam.namerane_hodnoty }}</i><br>
+                {% endif %}
+                {% if zaznam.zmena_hardveru %}
+                    <span style="display: inline-block; margin-top: 4px; color: #ef4444; font-weight: 800; font-size: 10px; background: #fef2f2; padding: 2px 6px; border-radius: 4px; border: 1px solid #fca5a5; text-transform: uppercase; letter-spacing: 0.5px;">
+                        Evidovaná zmena parametrov zariadenia
+                    </span>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- VIZUÁLNA INŠPEKCIA (FOTKY) -->
+    {% if zaznam.foto_pred or zaznam.foto_po %}
+    <h2 class="section-title">Vizuálna inšpekcia</h2>
+    <div class="photo-grid">
+        {% if zaznam.foto_pred %}
+        <div class="photo-box">
+            <img src="{{ zaznam.foto_pred.url }}" alt="Pred">
+            <span class="photo-label">STAV PRED</span>
+        </div>
+        {% endif %}
+        {% if zaznam.foto_po %}
+        <div class="photo-box">
+            <img src="{{ zaznam.foto_po.url }}" alt="Po">
+            <span class="photo-label">STAV PO ZÁSAHU</span>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <div id="badge-krok-1" class="step-badge step-1">KROK 1/2: Kontrola textu technikom</div>
+    <div id="badge-krok-2" class="step-badge step-2">KROK 2/2: Uzavretie protokolu zákazníkom</div>
+
+    <h2 class="section-title">Záznam o výkone prác</h2>
+    
+    <!-- Typ servisu a Reklamácia -->
+    <div style="margin-bottom: 15px;">
+        {% if typy_prac %}
+            <div style="font-size: 12px; color: var(--slate-700); margin-bottom: 5px;">
+                <b>Typ zásahu:</b> {% for t in typy_prac %}{{ t.nazov }}{% if not forloop.last %}, {% endif %}{% endfor %}
+            </div>
+        {% endif %}
+        {% if zaznam.koren_problemu and zaznam.koren_problemu != 'NEHODNOTENE' %}
+            <div style="font-size: 12px; color: #b45309; background: #fef3c7; padding: 6px 10px; border-radius: 6px; display: inline-block; font-weight: 700; border: 1px solid #fde68a; text-transform: uppercase; letter-spacing: 0.5px;">
+                Výsledok diagnostiky (Reklamácia): {{ zaznam.verejny_koren_problemu_display }}
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Pohľad Technika -->
+    <div id="technik-editor-wrapper" style="margin-bottom: 25px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <span style="font-size: 11px; color: var(--slate-500); font-weight: 800; text-transform: uppercase;">Surové poznámky / Finálny text:</span>
+            <button type="button" id="btn-ai-magic" class="ai-magic-btn">
+                <span style="font-size: 15px;">✨</span> Naštylizovať pomocou AI
+            </button>
+        </div>
+        <textarea id="ai_text_editor" class="ai-summary-editor" placeholder="Napíšte v skratke, čo sa robilo...">{{ zaznam.formalne_zhodnotenie_ai|default:zaznam.poruchy|escape }}</textarea>
+    </div>
+    
+    <!-- Pohľad Zákazníka -->
+    <div id="ai_text_final" class="ai-summary-final"></div>
+
+    <button id="btn-potvrdit-text" class="submit-btn btn-primary">Potvrdiť a prejsť k podpisu</button>
+
+    <div class="signatures-wrapper" id="podpisova-cast">
+        
+        <!-- POLOŽKY A KOMPONENTY (Zákazník to musí vidieť pred podpisom!) -->
+        {% if materialy %}
+        <h2 class="section-title" style="margin-top: 0;">Použité položky a komponenty</h2>
+        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; margin-bottom: 20px;">
+            {% for mat in materialy %}
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f1f5f9; {% if forloop.last %}border-bottom: none;{% endif %}">
+                <div>
+                    <div style="font-size: 9px; color: var(--primary); text-transform: uppercase; font-weight: 800; background: #eff6ff; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-bottom: 4px; letter-spacing: 0.5px;">{{ mat.kategoria_zobrazenie }}</div>
+                    <div style="font-size: 13px; font-weight: 600; color: var(--slate-900);">{{ mat.cisty_nazov }}</div>
+                    {% if not mat.skryt_vyrobcu %}
+                        {% if mat.vyrobca_nazov %}
+                            <div style="font-size: 10px; color: var(--slate-500); margin-top: 3px; font-weight: 500;">Výrobca: <strong style="color: var(--slate-700); font-weight: 700;">{{ mat.vyrobca_nazov }}</strong></div>
+                        {% elif mat.content_object.vyrobca %}
+                            <div style="font-size: 10px; color: var(--slate-500); margin-top: 3px; font-weight: 500;">Výrobca: <strong style="color: var(--slate-700); font-weight: 700;">{{ mat.content_object.vyrobca }}</strong></div>
+                        {% endif %}
+                    {% endif %}
+                </div>
+                <div style="font-size: 14px; font-weight: 800; color: var(--primary);">
+                    {{ mat.pocet }} <span style="font-size: 11px; color: var(--slate-500);">{{ mat.merna_jednotka_zobrazenie }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        <div class="legal-box">
+            <strong style="color: var(--slate-900);">Odovzdanie diela a Záväzok úhrady:</strong> Zákazník (objednávateľ) svojím podpisom potvrdzuje, že predmetné servisné úkony boli riadne vykonané a predmet servisu prevzal <b>v stave zodpovedajúcom rozsahu vykonaných prác, bez zjavných vád a nedorobkov</b>. Zákazník bez výhrad súhlasí so súpisom použitých položiek a vykonaných prác a <b>zaväzuje sa uhradiť</b> na ich základe vystavenú faktúru. Prípadné demontované alebo vymenené pôvodné súčasti zostávajú v dispozícii zákazníka (ak nebolo dohodnuté inak).<br><br>
+            <strong style="color: var(--slate-900);">Spracovanie dát (GDPR):</strong> Zákazník berie na vedomie, že pre účely preukázateľnosti a oprávneného záujmu zhotoviteľa je tento dokument zabezpečený digitálnou pečaťou, časovou stopou a GPS súradnicami miesta podpisu.
+        </div>
+
+        <!-- TECHNIK -->
+        <div class="sign-box">
+            <h3 class="sign-box-title">Podpis Technika (Zhotoviteľ)</h3>
+            <div style="font-weight: 700; margin-bottom: 2px; color: var(--slate-700); font-size: 15px;">
+                {% if zaznam.technici.all %}
+                    {% for t in zaznam.technici.all %}{{ t.meno }} {{ t.priezvisko }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                {% elif request.user.zamestnanec %}
+                    {{ request.user.zamestnanec.meno }} {{ request.user.zamestnanec.priezvisko }}
+                {% elif request.user.is_authenticated %}
+                    {{ request.user.first_name }} {{ request.user.last_name|default:request.user.username }}
+                {% else %}
+                    {{ identita.vystavuje_servis_vykazy|default:"Servisný technik" }}
+                {% endif %}
+            </div>
+            <div style="font-size: 11px; color: var(--slate-500); margin-bottom: 15px; font-weight: 500;">
+                {% if zaznam.technici.all %}
+                    Tel: {{ zaznam.technici.all.0.telefon|default:identita.telefon|default:"-" }} | E-mail: {{ zaznam.technici.all.0.email|default:identita.email_vseobecny|default:"-" }}
+                {% elif request.user.zamestnanec %}
+                    Tel: {{ request.user.zamestnanec.telefon|default:identita.telefon|default:"-" }} | E-mail: {{ request.user.zamestnanec.email|default:identita.email_vseobecny|default:"-" }}
+                {% else %}
+                    Tel: {{ identita.telefon|default:"-" }} | E-mail: {% if request.user.email %}{{ request.user.email }}{% else %}{{ identita.email_vseobecny|default:"-" }}{% endif %}
+                {% endif %}
+            </div>
+            <div class="canvas-container"><canvas id="canvas-technik"></canvas></div>
+
+            <button class="clear-btn" onclick="clearCanvas(canvasTechnik, ctxTechnik)">Vymazať podpis</button>
+        </div>
+
+        <!-- ZÁKAZNÍK -->
+        <div class="sign-box" style="border: 2px solid var(--primary); background: #f8fafc;">
+            
+            <!-- NPS HODNOTENIE PRE ZÁKAZNÍKA -->
+            <div class="nps-box">
+                <div class="nps-title">Ako ste boli spokojný s prístupom technika?</div>
+                <div class="stars" id="star-rating">
+                    <span class="star" data-val="1">★</span>
+                    <span class="star" data-val="2">★</span>
+                    <span class="star" data-val="3">★</span>
+                    <span class="star" data-val="4">★</span>
+                    <span class="star" data-val="5">★</span>
+                </div>
+            </div>
+
+            <h3 class="sign-box-title">Podpis Zákazníka (Objednávateľ)</h3>
+            <input type="text" id="meno_zakaznika" class="input-name" placeholder="Zadajte meno preberajúcej osoby" autocomplete="off" required>
+            <div class="canvas-container" style="background: white;"><canvas id="canvas-zakaznik"></canvas></div>
+            <button class="clear-btn" onclick="clearCanvas(canvasZakaznik, ctxZakaznik)">Vymazať podpis</button>
+        </div>
+
+        <label style="display: flex; align-items: center; gap: 10px; margin: 20px 0 10px 0; font-weight: 700; cursor: pointer; color: var(--slate-700); font-size: 13px; user-select: none;">
+            <input type="checkbox" id="odoslat_mail_zakaznikovi" style="width: 20px; height: 20px; cursor: pointer; accent-color: var(--primary);">
+            Odoslať kópiu protokolu zákazníkovi na e-mail ihneď po uzamknutí a uložení
+        </label>
+
+        <button id="submit-protocol" class="submit-btn btn-green">🔒 Uzamknúť s podpisom zákazníka</button>
+        <button id="submit-smart-lock" class="submit-btn" style="background: var(--slate-700); margin-top: 15px; box-shadow: 0 10px 25px rgba(51, 65, 85, 0.3);">🏢 Uzamknúť bez zákazníka (Smart Lock)</button>
+    </div>
+    <div style="display: none;">{% csrf_token %}</div>
+</div>
+
+<!-- ======================================================================= -->
+<!-- JAVASCRIPT LOGIKA - ABSOLÚTNE NEDOTKNUTÁ, PÔVODNÁ Z TVOJHO KÓDU         -->
+<!-- ======================================================================= -->
+<script>
+    // --- GLOBÁLNE PREMENNÉ PRE NOVÉ DÁTA ---
+    let customerRating = 0;
+    let gpsCoords = "Nezískané";
+
+    // --- HVIEZDIČKY LOGIKA ---
+    const stars = document.querySelectorAll('.star');
+    stars.forEach(star => {
+        star.addEventListener('click', function() {
+            customerRating = this.getAttribute('data-val');
+            stars.forEach(s => {
+                if (s.getAttribute('data-val') <= customerRating) s.classList.add('active');
+                else s.classList.remove('active');
+            });
+        });
+    });
+
+    // --- GPS LOGIKA ---
+    function fetchGPSLocation() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => { gpsCoords = `${position.coords.latitude}, ${position.coords.longitude}`; },
+                (error) => { console.warn("GPS odmietnuté alebo zlyhalo."); }
+            );
+        }
+    }
+
+    // --- MAGIC AI BUTTON LOGIC ---
+    document.getElementById('btn-ai-magic').addEventListener('click', function() {
+        const editor = document.getElementById('ai_text_editor');
+        const btn = this;
+        editor.style.opacity = '0.5';
+
+        window.ISASAction({ text: editor.value }, btn, {
+            url: "{% url 'evidencia:generuj_protokol_ai_ajax' %}",
+            loadingText: '<span>⏳</span> Generujem...',
+            reload: false,
+            onComplete: (data) => {
+                editor.style.opacity = '1';
+                if (data.status === 'success') {
+                    editor.value = data.vysledok;
+                    showISASToast('Text bol úspešne upravený pomocou AI', '✨', 'success');
+                } else {
+                    window.showGlobalAlertModal('Chyba', data.message || 'AI asistent momentálne neodpovedá.', 'error');
+                }
+            },
+            onError: () => {
+                editor.style.opacity = '1';
+                showISASToast('Chyba spojenia so serverom. Skontrolujte pripojenie.', '🔌', 'error');
+            }
+        });
+    });
+
+    // --- PRECHOD K PODPISU (SPUSTENIE GPS) ---
+    document.getElementById('btn-potvrdit-text').addEventListener('click', function() {
+        if (this.dataset.clicked) return; // Ochrana proti double-clicku
+        
+        const textToSave = document.getElementById('ai_text_editor').value.trim();
+        if (!textToSave) { 
+            showISASToast('Záznam o výkone prác nesmie byť prázdny.', '⚠️', 'warning'); 
+            return; 
+        }
+        
+        this.dataset.clicked = "true"; // Zamknutie tlačidla
+
+        // Spustíme pýtanie GPS polohy pri prechode na zákazníka
+        fetchGPSLocation();
+
+        document.getElementById('technik-editor-wrapper').style.display = 'none';
+        this.style.display = 'none';
+        document.getElementById('badge-krok-1').style.display = 'none';
+        
+        const finalBox = document.getElementById('ai_text_final');
+        finalBox.textContent = textToSave; // Zmena z innerHTML na textContent (Ochrana pred XSS)
+        finalBox.style.display = 'block';
+
+        document.getElementById('badge-krok-2').style.display = 'inline-block';
+        document.getElementById('podpisova-cast').style.display = 'flex';
+
+        resizeCanvas(canvasZakaznik); resizeCanvas(canvasTechnik);
+        document.getElementById('podpisova-cast').scrollIntoView({ behavior: 'smooth' });
+    });
+
+    // --- LOGIKA CANVAS (Nezmenená) ---
+    function setupCanvas(canvasId) {
+        const canvas = document.getElementById(canvasId); const ctx = canvas.getContext('2d'); let isDrawing = false;
+        canvas.addEventListener('mousedown', (e) => { isDrawing = true; ctx.beginPath(); const pos = getPos(e, canvas); ctx.moveTo(pos.x, pos.y); });
+        canvas.addEventListener('mousemove', (e) => { if (!isDrawing) return; const pos = getPos(e, canvas); ctx.lineTo(pos.x, pos.y); ctx.stroke(); });
+        canvas.addEventListener('mouseup', () => { isDrawing = false; }); canvas.addEventListener('mouseout', () => { isDrawing = false; });
+        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); isDrawing = true; ctx.beginPath(); const pos = getPos(e, canvas); ctx.moveTo(pos.x, pos.y); });
+        canvas.addEventListener('touchmove', (e) => { e.preventDefault(); if (!isDrawing) return; const pos = getPos(e, canvas); ctx.lineTo(pos.x, pos.y); ctx.stroke(); });
+        canvas.addEventListener('touchend', () => { isDrawing = false; });
+        return { canvas, ctx };
+    }
+    function resizeCanvas(canvas) { 
+        const rect = canvas.parentElement.getBoundingClientRect(); 
+        const ratio = window.devicePixelRatio || 1; 
+        canvas.width = rect.width * ratio; 
+        canvas.height = 200 * ratio; 
+        canvas.style.width = rect.width + 'px'; 
+        canvas.style.height = '200px'; 
+        const ctx = canvas.getContext('2d'); 
+        ctx.scale(ratio, ratio); 
+        ctx.lineWidth = 3; 
+        ctx.lineCap = 'round'; 
+        ctx.strokeStyle = '#0f172a'; 
+    }
+    function getPos(e, canvas) { const rect = canvas.getBoundingClientRect(); const clientX = e.touches ? e.touches[0].clientX : e.clientX; const clientY = e.touches ? e.touches[0].clientY : e.clientY; return { x: clientX - rect.left, y: clientY - rect.top }; }
+    function clearCanvas(canvas, ctx) { ctx.clearRect(0, 0, canvas.width, canvas.height); }
+    function isCanvasBlank(canvas) { const blank = document.createElement('canvas'); blank.width = canvas.width; blank.height = canvas.height; return canvas.toDataURL() === blank.toDataURL(); }
+
+    const zakaznikPad = setupCanvas('canvas-zakaznik'); const canvasZakaznik = zakaznikPad.canvas; const ctxZakaznik = zakaznikPad.ctx;
+    const technikPad = setupCanvas('canvas-technik'); const canvasTechnik = technikPad.canvas; const ctxTechnik = technikPad.ctx;
+
+    // --- SPOLOČNÁ FUNKCIA PRE ULOŽENIE (ŠTANDARD AJ SMART LOCK) ---
+    function spracujUlozenie(meno, podpisZakaznikaB64, pouzitGps) {
+        const upravenyText = document.getElementById('ai_text_editor').value.trim();
+        const poslatMail = document.getElementById('odoslat_mail_zakaznikovi')?.checked || false;
+        
+        // Ak je to Smart Lock z kancelárie, prepíšeme GPS
+        let finalGps = pouzitGps ? gpsCoords : "Spracované v systéme (Back-office)";
+
+        const payload = {
+            id_offline_zaznamu: Date.now(),
+            meno_zakaznika: meno,
+            podpis_zakaznika: podpisZakaznikaB64, // Bude prázdne pri Smart Locku
+            podpis_technika: canvasTechnik.toDataURL('image/png'),
+            upraveny_text_ai: upravenyText,
+            hodnotenie_zakaznika: customerRating,
+            gps_suradnice: finalGps,
+            odoslat_mail_zakaznikovi: poslatMail
+        };
+
+        const syncUrl = "{% url 'evidencia:ulozit_podpis_ajax' zaznam.bezpecnostny_kluc %}";
+
+        const sendToServer = () => {
+            const token = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+            fetch(syncUrl, {
+                method: "POST", headers: { "Content-Type": "application/json", "X-CSRFToken": token }, body: JSON.stringify(payload)
+            }).then(r => r.json()).then(data => {
+                if(data.status === 'success') {
+                    showISASToast('Protokol bol uzamknutý a PDF vygenerované.', '🔒', 'success');
+                    setTimeout(() => { 
+                        window.location.href = "/admin/Evidencia/servisnyzaznam/"; 
+                    }, 1000);
+                } else {
+                    window.showGlobalAlertModal('Chyba', data.message || 'Protokol sa nepodarilo uzamknúť.', 'error');
+                    obnovTlacidla();
+                }
+            }).catch(() => { saveOffline(payload, syncUrl); });
+        };
+
+        const saveOffline = (payloadData, url) => {
+            let offlineData = JSON.parse(localStorage.getItem('isas_offline_protocols') || '[]');
+            offlineData.push({ url: url, payload: payloadData });
+            try {
+                localStorage.setItem('isas_offline_protocols', JSON.stringify(offlineData));
+                window.showGlobalAlertModal('📶 Offline Režim', 'Zariadenie je bez internetu. Protokol bol bezpečne uložený do lokálnej pamäte zariadenia a odošle sa automaticky po obnovení siete.', 'warning');
+                document.getElementById('podpisova-cast').innerHTML = '<div style="text-align:center; padding:30px 20px; background:#ecfdf5; border-radius:12px; border:1px solid #a7f3d0;"><div style="font-size:36px; margin-bottom:10px;">📶</div><h3 style="color:#065f46; margin:0; font-weight:800;">Protokol je bezpečne uložený v Offline pamäti</h3><p style="color:#047857; font-size:13px; margin:8px 0 0 0;">Po pripojení k internetu sa dáta automaticky zosynchronizujú so systémom ISAS CORE.</p></div>';
+            } catch (e) {
+                window.showGlobalAlertModal('Kritická chyba', 'Lokálna pamäť zariadenia je plná! Uvoľnite miesto a skúste to znova.', 'error');
+                obnovTlacidla();
+            }
+        };
+
+        if (navigator.onLine) { sendToServer(); } else { saveOffline(payload, syncUrl); }
+    }
+
+    function zablokujTlacidla() {
+        document.getElementById('submit-protocol').innerHTML = '⏳ Spracovávam...';
+        document.getElementById('submit-protocol').disabled = true;
+        document.getElementById('submit-smart-lock').disabled = true;
+    }
+
+    function obnovTlacidla() {
+        document.getElementById('submit-protocol').innerHTML = '🔒 Uzamknúť s podpisom zákazníka';
+        document.getElementById('submit-protocol').disabled = false;
+        document.getElementById('submit-smart-lock').disabled = false;
+    }
+
+    // --- 1. ŠTANDARDNÉ UZAMKNUTIE (S PODPISOM) ---
+    document.getElementById('submit-protocol').addEventListener('click', function() {
+        if (this.disabled) return; // Defenzívna ochrana proti Event Queue race condition
+        const meno = document.getElementById('meno_zakaznika').value.trim();
+        if (!meno) { 
+            showISASToast('Prosím vyplňte meno preberajúcej osoby (zákazníka).', '⚠️', 'warning'); 
+            return; 
+        }
+        if (isCanvasBlank(canvasZakaznik) || isCanvasBlank(canvasTechnik)) {
+            showISASToast('Protokol musí byť podpísaný zákazníkom aj technikom.', '✍️', 'warning'); 
+            return;
+        }
+        zablokujTlacidla();
+        spracujUlozenie(meno, canvasZakaznik.toDataURL('image/png'), true);
+    });
+
+    // --- 2. SMART LOCK (BEZ ZÁKAZNÍKA) ---
+    document.getElementById('submit-smart-lock').addEventListener('click', function() {
+        if (this.disabled) return; // Defenzívna ochrana proti Event Queue race condition
+        if (isCanvasBlank(canvasTechnik)) {
+            showISASToast('Vy (Technik) sa musíte podpísať pred uzamknutím!', '✍️', 'warning'); 
+            return;
+        }
+
+        window.ISASModalEngine({
+            maxWidth: "460px",
+            icon: "🏢",
+            iconStyle: "background: #eff6ff; width: 68px; height: 68px; line-height: 68px; border-radius: 50%; margin: 0 auto 15px auto; font-size: 30px;",
+            title: "Dôvod chýbajúceho podpisu",
+            text: "Zvoľte dôvod, prečo protokol nie je podpísaný preberajúcou osobou:",
+            showClose: true,
+            closeText: "Zrušiť",
+            fields: [{
+                type: 'html',
+                html: `
+                    <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;">
+                        <button type="button" id="btn-reason-1" style="display: flex; align-items: center; gap: 14px; padding: 16px; background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 12px; cursor: pointer; transition: all 0.2s ease; text-align: left; width: 100%; box-sizing: border-box; outline: none;">
+                            <div style="font-size: 26px; line-height: 1;">🛠️</div>
+                            <div style="display: flex; flex-direction: column;">
+                                <span style="font-weight: 800; color: #0f172a; font-size: 14px;">Zákazník nie je prítomný</span>
+                                <span style="font-size: 12px; color: #64748b; margin-top: 2px; font-weight: 500;">Zásah bol vykonaný na mieste alebo vzdialene bez prítomnosti preberajúcej osoby.</span>
+                            </div>
+                        </button>
+                        <button type="button" id="btn-reason-2" style="display: flex; align-items: center; gap: 14px; padding: 16px; background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 12px; cursor: pointer; transition: all 0.2s ease; text-align: left; width: 100%; box-sizing: border-box; outline: none;">
+                            <div style="font-size: 26px; line-height: 1;">🏢</div>
+                            <div style="display: flex; flex-direction: column;">
+                                <span style="font-weight: 800; color: #0f172a; font-size: 14px;">Administratívne spracovanie</span>
+                                <span style="font-size: 12px; color: #64748b; margin-top: 2px; font-weight: 500;">Spracovávam protokol z kancelárie (Back-office).</span>
+                            </div>
+                        </button>
+                    </div>
+                `
+            }],
+            onRender: (m) => {
+                const b1 = m.card.querySelector('#btn-reason-1');
+                const b2 = m.card.querySelector('#btn-reason-2');
+                if (b1) {
+                    b1.onclick = function() {
+                        if (this.disabled) return;
+                        this.disabled = true;
+                        m.close();
+                        zablokujTlacidla();
+                        spracujUlozenie('Zákazník neprítomný pri ukončení zásahu', '', true);
+                    };
+                }
+                if (b2) {
+                    b2.onclick = function() {
+                        if (this.disabled) return;
+                        this.disabled = true;
+                        m.close();
+                        zablokujTlacidla();
+                        spracujUlozenie('Administratívne uzamknuté', '', false);
+                    };
+                }
+            }
+        });
+    });
+
+    // --- AUTO-SYNC KEĎ NAKOČÍ INTERNET ---
+    let isSyncing = false; // Globálny zámok pre synchronizáciu
+    window.addEventListener('online', function() {
+        if (isSyncing) return; // Ak už synchronizácia beží, ignoruj ďalšie eventy
+        
+        let offlineData = JSON.parse(localStorage.getItem('isas_offline_protocols') || '[]');
+        if (offlineData.length > 0) {
+            isSyncing = true; // Zamknutie
+            showISASToast('Obnovené pripojenie. Synchronizujem offline protokoly...', '📶', 'warning');
+            
+            const token = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+
+            // Odošleme všetky uložené protokoly z lokálneho úložiska
+            let syncPromises = offlineData.map((item) => {
+                return fetch(item.url, {
+                    method: "POST", headers: { "Content-Type": "application/json", "X-CSRFToken": token }, body: JSON.stringify(item.payload)
+                }).then(r => r.json()).then(data => {
+                    if (data.status === 'success') {
+                        // Bezpečné vymazanie len konkrétneho záznamu
+                        let currentData = JSON.parse(localStorage.getItem('isas_offline_protocols') || '[]');
+                        currentData = currentData.filter(p => p.payload.id_offline_zaznamu !== item.payload.id_offline_zaznamu);
+                        localStorage.setItem('isas_offline_protocols', JSON.stringify(currentData));
+                    }
+                }).catch(err => {
+                    console.error('Chyba pri auto-synchronizácii:', err);
+                });
+            });
+
+            Promise.all(syncPromises).finally(() => {
+                isSyncing = false; // Odomknutie po dokončení všetkých requestov
+                if (JSON.parse(localStorage.getItem('isas_offline_protocols') || '[]').length === 0) {
+                    showISASToast('Offline protokoly boli úspešne synchronizované!', '☁️', 'success');
+                }
+            });
+        }
+    });
+</script>
+</body>
+</html>

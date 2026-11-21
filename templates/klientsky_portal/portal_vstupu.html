@@ -1,0 +1,412 @@
+{% extends "documents/portal_design_system.html" %}
+
+{% block title %}Povolenie na vstup | {{ povolenie.zakaznik.Nazov_spolocnosti }}{% endblock %}
+
+{% block doc_header_right %}
+    <div class="doc-type">Portál pre SBS / Vrátnicu</div>
+    <div class="doc-number">Vstup: {{ povolenie.datum_vstupu|date:"d.m.Y" }}</div>
+    <div class="doc-date">Vygenerované: {% now "d.m.Y H:i" %}</div>
+{% endblock %}
+
+{% block document_content %}
+
+    <!-- INFORMAČNÉ KARTY -->
+    <div class="info-grid">
+        <!-- VYSIELAJÚCA ORGANIZÁCIA -->
+        <div class="info-card">
+            <div class="info-card-header">🏢 Vysielajúca organizácia (Dodávateľ)</div>
+            <div class="info-value">{{ identita.nazov_spolocnosti }}</div>
+            <div class="info-meta" style="margin-bottom: 10px;">
+                {% if identita.sidlo_ulica %}{{ identita.sidlo_ulica }} {{ identita.sidlo_cislo }},{% endif %}
+                {% if identita.sidlo_psc %}{{ identita.sidlo_psc }}{% endif %}
+                {% if identita.sidlo_mesto %}{{ identita.sidlo_mesto }}{% endif %}
+                {% if identita.sidlo_stat %}<br>{{ identita.sidlo_stat }}{% endif %}
+            </div>
+            <div class="meta-line"><strong>IČO:</strong> <span>{{ identita.ico|default:"-" }}</span></div>
+            <div class="meta-line"><strong>DIČ:</strong> <span>{{ identita.dic|default:"-" }}</span></div>
+            <div class="meta-line"><strong>IČ DPH:</strong> <span>{% if identita.je_platca_dph %}{{ identita.ic_dph|default:"-" }}{% else %}<span style="color: var(--slate-500); font-weight: 600;">Neplatca DPH</span>{% endif %}</span></div>
+            
+            <div class="meta-line" style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e2e8f0;">
+                <strong>Vystavil:</strong> 
+                <span>
+                    {% if povolenie.vytvoril_zamestnanec %}
+                        {{ povolenie.vytvoril_zamestnanec.meno }} {{ povolenie.vytvoril_zamestnanec.priezvisko }}
+                    {% else %}
+                        {{ identita.vystavuje_vstupky|default:identita.konatel|default:"Dispečing" }}
+                    {% endif %}
+                </span>
+            </div>
+            <div class="meta-line"><strong>Tel:</strong> <span>{% if povolenie.vytvoril_zamestnanec.telefon %}{{ povolenie.vytvoril_zamestnanec.telefon }}{% else %}{{ identita.telefon|default:"-" }}{% endif %}</span></div>
+            <div class="meta-line"><strong>Email:</strong> <span>{% if povolenie.vytvoril_zamestnanec.email %}{{ povolenie.vytvoril_zamestnanec.email }}{% else %}{{ identita.email_vseobecny|default:"-" }}{% endif %}</span></div>
+            {% if identita.web %}
+            <div class="meta-line"><strong>Web:</strong> <span>{{ identita.web }}</span></div>
+            {% endif %}
+        </div>
+
+        <!-- CIEĽOVÝ OBJEKT A ÚČEL -->
+        <div class="info-card">
+            <div class="info-card-header">📍 Cieľový objekt a Účel vstupu</div>
+            <div class="info-value">{{ povolenie.zakaznik.Nazov_spolocnosti }}</div>
+            <div class="info-meta" style="margin-bottom: 10px;">
+                {% if povolenie.zakaznik.ulica_a_cislo %}{{ povolenie.zakaznik.ulica_a_cislo }},{% endif %}
+                {% if povolenie.zakaznik.psc %}{{ povolenie.zakaznik.psc }}{% endif %}
+                {% if povolenie.zakaznik.mesto %}{{ povolenie.zakaznik.mesto }}{% endif %}
+                {% if povolenie.zakaznik.stat %}<br>{{ povolenie.zakaznik.stat }}{% endif %}
+            </div>
+            
+            <div class="meta-line"><strong>IČO:</strong> <span>{{ povolenie.zakaznik.ico|default:"-" }}</span></div>
+            <div class="meta-line"><strong>DIČ:</strong> <span>{{ povolenie.zakaznik.dic|default:"-" }}</span></div>
+            <div class="meta-line"><strong>IČ DPH:</strong> <span>{{ povolenie.zakaznik.ic_dph|default:"-" }}</span></div>
+            
+            {% if povolenie.zakaznik.kontaktna_osoba or povolenie.zakaznik.telefon or povolenie.zakaznik.email %}
+            <div class="meta-line" style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e2e8f0;">
+                <strong>Kontakt:</strong> <span>{{ povolenie.zakaznik.oslovenie_rod|default:""|title }} {{ povolenie.zakaznik.kontaktna_osoba|default:"-" }}</span>
+            </div>
+            <div class="meta-line"><strong>Tel:</strong> <span>{{ povolenie.zakaznik.telefon|default:"-" }}</span></div>
+            <div class="meta-line"><strong>Email:</strong> <span>{{ povolenie.zakaznik.email|default:"-" }}</span></div>
+            {% endif %}
+
+            <div class="meta-line" style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e2e8f0;">
+                <strong>Účel vstupu:</strong> 
+                <span>
+                    {% if povolenie.uloha %}
+                        {% for typ in povolenie.uloha.typ_servisu.all %}{{ typ.nazov }}{% if not forloop.last %}, {% endif %}{% empty %}Servisný / Inštalačný zásah{% endfor %}
+                    {% else %}
+                        Servisný / Inštalačný zásah
+                    {% endif %}
+                </span>
+            </div>
+            
+            {% if povolenie.uloha and povolenie.uloha.zariadenia.all %}
+            <div class="meta-line"><strong>Zariadenia:</strong> 
+                <span>
+                    {% for zar in povolenie.uloha.zariadenia.all %}
+                        {{ zar.nazov|default:zar.model_zariadenia }} (S/N: {{ zar.vyrobne_cislo|default:"-" }}){% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                </span>
+            </div>
+            {% endif %}
+
+            {% if povolenie.uloha and povolenie.uloha.zaciatok %}
+            <div class="meta-line"><strong>Čas príchodu:</strong> <span>{{ povolenie.uloha.zaciatok|date:"d.m.Y H:i" }}</span></div>
+            {% endif %}
+            {% if povolenie.uloha and povolenie.uloha.koniec %}
+            <div class="meta-line"><strong>Predpokl. odchod:</strong> <span>{{ povolenie.uloha.koniec|date:"d.m.Y H:i" }}</span></div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- BEZPEČNOSTNÉ POKYNY (AI INSIGHT ŠTÝL) -->
+    {% if povolenie.zakaznik.instrukcie_vstupu %}
+    <div class="avoid-break">
+        <div class="section-title">Bezpečnostné inštrukcie objektu</div>
+        <div class="ai-insight">
+            <div class="ai-label">Inštrukcie zákazníka</div>
+            <div class="ai-content">
+                <div style="font-weight: 500; color: var(--slate-700); text-align: justify; line-height: 1.6;">
+                    {{ povolenie.zakaznik.instrukcie_vstupu|linebreaksbr }}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- OSOBY -->
+    <div class="section-title">👤 Zoznam vyslaných pracovníkov</div>
+    <table class="modern-table">
+        <thead>
+            <tr>
+                <th style="width: 35%;">Meno a Priezvisko</th>
+                <th style="width: 25%;">Identifikácia</th>
+                <th style="width: 40%;">Odborná spôsobilosť a BOZP</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for technik in povolenie.zamestnanci.all %}
+            <tr>
+                <td>
+                    <span class="item-name">{{ technik.meno }} {{ technik.priezvisko }}</span>
+                    <span class="item-sub">Rola: <strong>{{ technik.get_pracovna_rola_display|default:"Technik" }}</strong></span>
+                </td>
+                <td>
+                    <span class="item-name">{{ technik.cislo_op|default:"Preukáže sa pri vstupe" }}</span>
+                    <span class="item-sub">Narodenie: <strong>{{ technik.datum_narodenia|date:"d.m.Y"|default:"-" }}</strong></span>
+                    <span class="item-sub">Štátna príslušnosť: <strong>{{ technik.stat|default:"-" }}</strong></span>
+                </td>
+                <td>
+                    <span class="item-name">
+                        {% if technik.certifikaty.exists %}
+                            {% for c in technik.certifikaty.all %}{{ c.nazov }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                        {% else %}
+                            Odborný pracovník
+                        {% endif %}
+                    </span>
+                    {% if technik.bozp_platne_do %}
+                        <span class="badge-success">BOZP platné do: {{ technik.bozp_platne_do|date:"d.m.Y" }}</span>
+                    {% else %}
+                        <span class="badge-danger">BOZP: Preukáže sa na mieste</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="3" style="text-align: center; padding: 20px; color: var(--slate-500); font-style: italic;">
+                    Nie sú špecifikovaní žiadni konkrétni pracovníci (Vstup na základe predloženia dokladov na vrátnici)
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- VOZIDLÁ -->
+    <div class="section-title">🚗 Zoznam vstupujúcich vozidiel</div>
+    <table class="modern-table">
+        <thead>
+            <tr>
+                <th style="width: 25%;">EČV (ŠPZ)</th>
+                <th style="width: 40%;">Továrenská značka a model</th>
+                <th style="width: 35%;">Kategória a Palivo</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for auto in povolenie.vozidla.all %}
+            <tr>
+                <td>
+                    <span class="item-name" style="font-size: 14px; color: var(--primary-dark);">{{ auto.spz }}</span>
+                </td>
+                <td>
+                    <span class="item-name">{{ auto.znacka_a_model }}</span>
+                </td>
+                <td>
+                    <span class="item-name">{{ auto.get_typ_vozidla_erp_display|default:"Osobné vozidlo" }}</span>
+                    {% if auto.typ_paliva == 'LPG' %}
+                        <span class="badge-danger">⚠️ POZOR: Vozidlo na LPG</span>
+                    {% else %}
+                        <span class="item-sub">Palivo: <strong>{{ auto.get_typ_paliva_display|default:"-" }}</strong></span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="3" style="text-align: center; padding: 20px; color: var(--slate-500); font-style: italic;">
+                    Bez vozidla (Peší vstup / Zabezpečená iná preprava)
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- LEGISLATÍVA A BEZPEČNOSŤ -->
+    <div class="legal-box">
+        <div style="margin-bottom: 8px;">
+            <strong style="color: var(--slate-900);">Ochrana osobných údajov (GDPR):</strong> Tento dokument obsahuje osobné údaje pracovníkov (čísla dokladov, dátumy narodenia) nevyhnutné výhradne pre účely identifikácie, evidencie vstupov a zaistenia bezpečnosti v cieľovom objekte. Prijímateľ je povinný s týmito údajmi nakladať prísne dôverne, v súlade s Nariadením (EÚ) 2016/679 (GDPR) a po pominutí účelu spracovania ich bezpečne zlikvidovať.
+        </div>
+        <div style="margin-bottom: 8px;">
+            <strong style="color: var(--slate-900);">Bezpečnosť pri práci (BOZP):</strong> Vysielajúca organizácia potvrdzuje, že všetci uvedení pracovníci sú zdravotne a odborne spôsobilí na výkon požadovaných prác a boli riadne preškolení v oblasti BOZP a PO. Pracovníci sú vybavení predpísanými osobnými ochrannými pracovnými prostriedkami (OOPP) a sú preukázateľne poučení o povinnosti striktne dodržiavať interné bezpečnostné predpisy a pokyny prevádzkovateľa cieľového objektu.
+        </div>
+    </div>
+
+    <!-- PÄTIČKA A PODPIS -->
+    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 30px; padding-top: 20px; border-top: 2px solid #e2e8f0;">
+        <div style="font-size: 10px; color: var(--slate-500); line-height: 1.4;">
+            <strong>ISAS CORE - Autenticita dokumentu</strong><br>
+            Tento dokument bol automaticky vygenerovaný informačným systémom.<br>
+            ID Záznamu: {{ povolenie.bezpecnostny_kluc|truncatechars:15 }}
+        </div>
+        
+        <div style="text-align: right; font-size: 10px; color: var(--slate-500);">
+            {% if povolenie.vytvoril_zamestnanec.osobny_podpis and povolenie.vytvoril_zamestnanec.osobny_podpis.name %}
+                <img src="{{ povolenie.vytvoril_zamestnanec.osobny_podpis.url }}" style="max-height: 55px; margin-bottom: 6px; display: inline-block;" alt="Osobný podpis"><br>
+            {% elif identita.peciatka_podpis and identita.peciatka_podpis.name %}
+                <img src="{{ identita.peciatka_podpis.url }}" style="max-height: 55px; margin-bottom: 6px; display: inline-block;" alt="Pečiatka a Podpis"><br>
+            {% endif %}
+            Vystavil:<br>
+            <strong style="color: var(--slate-900); font-size: 12px;">
+                {% if povolenie.vytvoril_zamestnanec %}
+                    {{ povolenie.vytvoril_zamestnanec.meno }} {{ povolenie.vytvoril_zamestnanec.priezvisko }}
+                {% else %}
+                    {{ identita.vystavuje_vstupky|default:identita.konatel|default:"Dispečing" }}
+                {% endif %}
+            </strong><br>
+            {{ identita.nazov_spolocnosti }}<br>
+            Dňa: {% now "d.m.Y H:i" %}
+        </div>
+    </div>
+
+    <!-- 🖱️ AKCIA ZÁKAZNÍKA (INTERAKTÍVNY BLOK) -->
+    {% if povolenie.stav == 'SCHVALENE' %}
+        <div style="background: #f8fafc; padding: 30px; border-radius: 10px; border: 2px dashed #cbd5e1; text-align: center; margin-top: 40px;">
+            <div style="color: var(--success); font-size: 40px; line-height: 1; margin-bottom: 10px;">✅</div>
+            <div style="font-size: 16px; color: var(--success); font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Vstup povolený</div>
+            <div style="font-size: 13px; color: var(--slate-700); margin-top: 10px;">Tento vstup bol úspešne schválený a zaevidovaný v našom systéme.</div>
+            <div style="font-size: 11px; color: var(--slate-500); margin-top: 5px;">Dňa: {{ povolenie.cas_schvalenia_sbs|date:"d.m.Y H:i" }} | IP: {{ povolenie.ip_schvalitela_sbs|default:"Neznáma" }}</div>
+            
+            {% if povolenie.vygenerovany_dokument %}
+            <a href="{{ povolenie.vygenerovany_dokument.url }}" target="_blank" class="btn-pdf" style="max-width: 300px; margin: 20px auto 0 auto;">📄 Stiahnuť PDF Priepustku</a>
+            {% endif %}
+        </div>
+    {% elif povolenie.stav == 'ZAMIETNUTE' %}
+        <div style="background: #fef2f2; padding: 30px; border-radius: 10px; border: 2px dashed #fca5a5; text-align: center; margin-top: 40px;">
+            <div style="color: var(--danger); font-size: 40px; line-height: 1; margin-bottom: 10px;">❌</div>
+            <div style="font-size: 16px; color: var(--danger); font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Vstup zamietnutý</div>
+            <div style="font-size: 13px; color: var(--slate-700); margin-top: 10px;">Zaznamenali sme, že ste vstup vyslaným osobám zamietli. Dispečing bol informovaný.</div>
+            <div style="font-size: 11px; color: var(--slate-500); margin-top: 5px;">Dňa: {{ povolenie.cas_schvalenia_sbs|date:"d.m.Y H:i" }} | IP: {{ povolenie.ip_schvalitela_sbs|default:"Neznáma" }}</div>
+        </div>
+    {% else %}
+        <div class="action-grid">
+            <div>
+                <button id="btn-schvalit" class="btn-approve">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    POVOLIŤ VSTUP OSOBÁM
+                </button>
+            </div>
+            <div>
+                <button id="btn-zamietnut" class="btn-reject">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    ZAMIETNUŤ VSTUP
+                </button>
+            </div>
+        </div>
+        
+        {% if povolenie.vygenerovany_dokument %}
+        <a href="{{ povolenie.vygenerovany_dokument.url }}" target="_blank" class="btn-pdf">📄 OTVORIŤ PDF PRIEPUSTKU</a>
+        {% endif %}
+        
+        <div style="text-align: center; font-size: 10px; color: var(--slate-500); margin-top: 20px; line-height: 1.5;">
+            Kliknutím na jedno z tlačidiel potvrdzujete Vaše rozhodnutie.<br>
+            Z bezpečnostných dôvodov je zaznamenaná IP adresa vrátnice: <strong>{{ klient_ip }}</strong>
+        </div>
+    {% endif %}
+
+    {% endblock %}
+
+{% block document_scripts %}
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        function posliRozhodnutie(akcia, btnElement, poznamkaText = "") {
+            const btnS = document.getElementById('btn-schvalit');
+            const btnZ = document.getElementById('btn-zamietnut');
+            if (btnS) btnS.disabled = true;
+            if (btnZ) btnZ.disabled = true;
+
+            window.ISASAction({ action: akcia, poznamka: poznamkaText }, btnElement, {
+                url: window.location.href,
+                loadingText: "⏳ Bezpečne odosielam...",
+                reload: false,
+                onComplete: (data) => {
+                    if (data.status === 'success') {
+                        const isSchvalene = akcia === 'schvalit';
+                        window.ISASModalEngine({
+                            maxWidth: "420px",
+                            icon: isSchvalene ? '🎉' : '❌',
+                            title: isSchvalene ? 'Povolené!' : 'Zamietnuté!',
+                            text: isSchvalene ? 'Vstup bol úspešne schválený a zaevidovaný.' : 'Vstup bol zamietnutý. Dispečing bol informovaný.',
+                            showClose: false,
+                            showCloseX: false,
+                            buttons: [{
+                                id: 'btn-ok-reload',
+                                text: 'Rozumiem',
+                                style: `background: ${isSchvalene ? '#10b981' : '#ef4444'}; color: white; border: none; padding: 14px 28px; border-radius: 10px; font-size: 13px; font-weight: 800; cursor: pointer; text-transform: uppercase; width: 100%;`,
+                                onClick: () => window.location.reload()
+                            }]
+                        });
+                    } else {
+                        showISASToast(data.message || "Nastala chyba pri spracovaní požiadavky.", "❌", "error");
+                    }
+                },
+                onError: (err) => {
+                    showISASToast("Chyba spojenia so serverom. Skontrolujte pripojenie.", "🔌", "error");
+                }
+            });
+        }
+
+        const btnSchvalit = document.getElementById('btn-schvalit');
+        if (btnSchvalit) {
+            btnSchvalit.addEventListener('click', () => {
+                window.ISASModalEngine({
+                    maxWidth: "500px",
+                    icon: "ℹ️",
+                    title: "Potvrdenie vstupu",
+                    text: "Naozaj si prajete povoliť vstup pre uvedených pracovníkov a vozidlá?",
+                    fields: [
+                        {
+                            type: 'textarea',
+                            id: 'sbs-poznamka-schvalit',
+                            label: 'Poznámka pre technikov (Voliteľné):',
+                            placeholder: 'Napr. Parkujte na vyhradenom mieste č. 5, hláste sa u majstra...',
+                            rows: 3
+                        }
+                    ],
+                    buttonsDirection: "column",
+                    buttons: [
+                        {
+                            id: "btn-confirm-with-note",
+                            text: "✅ Odoslať s poznámkou",
+                            style: "background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; padding: 14px; border-radius: 10px; font-size: 13px; font-weight: 800; cursor: pointer; text-transform: uppercase; transition: all 0.2s;",
+                            onClick: (e, m) => {
+                                const note = m.card.querySelector('#sbs-poznamka-schvalit')?.value || "";
+                                m.close();
+                                posliRozhodnutie('schvalit', btnSchvalit, note);
+                            }
+                        },
+                        {
+                            id: "btn-skip-without-note",
+                            text: "⏭️ Preskočiť (Bez poznámky)",
+                            style: "background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 12px; border-radius: 10px; font-size: 12px; font-weight: 800; cursor: pointer; text-transform: uppercase; transition: all 0.2s;",
+                            onClick: (e, m) => {
+                                m.close();
+                                posliRozhodnutie('schvalit', btnSchvalit, "");
+                            }
+                        }
+                    ],
+                    closeText: "Zrušiť"
+                });
+            });
+        }
+
+        const btnZamietnut = document.getElementById('btn-zamietnut');
+        if (btnZamietnut) {
+            btnZamietnut.addEventListener('click', () => {
+                window.ISASModalEngine({
+                    maxWidth: "500px",
+                    icon: "⚠️",
+                    title: "Zamietnuť vstup?",
+                    text: "Naozaj si prajete odoprieť vstup týmto pracovníkom? Informácia bude okamžite zaslaná dispečingu.",
+                    fields: [
+                        {
+                            type: 'textarea',
+                            id: 'sbs-poznamka-zamietnut',
+                            label: 'Dôvod zamietnutia (Voliteľné):',
+                            placeholder: 'Napr. Chýbajúce OOPP, neplatné doklady, vozidlo na LPG...',
+                            rows: 3
+                        }
+                    ],
+                    buttonsDirection: "column",
+                    buttons: [
+                        {
+                            id: "btn-reject-with-note",
+                            text: "❌ Zamietnuť s poznámkou",
+                            style: "background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; border: none; padding: 14px; border-radius: 10px; font-size: 13px; font-weight: 800; cursor: pointer; text-transform: uppercase; transition: all 0.2s;",
+                            onClick: (e, m) => {
+                                const note = m.card.querySelector('#sbs-poznamka-zamietnut')?.value || "";
+                                m.close();
+                                posliRozhodnutie('zamietnut', btnZamietnut, note);
+                            }
+                        },
+                        {
+                            id: "btn-skip-reject-note",
+                            text: "⏭️ Preskočiť (Bez poznámky)",
+                            style: "background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 12px; border-radius: 10px; font-size: 12px; font-weight: 800; cursor: pointer; text-transform: uppercase; transition: all 0.2s;",
+                            onClick: (e, m) => {
+                                m.close();
+                                posliRozhodnutie('zamietnut', btnZamietnut, "");
+                            }
+                        }
+                    ],
+                    closeText: "Zrušiť"
+                });
+            });
+        }
+    });
+</script>
+{% endblock %}

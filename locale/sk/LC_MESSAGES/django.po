@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-09-06 20:54+0200\n"
+"POT-Creation-Date: 2025-09-27 15:23+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,6 +18,31 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=4; plural=(n % 1 == 0 && n == 1 ? 0 : n % 1 == 0 && n "
 ">= 2 && n <= 4 ? 1 : n % 1 != 0 ? 2: 3);\n"
+
+#: .\Evidencia\templates\admin\edit_inline\stacked.html:20
+#: .\Evidencia\templates\admin\edit_inline\tabular.html:40
+#: .\templates\admin\edit_inline\tabular.html:40
+#: .\venv\Lib\site-packages\django\forms\widgets.py:529
+msgid "Change"
+msgstr ""
+
+#: .\Evidencia\templates\admin\edit_inline\stacked.html:20
+#: .\Evidencia\templates\admin\edit_inline\tabular.html:40
+#: .\templates\admin\edit_inline\tabular.html:40
+msgid "View"
+msgstr ""
+
+#: .\Evidencia\templates\admin\edit_inline\stacked.html:22
+#: .\Evidencia\templates\admin\edit_inline\tabular.html:42
+#: .\templates\admin\edit_inline\tabular.html:42
+msgid "View on site"
+msgstr ""
+
+#: .\Evidencia\templates\admin\edit_inline\stacked.html:23
+#: .\Evidencia\templates\admin\edit_inline\tabular.html:26
+#: .\templates\admin\edit_inline\tabular.html:26
+msgid "Delete from database"
+msgstr "Vymazať z databázy"
 
 #: .\venv\Lib\site-packages\django\contrib\messages\apps.py:16
 msgid "Messages"
@@ -662,10 +687,6 @@ msgstr ""
 msgid "Currently"
 msgstr ""
 
-#: .\venv\Lib\site-packages\django\forms\widgets.py:529
-msgid "Change"
-msgstr ""
-
 #: .\venv\Lib\site-packages\django\forms\widgets.py:866
 msgid "Unknown"
 msgstr ""
@@ -1243,27 +1264,26 @@ msgstr ""
 msgid "Connect, get help, or contribute"
 msgstr ""
 
-msgid "Add %s"
-msgstr "Pridať %s"
+#~ msgid "Add %s"
+#~ msgstr "Pridať %s"
 
-msgid "Select %s to change"
-msgstr "Vybrať %s na úpravu"
+#~ msgid "Select %s to change"
+#~ msgstr "Vybrať %s na úpravu"
 
-msgid "Add Customer"
-msgstr "Pridať zákazníka"
+#~ msgid "Add Customer"
+#~ msgstr "Pridať zákazníka"
 
-msgid "Add Supplier"
-msgstr "Pridať dodávateľa"
+#~ msgid "Add Supplier"
+#~ msgstr "Pridať dodávateľa"
 
-msgid "Add Employee"
-msgstr "Pridať zamestnanca"
+#~ msgid "Add Employee"
+#~ msgstr "Pridať zamestnanca"
 
-msgid "Select Employee to change"
-msgstr "Vybrať zamestnanca na úpravu"
+#~ msgid "Select Employee to change"
+#~ msgstr "Vybrať zamestnanca na úpravu"
 
-msgid "Select Supplier to change"
-msgstr "Vybrať dodávateľa na úpravu"
+#~ msgid "Select Supplier to change"
+#~ msgstr "Vybrať dodávateľa na úpravu"
 
-msgid "Select Customer to change"
-msgstr "Vybrať zákazníka na úpravu"
-
+#~ msgid "Select Customer to change"
+#~ msgstr "Vybrať zákazníka na úpravu"

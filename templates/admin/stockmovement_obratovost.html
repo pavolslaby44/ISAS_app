@@ -1,0 +1,618 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}📊 Obratovosť položiek | ISAS Command Center{% endblock %}
+
+{% block extrahead %}
+    {{ block.super }}
+    <link rel="stylesheet" href="{% static 'admin/css/vendor/select2/select2.min.css' %}">
+    <script src="{% static 'admin/js/vendor/jquery/jquery.min.js' %}"></script>
+    <script src="{% static 'admin/js/vendor/select2/select2.full.min.js' %}"></script>
+{% endblock %}
+
+{% block content %}
+<style>
+    /* --- 💎 ISAS VIVID LIGHT DASHBOARD (1:1 UNIFIED ULTIMATE) --- */
+    :root {
+        --primary-indigo: #6366f1;
+        --primary-dark: #4f46e5;
+        --primary-light: #eef2ff;
+        --slate-950: #0f172a;
+        --slate-800: #1e293b;
+        --slate-400: #64748b;
+        --slate-200: #e2e8f0;
+        --emerald: #10b981;
+        --emerald-dark: #059669;
+        --warn-red: #ef4444;
+        --hyper-glass: rgba(255, 255, 255, 0.85);
+    }
+
+    .breadcrumbs, #content > h1, .pretitle, #content-main > h1 { display: none !important; }
+
+    #content { 
+        background: transparent !important;
+        min-height: calc(100vh - 60px); padding: 50px 40px !important; display: flex; flex-direction: column; align-items: center;
+    }
+
+    .isas-ultimate-wrapper { width: 100%; max-width: 1200px; animation: introFadeUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); }
+    @keyframes introFadeUp { from { opacity: 0; transform: translateY(30px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+    /* --- ⬅️ LUXURY HEADER & NAV --- */
+    .dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; width: 100%; }
+    .dashboard-title { font-size: 32px !important; font-weight: 950 !important; color: var(--slate-950) !important; margin: 0 !important; display: flex; align-items: center; gap: 15px; letter-spacing: -0.5px; }
+
+    .back-link {
+        display: inline-flex; align-items: center; gap: 10px; color: var(--slate-800) !important;
+        text-decoration: none !important; font-weight: 800; font-size: 12px; text-transform: uppercase;
+        letter-spacing: 1.5px; transition: 0.3s ease;
+        padding: 10px 22px; background: rgba(255,255,255,0.7); border-radius: 100px; 
+        backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.8);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+    }
+    .back-link:hover { color: var(--primary-indigo) !important; background: white; box-shadow: 0 10px 20px -5px rgba(99, 102, 241, 0.2); transform: translateX(-4px); }
+
+    /* --- 🧊 PREMIUM CARD --- */
+    .premium-card {
+        background: var(--hyper-glass); backdrop-filter: blur(30px) saturate(180%); -webkit-backdrop-filter: blur(30px) saturate(180%);
+        border-radius: 30px; box-shadow: 0 35px 80px -20px rgba(0, 0, 0, 0.1), inset 0 0 0 1px rgba(255, 255, 255, 0.9);
+        padding: 50px 60px; position: relative; margin-bottom: 40px; overflow: visible;
+    }
+    .premium-card::before {
+        content: ''; position: absolute; top: 0; left: 0; right: 0; height: 6px;
+        background: linear-gradient(90deg, #6366f1, #10b981, #6366f1); background-size: 200% auto; animation: gradientFlow 5s linear infinite;
+        border-radius: 30px 30px 0 0;
+    }
+    @keyframes gradientFlow { 0% { background-position: 0% center; } 100% { background-position: 200% center; } }
+
+    /* Zjednotený GRID pre 5 prvkov + tlačidlo */
+    .form-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 25px 35px; align-items: flex-end; width: 100%; box-sizing: border-box; }
+
+    .field-wrapper { display: flex; flex-direction: column; position: relative; min-width: 0; width: 100%; box-sizing: border-box; }
+    .field-wrapper label {
+        font-weight: 800; color: var(--slate-400); font-size: 11px; text-transform: uppercase;
+        letter-spacing: 1.2px; margin-bottom: 12px; padding-left: 8px; transition: color 0.3s;
+    }
+    .field-wrapper:focus-within label { color: var(--primary-indigo); }
+
+    select.premium-input { display: none; } 
+
+    /* --- ✨ SELECT2 STYLING (Dokonalá zhoda a ochrana šípky) ✨ --- */
+    .select2-container { width: 100% !important; max-width: 100% !important; box-sizing: border-box; }
+    .select2-container--default .select2-selection--single {
+        height: 60px !important; border-radius: 16px !important; border: 2px solid var(--slate-200) !important;
+        background: rgba(255, 255, 255, 0.9) !important; display: flex; align-items: center;
+        font-size: 15px; font-weight: 700; color: var(--slate-800); box-shadow: inset 0 2px 4px rgba(0,0,0,0.02) !important;
+        transition: all 0.3s ease;
+    }
+    .select2-container--default.select2-container--focus .select2-selection--single,
+    .select2-container--default.select2-container--open .select2-selection--single {
+        border-color: var(--primary-indigo) !important; background-color: #ffffff !important; box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1) !important;
+    }
+    .select2-container--default.select2-container--disabled .select2-selection--single { background-color: #f8fafc !important; cursor: not-allowed; opacity: 0.8; border-color: #e2e8f0 !important; }
+    .select2-container--default.select2-container--disabled .select2-selection__rendered { color: #94a3b8 !important; }
+    
+    .select2-container--default .select2-selection--single .select2-selection__arrow { height: 56px !important; right: 15px !important; }
+    
+    /* 🛡️ OCHRANA ŠÍPKY A ZAROVNANIE TEXTU S OREZÁVANÍM */
+    .select2-container--default .select2-selection--single .select2-selection__rendered { 
+        padding-left: 20px !important; 
+        padding-right: 50px !important; /* Bezpečná zóna pre šípku */
+        color: var(--slate-800) !important; 
+        line-height: normal; 
+        width: 100%;
+        box-sizing: border-box;
+        display: block !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__placeholder { color: #94a3b8; font-weight: 600; }
+
+    /* Dropdown Menu (Vyhľadávanie) */
+    .select2-dropdown { border: 1px solid var(--primary-indigo); border-radius: 16px; box-shadow: 0 25px 50px rgba(0,0,0,0.15); overflow: hidden; padding: 10px; margin-top: 5px; }
+    .select2-search--dropdown { padding: 5px 5px 15px 5px; }
+    .select2-search--dropdown .select2-search__field { 
+        border-radius: 12px; border: 2px solid var(--slate-200); padding: 14px 15px 14px 45px; 
+        font-family: inherit; font-size: 14px; font-weight: 600; outline: none; transition: 0.3s;
+        background: #f8fafc url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="%2394a3b8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>') no-repeat 15px center;
+    }
+    .select2-search--dropdown .select2-search__field:focus { border-color: var(--primary-indigo); background-color: white; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.1); }
+    .select2-container--default .select2-results__option { 
+        padding: 14px 20px; 
+        font-size: 14px; 
+        font-weight: 700; 
+        color: var(--slate-800); 
+        border-radius: 12px; 
+        margin-bottom: 4px; 
+        transition: 0.2s; 
+        cursor: pointer; 
+        border: 1px solid transparent; 
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+    .select2-container--default .select2-results__option--highlighted[aria-selected] { background-color: var(--primary-light); color: var(--primary-dark); border-color: #c7d2fe; transform: translateX(5px); }
+    .select2-container--default .select2-results__option[aria-selected=true] { background-color: #f1f5f9; color: var(--slate-900); }
+
+
+    /* THE GREEN ISAS BUTTON */
+    .button-container { grid-column: span 4; margin-top: 20px; }
+    .btn-action {
+        width: 100%; height: 64px; background: linear-gradient(135deg, var(--emerald) 0%, var(--emerald-dark) 100%);
+        color: white; border: none; border-radius: 18px; font-size: 17px; font-weight: 900;
+        text-transform: uppercase; letter-spacing: 1.5px; cursor: pointer; position: relative;
+        overflow: hidden; transition: all 0.3s ease;
+        box-shadow: 0 15px 30px -10px rgba(16, 185, 129, 0.5); display: flex; align-items: center; justify-content: center; gap: 12px; z-index: 1;
+    }
+    .btn-action:hover { transform: translateY(-3px); box-shadow: 0 20px 40px -10px rgba(16, 185, 129, 0.6); }
+    .btn-shine { position: absolute; top: 0; left: -100%; width: 120%; height: 100%; background: linear-gradient(120deg, transparent, rgba(255,255,255,0.4), transparent); transition: 0.7s; }
+    .btn-action:hover .btn-shine { left: 100%; }
+
+    /* --- 📊 STATS CARDS --- */
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+    
+    .stat-card {
+        background: var(--hyper-glass); backdrop-filter: blur(30px) saturate(180%);
+        padding: 45px 50px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.9);
+        display: flex; align-items: center; gap: 35px; position: relative; overflow: hidden;
+        transition: all 0.4s ease; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.05);
+    }
+    .stat-card:hover { transform: translateY(-6px); box-shadow: 0 35px 60px -12px rgba(0,0,0,0.1); }
+
+    .stat-icon { width: 100px; height: 100px; border-radius: 24px; display: flex; align-items: center; justify-content: center; font-size: 45px; z-index: 2; flex-shrink: 0; }
+    .stat-info { z-index: 2; flex-grow: 1; }
+    .stat-info h3 { margin: 0 0 8px 0; font-size: 13px; color: var(--slate-400); text-transform: uppercase; letter-spacing: 1.5px; font-weight: 800; }
+    .number-wrapper p { font-size: 75px; font-weight: 900; margin: 0; line-height: 1; letter-spacing: -2px; color: var(--slate-950); }
+    
+    .stat-label { 
+        font-size: 11px; color: var(--slate-800); font-weight: 800; text-transform: uppercase; 
+        letter-spacing: 1px; margin-top: 15px; display: inline-block; padding: 6px 12px; 
+        background: rgba(255,255,255,0.9); border: 1px solid #e2e8f0; border-radius: 8px; transition: all 0.3s ease;
+    }
+
+    .incoming { border-bottom: 8px solid var(--emerald); }
+    .incoming .stat-icon { background: rgba(16, 185, 129, 0.1); color: var(--emerald); }
+    .incoming p { color: #064e3b; }
+
+    .outgoing { border-bottom: 8px solid var(--warn-red); }
+    .outgoing .stat-icon { background: rgba(239, 68, 68, 0.1); color: var(--warn-red); }
+    .outgoing p { color: #7f1d1d; }
+
+    /* RESPONSIVE PANCÍR */
+    @media (max-width: 1024px) {
+        #content { padding: 20px 15px !important; box-sizing: border-box !important; overflow-x: hidden; }
+        .premium-card { padding: 30px 20px !important; margin-bottom: 25px !important; width: 100% !important; box-sizing: border-box !important; }
+        .dashboard-header { flex-direction: column !important; align-items: flex-start !important; gap: 15px !important; width: 100% !important; box-sizing: border-box !important; }
+        .dashboard-title { font-size: 26px !important; }
+        .back-link { width: 100% !important; justify-content: center !important; box-sizing: border-box !important;}
+        .form-grid { grid-template-columns: 1fr !important; gap: 20px !important; width: 100% !important; box-sizing: border-box !important; }
+        .field-wrapper { width: 100% !important; box-sizing: border-box !important; max-width: 100% !important; }
+        .field-wrapper[style*="grid-column"] { grid-column: span 1 !important; }
+        .button-container { grid-column: span 1 !important; width: 100% !important; box-sizing: border-box !important; }
+        .stats-grid { grid-template-columns: 1fr !important; gap: 20px !important; }
+        .stat-card { padding: 25px 20px !important; flex-direction: column !important; text-align: center !important; gap: 15px !important; }
+        .stat-icon { width: 70px !important; height: 70px !important; font-size: 35px !important; }
+        .number-wrapper p { font-size: 55px !important; }
+        .stat-info { display: flex; flex-direction: column; align-items: center; width: 100%;}
+    }
+</style>
+
+<div class="isas-ultimate-wrapper">
+    <div class="dashboard-header">
+        <h1 class="dashboard-title"><span style="font-size: 38px;">📊</span> Pohyby na sklade</h1>
+        <a href="{% url 'admin:Evidencia_stockmovement_changelist' %}" class="back-link">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+            Naspäť do zoznamu
+        </a>
+    </div>
+
+    <div class="premium-card">
+        <div class="form-grid">
+            
+            <!-- 1. VÝBER SKLADU (Nový filter) -->
+            <div class="field-wrapper" style="grid-column: span 1;">
+                <label>🏬 Sklad / Filiálka / Dodávka</label>
+                <select id="filialka-filter" class="premium-input">
+                    <option value="">🌍 Všetky sklady dokopy...</option>
+                    
+                    <!-- 🟢 Dynamický Hlavný sklad (napr. Svinná) -->
+                    <option value="main" data-icon="🏢">
+                        {{ nazov_hlavneho|default:"Hlavný sklad" }}
+                    </option>
+
+                    <!-- 🟢 Dynamicky načítané všetky Filiálky z databázy -->
+                    {% for f in filialky %}
+                        <option value="{{ f.id }}" 
+                                data-icon="{% if f.typ_skladu == 'AUTO' %}🚐{% elif f.typ_skladu == 'KONTAJNER' %}🏗️{% else %}🏬{% endif %}">
+                            {{ f.nazov }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- 2. KATEGÓRIA -->
+            <div class="field-wrapper" style="grid-column: span 1;">
+                <label>🗂️ Hlavná Kategória</label>
+                <select id="category-filter" class="premium-input">
+                    <option value="">⏳ Načítavam dáta, prosím počkajte...</option>
+                </select>
+            </div>
+
+            <!-- 3. PODKATEGÓRIA -->
+            <div class="field-wrapper" style="grid-column: span 2;">
+                <label>📂 Príslušná Podkategória</label>
+                <select id="subcategory-filter" class="premium-input" disabled>
+                    <option value="">🔒 Najskôr si vyberte kategóriu...</option>
+                </select>
+            </div>
+
+            <!-- 4. PRODUKT -->
+            <div class="field-wrapper" style="grid-column: span 3;">
+                <label>🔍 Vyhladať položku</label>
+                <select id="product-filter" class="premium-input" disabled>
+                    <option value="">🔒 Najskôr si vyberte podkategóriu...</option>
+                </select>
+            </div>
+
+            <!-- 5. ČASOVÉ OBDOBIE -->
+            <div class="field-wrapper" style="grid-column: span 1;">
+                <label>📅 Časové obdobie</label>
+                <select id="period-filter" class="premium-input">
+                    <option value="7" selected>📅 Zobrazte posledných 7 dní...</option>
+                    <option value="30">📅 Zobrazte posledný mesiac...</option>
+                    <option value="90">📅 Zobrazte posledný kvartál...</option>
+                    <option value="180">📅 Zobrazte posledný polrok...</option>
+                    <option value="365">📅 Zobrazte posledný rok...</option>
+                </select>
+            </div>
+
+            <!-- TLAČIDLO -->
+            <div class="button-container">
+                <button id="load-totals" class="btn-action">
+                    <div class="btn-shine"></div>
+                    <span id="btn-text">Aktualizovať dáta ⚡</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card incoming">
+            <div class="stat-icon">📥</div>
+            <div class="stat-info">
+                <h3>Prírastok na sklad</h3>
+                <div class="number-wrapper"><p id="incomingTotal">0</p></div>
+                <span class="stat-label" id="incomingUnit">EVIDOVANÉ MNOŽSTVO 📊</span>
+            </div>
+        </div>
+
+        <div class="stat-card outgoing">
+            <div class="stat-icon">📤</div>
+            <div class="stat-info">
+                <h3>Úbytok zo skladu</h3>
+                <div class="number-wrapper"><p id="outgoingTotal">0</p></div>
+                <span class="stat-label" id="outgoingUnit">EVIDOVANÉ MNOŽSTVO 📊</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function($) {
+    $(document).ready(function() {
+    const $filialkaEl = $("#filialka-filter");
+    const $categoryEl = $("#category-filter");
+    const $subcatEl   = $("#subcategory-filter");
+    const $productEl  = $("#product-filter");
+    const $periodEl   = $("#period-filter");
+    
+    const incomingEl = document.getElementById("incomingTotal");
+    const outgoingEl = document.getElementById("outgoingTotal");
+    const loadBtn = document.getElementById("load-totals");
+
+    const inUnitEl = document.getElementById("incomingUnit");
+    const outUnitEl = document.getElementById("outgoingUnit");
+
+    // PAMÄŤ FILTROV Z URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const savedFilialka = urlParams.get('filialka') || "";
+    const savedCat = urlParams.get('category') || "";
+    const savedSubcat = urlParams.get('subcategory') || "";
+    const savedProdId = urlParams.get('product') || "";
+    const savedPeriod = urlParams.get('period') || "7";
+
+    if(savedFilialka) $filialkaEl.val(savedFilialka);
+    if(savedPeriod) $periodEl.val(savedPeriod);
+
+    // 💎 ELITNÝ PARSER PRE SKLAD/FILIÁLKU
+    function formatFilialka(state) {
+        if (!state.id) {
+            return $(`<div style="font-weight: 800; color: #1e293b; font-size: 15px; padding: 4px 2px;">🌍 Všetky sklady</div>`);
+        }
+
+        let $el = $(state.element);
+        let text = state.text.trim();
+        let icon = $el.data('icon') || "🏬";
+
+        return $(`
+            <div style="display: flex; align-items: center; padding: 4px 2px; width: 100%; overflow: hidden; box-sizing: border-box;">
+                <span style="font-weight: 800; color: #1e293b; font-size: 15px; display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1;">
+                    <span style="font-size: 16px; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.1)); flex-shrink: 0;">${icon}</span>
+                    <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;">${text}</span>
+                </span>
+            </div>
+        `);
+    }
+
+    // 💎 ELITNÝ PARSER PRE KATEGÓRIE A PODKATEGÓRIE (Dynamické Emojis z Pythonu)
+    function formatCategoryWithEmoji(state) {
+        if (!state.id) {
+            return $(`<div style="font-weight: 800; color: #64748b; font-size: 14px; padding: 4px 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${state.text}</div>`);
+        }
+        
+        let text = state.text.trim();
+        let icon = "📁"; // Fallback
+        let mainText = text;
+
+        // Rozdelenie textu podľa prvej medzery (Python dict má formát "EMOJI Text")
+        let firstSpaceIndex = text.indexOf(' ');
+        if (firstSpaceIndex !== -1 && firstSpaceIndex <= 3) {
+            icon = text.substring(0, firstSpaceIndex).trim();
+            mainText = text.substring(firstSpaceIndex + 1).trim();
+            // Odstránenie prípadnej pomlčky na začiatku textu
+            if (mainText.startsWith('–') || mainText.startsWith('-')) {
+                mainText = mainText.substring(1).trim();
+            }
+        }
+
+        return $(`
+            <div style="display: flex; align-items: center; gap: 12px; padding: 4px 2px; width: 100%; overflow: hidden; box-sizing: border-box;">
+                <span style="font-size: 18px; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.1)); flex-shrink: 0;">${icon}</span>
+                <span style="font-weight: 700; color: #1e293b; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1; display: block;">${mainText}</span>
+            </div>
+        `);
+    }
+
+    // Inicializácia základných Select2 (Odstránené limity = vždy ukazuje vyhľadávanie)
+    $filialkaEl.select2({ templateResult: formatFilialka, templateSelection: formatFilialka, width: '100%' });
+    $categoryEl.select2({ placeholder: "🗂️ Vyberte kategóriu...", templateResult: formatCategoryWithEmoji, templateSelection: formatCategoryWithEmoji, width: '100%' });
+    $subcatEl.select2({ placeholder: "🔒 Najskôr vyberte kategóriu...", templateResult: formatCategoryWithEmoji, templateSelection: formatCategoryWithEmoji, width: '100%' });
+    $periodEl.select2({ width: '100%' }); 
+    $productEl.select2({ placeholder: "🔒 Najskôr vyberte podkategóriu...", width: '100%' });
+
+    function resetSelect2($el, text, disabled) {
+        $el.empty().append(new Option(text, '', true, true));
+        $el.prop('disabled', disabled);
+        $el.trigger('change.select2');
+    }
+
+    function updateUnits(unit) {
+        if (!unit || unit === "") {
+            inUnitEl.innerHTML = "EVIDOVANÉ MNOŽSTVO 📊";
+            outUnitEl.innerHTML = "EVIDOVANÉ MNOŽSTVO 📊";
+            return;
+        }
+        const escapeHTML = (str) => String(str).replace(/[&<>'"]/g, tag => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'}[tag]));
+        const safeUnit = escapeHTML(unit);
+        inUnitEl.innerHTML = `EVIDOVANÉ MNOŽSTVO 📊 <span style="color:var(--emerald); font-weight:900; font-size:13px; margin-left:4px;">(${safeUnit})</span>`;
+        outUnitEl.innerHTML = `EVIDOVANÉ MNOŽSTVO 📊 <span style="color:var(--warn-red); font-weight:900; font-size:13px; margin-left:4px;">(${safeUnit})</span>`;
+    }
+
+    function animateValue(obj, start, end, duration) {
+        let startTimestamp = null;
+        const isDecimal = (Number(end) % 1 !== 0) || (Number(start) % 1 !== 0);
+        const step = (timestamp) => {
+            if (!startTimestamp) startTimestamp = timestamp;
+            const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+            const currentVal = progress * (end - start) + start;
+            obj.innerHTML = isDecimal ? currentVal.toFixed(2) : Math.floor(currentVal);
+            if (progress < 1) window.requestAnimationFrame(step);
+        };
+        window.requestAnimationFrame(step);
+    }
+
+    $filialkaEl.on("change", function() {
+        if ($categoryEl.val() && $subcatEl.val()) {
+            $subcatEl.trigger('change');
+        }
+    });
+
+    // 2. NAČÍTANIE KATEGÓRIÍ
+    function loadCategories() {
+        fetch("{% url 'evidencia:get_categories' %}")
+            .then(r => r.json())
+            .then(d => {
+                $categoryEl.empty().append(new Option("🗂️ Vyberte kategóriu...", "", true, true));
+                d.categories.forEach(item => {
+                    const option = new Option(item.text, item.id, false, item.id == savedCat);
+                    $categoryEl.append(option);
+                });
+                $categoryEl.trigger('change.select2');
+                if (savedCat) $categoryEl.trigger('change');
+            })
+            .catch(() => {
+                resetSelect2($categoryEl, "❌ Chyba načítania kategórií", false);
+                showISASToast("Chyba spojenia so serverom. Skontrolujte pripojenie.", "🔌", "error");
+            });
+    }
+
+    // 3. ZMENA KATEGÓRIE -> NAČÍTA PODKATEGÓRIE
+    $categoryEl.on("change", function() {
+        const c = $(this).val();
+        $productEl.select2({ placeholder: "🔒 Najskôr vyberte podkategóriu..." });
+        resetSelect2($productEl, "🔒 Najskôr vyberte podkategóriu...", true);
+        updateUnits("");
+
+        if (!c) { 
+            $subcatEl.select2({ placeholder: "🔒 Najskôr vyberte kategóriu...", templateResult: formatCategoryWithEmoji, templateSelection: formatCategoryWithEmoji });
+            resetSelect2($subcatEl, "🔒 Najskôr vyberte kategóriu...", true); 
+            return; 
+        }
+        
+        $subcatEl.select2({ placeholder: "⏳ Načítavam dáta, prosím počkajte...", templateResult: formatCategoryWithEmoji, templateSelection: formatCategoryWithEmoji });
+        resetSelect2($subcatEl, "⏳ Načítavam dáta, prosím počkajte...", true);
+        
+        fetch("{% url 'evidencia:get_subcategories' %}?category=" + encodeURIComponent(c))
+            .then(r => r.json())
+            .then(d => {
+                $subcatEl.select2({ placeholder: "📂 Vyberte podkategóriu...", templateResult: formatCategoryWithEmoji, templateSelection: formatCategoryWithEmoji });
+                $subcatEl.empty().append(new Option("📂 Vyberte podkategóriu...", "", true, true));
+                d.subcategories.forEach(item => {
+                    const option = new Option(item.text, item.id, false, item.id == savedSubcat);
+                    $subcatEl.append(option);
+                });
+                $subcatEl.prop('disabled', false).trigger('change.select2');
+                if (savedSubcat) $subcatEl.trigger('change');
+            })
+            .catch(() => {
+                resetSelect2($subcatEl, "❌ Chyba načítania podkategórií", false);
+                showISASToast("Chyba spojenia so serverom. Skontrolujte pripojenie.", "🔌", "error");
+            });
+    });
+
+    // 4. ZMENA PODKATEGÓRIE -> NAČÍTA PRODUKTY
+    $subcatEl.on("change", function() {
+        const c = $categoryEl.val();
+        const s = $(this).val();
+        const f = $filialkaEl.val() || ""; 
+        
+        updateUnits("");
+
+        if (!c || !s) {
+            resetSelect2($productEl, "🔒 Najskôr vyberte podkategóriu...", true);
+            return;
+        }
+
+        resetSelect2($productEl, "⏳ Načítavam databázu, prosím počkajte...", true);
+        
+        // 🟢 PRIDANÝ FLAG: only_with_movements=true
+        fetch(`{% url 'evidencia:get_products' %}?category=${encodeURIComponent(c)}&subcategory=${encodeURIComponent(s)}&filialka=${encodeURIComponent(f)}&only_with_movements=true`)
+            .then(r => r.json())
+            .then(data => { 
+                // 🧠 ISAS INTELIGENCIA: Vytiahne emoji z podkategórie pre vizuál produktov
+                const subcatText = $subcatEl.find('option:selected').text().trim();
+                let dynaEmoji = subcatText ? subcatText.split(' ')[0] : '📦';
+                if (dynaEmoji.length > 4) dynaEmoji = '📦';
+
+                if ($productEl.hasClass("select2-hidden-accessible")) { $productEl.select2('destroy'); }
+                $productEl.empty();
+
+                let select2Data = data.products.map(prod => {
+                    return { 
+                        id: prod.id, 
+                        text: prod.name, 
+                        cleanName: prod.clean_name, // Uložíme si čistý názov pre grafy
+                        unit: prod.unit 
+                    };
+                });
+
+                select2Data.unshift({ id: '', text: '' }); 
+
+                $productEl.select2({
+                    data: select2Data,
+                    placeholder: "✨ Vyhľadajte položku podľa názvu...",
+                    allowClear: true,
+                    width: '100%',
+                    templateResult: function(state) {
+                        if (!state.id) return state.text;
+                        return $(`
+                            <div style="display: flex; justify-content: space-between; padding: 2px; align-items: center; width: 100%; gap: 10px; overflow: hidden; box-sizing: border-box;">
+                                <span style="font-weight: 700; color: #1e293b; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1; display: block;">${state.text}</span>
+                                <span style="background: #eef2ff; color: #4338ca; padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: 900; letter-spacing: 0.5px; border: 1px solid #c7d2fe; white-space: nowrap; flex-shrink: 0;">
+                                    ${dynaEmoji} ${state.unit}
+                                </span>
+                            </div>
+                        `);
+                    },
+                    templateSelection: function(state) {
+                        if (!state.id) return state.placeholder || "📦 Vyberte položku...";
+                        // Uložíme cleanName do data atribútu vybraného elementu
+                        $(state.element).attr('data-clean-name', state.cleanName);
+                        return $(`
+                            <div style="display: flex; align-items: center; gap: 12px; margin-top: 1px; width: 100%; overflow: hidden; box-sizing: border-box;">
+                                <span style="font-size: 15px; font-weight: 900; color: #0f172a; letter-spacing: -0.3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1; display: block;">${state.text}</span>
+                                <span style="flex-shrink: 0; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); color: #475569; border: 1px solid #cbd5e1; padding: 3px 10px; border-radius: 30px; font-size: 11px; font-weight: 900; letter-spacing: 0.5px; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.02), inset 0 2px 4px rgba(255,255,255,1);">
+                                    <span style="font-size: 12px; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.1));">${dynaEmoji}</span> <span style="color: #3b82f6;">${state.unit}</span>
+                                </span>
+                            </div>
+                        `);
+                    }
+                });
+                
+                $productEl.prop('disabled', false);
+
+                if (savedProdId && !window.initialLoadDone) {
+                    $productEl.val(savedProdId).trigger('change');
+                    const selectedProd = select2Data.find(p => String(p.id) === String(savedProdId));
+                    if (selectedProd && selectedProd.unit) updateUnits(selectedProd.unit);
+                    window.initialLoadDone = true;
+                    setTimeout(() => loadBtn.click(), 100); 
+                }
+            })
+            .catch(() => {
+                resetSelect2($productEl, "❌ Chyba načítania produktov", false);
+                showISASToast("Chyba spojenia so serverom. Skontrolujte pripojenie.", "🔌", "error");
+            });
+    });
+
+    $productEl.on('select2:select', function(e) {
+        let unit = e.params.data.unit || 'ks';
+        updateUnits(unit);
+    });
+    $productEl.on('select2:clear', function() { updateUnits(""); });
+
+    // 6. ODOSLANIE DÁT A ANIMÁCIA KARIET
+    $(loadBtn).on("click", function(e) {
+        e.preventDefault();
+        const btn = this;
+
+        // 🟢 100 % nepriestrelné získanie čistého názvu z internej pamäte Select2 aj DOM fallbacku
+        const select2Data = $productEl.select2('data');
+        const selectedObj = select2Data && select2Data.length > 0 ? select2Data[0] : null;
+        const productName = (selectedObj && selectedObj.cleanName) ? selectedObj.cleanName : ($productEl.find(':selected').attr('data-clean-name') || "");
+
+        const params = new URLSearchParams();
+        params.set('filialka', $filialkaEl.val() || "");
+        params.set('category', $categoryEl.val() || "");
+        params.set('subcategory', $subcatEl.val() || "");
+        params.set('product_name', productName); // 🟢 Posielame NÁZOV, nie ID
+        params.set('period', $periodEl.val() || "7");
+
+        // Uloženie do URL pre pamäť (tu necháme ID, aby sa po refreshi správne vybral produkt v roletke)
+        const currentUrl = new URL(window.location);
+        currentUrl.searchParams.set('filialka', $filialkaEl.val() || "");
+        currentUrl.searchParams.set('category', $categoryEl.val() || "");
+        currentUrl.searchParams.set('subcategory', $subcatEl.val() || "");
+        currentUrl.searchParams.set('product', $productEl.val() || "");
+        currentUrl.searchParams.set('period', $periodEl.val() || "7");
+        window.history.pushState({}, '', currentUrl);
+
+        const url = "{% url 'evidencia:get_totals' %}?" + params.toString();
+
+        window.ISASAction(null, btn, {
+            url: url,
+            method: 'GET',
+            reload: false,
+            loadingText: '<div class="btn-shine"></div><span id="btn-text">⏳ Spracovávam Vašu požiadavku, prosím počkajte...</span>',
+            onComplete: (data, actionBtn, origHtml) => {
+                const incStart = parseInt(incomingEl.innerText) || 0;
+                const outStart = parseInt(outgoingEl.innerText) || 0;
+                
+                animateValue(incomingEl, incStart, data.incoming || 0, 800);
+                animateValue(outgoingEl, outStart, data.outgoing || 0, 800);
+
+                setTimeout(() => {
+                    actionBtn.innerHTML = origHtml;
+                    actionBtn.classList.remove('is-processing');
+                    actionBtn.style.pointerEvents = 'auto';
+                }, 800);
+            }
+        });
+    });
+
+    // Štart!
+    loadCategories();
+});
+})(window.django ? django.jQuery : (window.jQuery || $));
+</script>
+{% endblock %}

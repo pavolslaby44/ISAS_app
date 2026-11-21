@@ -1,0 +1,469 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}🛒📦 Naskladnenie | ISAS Command Center{% endblock %}
+
+{% block extrahead %}
+    {{ block.super }}
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<style>
+    /* --- 💎 VIVID UI SETTINGS --- */
+    :root {
+        --primary: #6366f1; --primary-dark: #4f46e5;
+        --slate-900: #0f172a; --slate-800: #1e293b; --slate-500: #64748b; --slate-200: #e2e8f0;
+        --emerald: #10b981; --emerald-dark: #059669;
+        --amber: #f59e0b; --rose: #ef4444;
+        --glass-bg: rgba(255, 255, 255, 0.85);
+    }
+    
+    #content { background: transparent !important; padding: 20px 30px !important; min-height: 90vh; font-family: 'Segoe UI', system-ui, sans-serif;}
+    .breadcrumbs, #content > h1, .pretitle, .submit-row, .errornote { display: none !important; }
+    
+    /* Layout */
+    .builder-container { display: grid; grid-template-columns: 380px 1fr; gap: 30px; max-width: 1700px; margin: 0 auto; align-items: start; animation: fadeUp 0.5s ease; box-sizing: border-box; width: 100%; }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Panels */
+    .panel { background: var(--glass-bg); backdrop-filter: blur(20px); border-radius: 24px; border: 1px solid rgba(255,255,255,0.9); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.08); padding: 30px; position: relative; box-sizing: border-box; min-width: 0; }
+    .panel-header { font-size: 18px; font-weight: 900; color: var(--slate-900); margin-bottom: 25px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px; border-bottom: 2px solid #f1f5f9; padding-bottom: 15px;}
+    
+    /* Inputs */
+    .form-group { margin-bottom: 20px; }
+    .vivid-input { width: 100%; padding: 12px 16px; border-radius: 12px; border: 2px solid var(--slate-200); background: white; font-size: 14px; font-weight: 700; color: var(--slate-800); outline: none; transition: 0.3s; box-sizing: border-box; }
+    
+    /* Select2 */
+    select.vivid-input { display: none; }
+    .select2-container { width: 100% !important; max-width: 100% !important; box-sizing: border-box; }
+    .select2-container .select2-selection--single { height: 60px !important; border-radius: 16px !important; border: 2px solid #e2e8f0 !important; background: rgba(255, 255, 255, 0.9) !important; display: flex; align-items: center; font-size: 15px; font-weight: 700; color: var(--slate-800); width: 100%; box-sizing: border-box; }
+    .select2-container--default.select2-container--focus .select2-selection--single { border-color: var(--primary) !important; background-color: #ffffff !important; box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1) !important; }
+    .select2-container--default .select2-selection--single .select2-selection__arrow { height: 56px !important; right: 15px !important; }
+    .select2-container--default .select2-selection--single .select2-selection__rendered { padding-left: 20px !important; padding-right: 50px !important; color: var(--slate-800) !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; box-sizing: border-box; }
+    
+    /* Toggle Switch */
+    .toggle-switch { position: relative; display: inline-block; width: 50px; height: 28px; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .4s; border-radius: 34px; }
+    .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+    input:checked + .slider { background-color: var(--primary); }
+    input:checked + .slider:before { transform: translateX(22px); }
+
+    /* Buttons */
+    .btn { padding: 12px 24px; border-radius: 12px; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; border: none; transition: 0.3s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+    .btn-save { background: linear-gradient(135deg, var(--emerald), var(--emerald-dark)); color: white; box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3); width: 100%; font-size: 14px; height: 55px;}
+    .btn-save:hover { transform: translateY(-2px); box-shadow: 0 15px 30px rgba(16, 185, 129, 0.4); }
+    .btn-bulk { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3); padding: 10px 20px;}
+    .btn-bulk:hover { transform: translateY(-2px); box-shadow: 0 15px 30px rgba(99, 102, 241, 0.4); }
+    .btn-ghost { background: #f1f5f9; color: var(--slate-800); border: 1px solid var(--slate-200); }
+    .btn-ghost:hover { background: #e2e8f0; }
+
+    /* Table */
+    .items-table { width: 100%; border-collapse: separate; border-spacing: 0 8px; }
+    .items-table th { text-align: left; font-size: 11px; font-weight: 800; color: var(--slate-500); text-transform: uppercase; letter-spacing: 1px; padding: 0 15px 10px 15px; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
+    .items-table td { background: white; padding: 15px; border-top: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+    .items-table tr td:first-child { border-left: 1px solid #f1f5f9; border-radius: 12px 0 0 12px; }
+    .items-table tr td:last-child { border-right: 1px solid #f1f5f9; border-radius: 0 12px 12px 0; }
+    .items-table tr.row-success td { background: #f0fdf4; border-color: #bbf7d0; }
+    .items-table tr.row-service td { background: #f8fafc; border-color: #e2e8f0; opacity: 0.8; }
+
+    /* Badges */
+    .badge { padding: 4px 10px; border-radius: 6px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; display: inline-block; white-space: nowrap; }
+    .badge-new { background: #fff7ed; color: #ea580c; border: 1px solid #fdba74; }
+    .badge-db { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+    .badge-service { background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; }
+    .badge-success { background: #ecfdf5; color: #059669; border: 1px solid #6ee7b7; font-size: 12px; padding: 6px 12px;}
+
+    /* Checkbox */
+    .vivid-checkbox { width: 22px; height: 22px; cursor: pointer; accent-color: var(--primary); }
+
+    /* 🛡️ ISAS ARCHITECT FIX: Globálna ochrana tabuľky pred pretekaním (aj na desktope) */
+    .table-responsive { display: block; width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 12px; padding-bottom: 10px; }
+
+    /* --- 📱 RESPONSIVE DESIGN (MOBILE & SMALL LAPTOPS) --- */
+    @media (max-width: 1280px) {
+        #content { padding: 10px 5px !important; overflow-x: hidden; }
+        .builder-container { grid-template-columns: 1fr; gap: 15px; width: 100%; max-width: 100vw; overflow-x: hidden; }
+        .panel { padding: 15px; width: 100%; }
+        .panel-header { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+        .panel-header .btn-ghost { margin-left: auto; }
+        .panel-header .btn-bulk { width: 100%; margin-top: 5px; }
+        .items-table { min-width: 700px; } /* Vynúti šírku tabuľky, čím sa aktivuje horizontálny scroll */
+    }
+</style>
+
+{% csrf_token %}
+
+<div class="builder-container">
+    
+    <!-- 🎛️ ĽAVÝ PANEL: NASTAVENIA NASKLADNENIA -->
+    <div class="panel">
+        <div class="panel-header">
+            <span>⚙️ Nastavenia</span>
+            <a href="/admin/Evidencia/prichodziafaktura/{{ original.id }}/change/" class="btn-ghost" style="padding: 6px 12px; border-radius: 8px; font-size: 11px; text-decoration: none; display: flex; align-items: center; gap: 4px; font-weight: 800; text-transform: uppercase;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg> Naspäť
+            </a>
+        </div>
+
+        <!-- 🏢 VÝBER SKLADU -->
+        <div class="form-group" style="background: #eff6ff; padding: 15px; border-radius: 16px; border: 1px dashed #93c5fd; margin-bottom: 25px;">
+            <label style="color: #1e3a8a; font-size: 13px; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; font-weight: 800;">
+                <span style="font-size: 16px;">🏢</span> Cieľový sklad / Filiálka
+            </label>
+            
+            <select id="sel-zdrojovy-sklad" class="vivid-input select2-main" data-placeholder="🏭 Vyberte sklad pre príjem...">
+                <option value="HLAVNY" {% if not original.cielovy_sklad %}selected{% endif %}>
+                    🏭 {{ nazov_hlavneho_skladu|default:"Hlavný sklad" }}
+                </option>
+                {% if aktivne_filialky %}
+                <optgroup label="🏪 Sklady a Filiálky">
+                    {% for f in aktivne_filialky %}
+                        <option value="{{ f.id }}" {% if original.cielovy_sklad.id == f.id %}selected{% endif %}>
+                            {% if f.typ_skladu == 'AUTO' %}🚐{% elif f.typ_skladu == 'KONTAJNER' %}🏗️{% elif f.typ_skladu == 'INE' %}📦{% else %}🏢{% endif %} {{ f.nazov }}
+                        </option>
+                    {% endfor %}
+                </optgroup>
+                {% endif %}
+            </select>
+        </div>
+
+        <!-- 📥 POVOLENIE PRÍJMU -->
+        <div class="form-group">
+            <div style="display: flex; justify-content: space-between; align-items: center; background: #f0fdf4; padding: 15px; border-radius: 12px; border: 1px solid #bbf7d0;">
+                <div>
+                    <label style="color: #166534; margin: 0 0 4px 0; font-weight: 800; font-size: 13px; display: flex; align-items: center; gap: 6px;">
+                        🔄📦 Aktualizovať stav na sklade
+                    </label>
+                    <span style="font-size: 10px; color: #15803d; font-weight: 700;">✅ Zvolené položky sa naskladnia.</span>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="chk-prijem-sklad" {% if original.prijat_na_sklad != False %}checked{% endif %}>
+                    <span class="slider" style="background-color: #86efac;"></span>
+                </label>
+            </div>
+            <style>#chk-prijem-sklad:checked + .slider { background-color: #10b981 !important; }</style>
+        </div>
+
+        <!-- 📲 NOTIFIKÁCIE -->
+        <div class="form-group" style="background: #f8fafc; padding: 15px; border-radius: 16px; border: 1px solid #e2e8f0; margin-bottom: 25px;">
+            <label style="color: var(--slate-900); font-size: 13px; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; font-weight: 800;">
+                <span style="font-size: 16px;">📲</span> Notifikácie o príjme
+            </label>
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px dashed #e2e8f0;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="background: #e0f2fe; color: #0284c7; width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px;">✈️</div>
+                    <div>
+                        <div style="font-size: 12px; font-weight: 800; color: #0f172a;">Telegram Bot</div>
+                        <div style="font-size: 10px; font-weight: 600; color: #64748b;">Informovať o dokončení naskladnenia</div>
+                    </div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="chk-notif-tg" {% if original.notif_prijem_tg != False %}checked{% endif %}>
+                    <span class="slider" style="background-color: #cbd5e1;"></span>
+                </label>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="background: #f3e8ff; color: #7e22ce; width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px;">✉️</div>
+                    <div>
+                        <div style="font-size: 12px; font-weight: 800; color: #0f172a;">E-mail</div>
+                        <div style="font-size: 10px; font-weight: 600; color: #64748b;">Poslať detailný rozpis na e-mail</div>
+                    </div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="chk-notif-mail" {% if original.notif_prijem_mail != False %}checked{% endif %}>
+                    <span class="slider" style="background-color: #cbd5e1;"></span>
+                </label>
+            </div>
+            
+            <style>
+                #chk-notif-tg:checked + .slider { background-color: #10b981 !important; }
+                #chk-notif-mail:checked + .slider { background-color: #8b5cf6 !important; }
+            </style>
+        </div>
+
+        <button id="btn-uloz-nastavenia" class="btn btn-save">
+            💾 Uložiť naskladnenie
+        </button>
+    </div>
+
+    <!-- 📄 PRAVÝ PANEL: TABUĽKA POLOŽIEK -->
+    <div class="panel">
+        <div class="panel-header" style="border-bottom: none;">
+            <span>📋 Zoznam vyťažených položiek</span>
+            <button id="btn-hromadne-naskladnit" class="btn btn-bulk">
+                ⚡ SPRACOVAŤ A ZAEVIDOVAŤ
+            </button>
+        </div>
+
+        <div class="table-responsive">
+            <table class="items-table" id="polozky-table">
+                <thead>
+                <tr>
+                    <th style="width: 5%; text-align: center;"><input type="checkbox" id="chk-all" class="vivid-checkbox"></th>
+                    <th style="width: 35%;">🏷️ Kód / Názov / AI Popis</th>
+                    <th style="width: 15%; text-align: center;">📊 Kategória</th>
+                    <th style="width: 10%; text-align: center;">🔢 Množstvo</th>
+                    <th style="width: 10%; text-align: right;">💰 Nákup</th>
+                    <th style="width: 10%; text-align: center;">📊 Status</th>
+                </tr>
+            </thead>
+            <tbody id="tbody-polozky">
+                <!-- Javascript sem vloží vyťažené položky -->
+            </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+{{ original.id|json_script:"faktura_id_data" }}
+{{ original.mena|default:''|json_script:"mena_dokladu_data" }}
+{{ polozky_json|json_script:"polozky_data" }}
+{{ js_category_emojis|json_script:"emoji_map_data" }}
+
+<script>
+$(document).ready(function() {
+    
+    // --- 📥 INICIALIZÁCIA PREMENNÝCH A DÁT Z BACKENDU ---
+    const csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
+    const CSRF_TOKEN = csrfInput ? csrfInput.value : '';
+    const FAKTURA_ID = String(JSON.parse(document.getElementById('faktura_id_data')?.textContent || 'null') ?? '');
+    const MENA_DOKLADU = String(JSON.parse(document.getElementById('mena_dokladu_data')?.textContent || '""') || '');
+    const API_URL = "{% url 'admin:Evidencia_prichodziafaktura_changelist' %}";
+    
+    let polozkyData = [];
+    try {
+        let rawPolozky = JSON.parse(document.getElementById('polozky_data')?.textContent || '[]');
+        polozkyData = typeof rawPolozky === 'string' ? JSON.parse(rawPolozky || '[]') : (rawPolozky || []);
+    } catch (e) {
+        console.error("ISAS Core: Chyba pri načítaní položiek:", e);
+        polozkyData = [];
+    }
+
+    let EMOJI_MAP = {};
+    try {
+        let rawEmojiMap = JSON.parse(document.getElementById('emoji_map_data')?.textContent || '{}');
+        EMOJI_MAP = typeof rawEmojiMap === 'string' ? JSON.parse(rawEmojiMap || '{}') : (rawEmojiMap || {});
+    } catch (e) {
+        console.error("ISAS Core: Chyba pri načítaní mapovania kategórií:", e);
+        EMOJI_MAP = {};
+    }
+
+    // --- 🛡️ POMOCNÉ SANITIZAČNÉ FUNKCIE ---
+    const escapeHTML = (str) => {
+        if (!str) return '';
+        return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+    };
+    const cleanVal = (val) => (val === null || val === undefined || val === 'None' || val === 'null' || String(val).trim() === '') ? null : val;
+
+    // --- 🎨 RENDER TABUĽKY ---
+    function renderTable() {
+        const tbody = $('#tbody-polozky');
+        tbody.empty();
+
+        if (polozkyData.length === 0) {
+            tbody.append('<tr><td colspan="6" style="text-align:center; padding: 30px; color: #64748b; font-weight: 800;">🚫 Žiadne položky na naskladnenie. Vyskúšajte spustiť AI vyťaženie. 🤖</td></tr>');
+            return;
+        }
+
+        polozkyData.forEach(p => {
+            let rowClass = '';
+            let chkHtml = '';
+            let statusHtml = '';
+
+            let safeId = escapeHTML(cleanVal(p.id)) || '';
+
+            // STATUS A CHECKBOX LOGIKA
+            if (p.uspesne) {
+                rowClass = 'row-success';
+                chkHtml = '✅';
+                statusHtml = '<span class="badge badge-success">✓ V SKLADE 📦</span>';
+            } 
+            else if (p.je_sluzba) {
+                rowClass = 'row-service';
+                chkHtml = '<span style="color:#cbd5e1;">—</span>';
+                statusHtml = '<div style="display: flex; flex-direction: column; gap: 4px; align-items: center;"><span class="badge badge-service">ℹ️ Služba</span><span style="color:#94a3b8; font-size:10px; font-weight:800;">🚫 Nenaskladňuje sa</span></div>';
+            } 
+            else {
+                chkHtml = `<input type="checkbox" class="vivid-checkbox row-chk" value="${safeId}">`;
+                if (p.v_db) {
+                    statusHtml = '<span class="badge badge-db">✓ EVIDOVANÉ V DB 💾</span>';
+                } else {
+                    statusHtml = '<span class="badge badge-new">✨ NOVÁ POLOŽKA</span>';
+                }
+            }
+
+            // 🧠 ISAS KASKÁDOVÁ KATEGÓRIA (Sanitizácia)
+            let hlavnaKat = escapeHTML(cleanVal(p.hlavna_kategoria)) || 'Nezaradené';
+            let podKat = escapeHTML(cleanVal(p.kategoria)) || 'Neznáma';
+            
+            let mainEmoji = '📂';
+            if (p.hlavna_kategoria && EMOJI_MAP[p.hlavna_kategoria]) {
+                mainEmoji = escapeHTML(EMOJI_MAP[p.hlavna_kategoria].split(' ')[0]);
+            } else if (p.je_sluzba) {
+                mainEmoji = '🛠️';
+            }
+
+            let katDisplay = `
+                <div style="font-weight: 900; color: var(--slate-900); font-size: 12px; white-space: nowrap;">${mainEmoji} ${hlavnaKat}</div>
+                <div style="font-weight: 700; color: var(--slate-500); font-size: 10px; margin-top: 2px; white-space: nowrap;">${podKat}</div>
+            `;
+
+            let cleanKod = escapeHTML(cleanVal(p.kod)) || '—';
+            let cleanNazov = escapeHTML(cleanVal(p.nazov)) || 'Bez názvu';
+            let cleanEan = escapeHTML(cleanVal(p.ean));
+            let cleanSku = escapeHTML(cleanVal(p.katalogove_cislo));
+            let cleanVyrobca = escapeHTML(cleanVal(p.vyrobca));
+            let cleanPopis = escapeHTML(cleanVal(p.popis));
+            let safeMnozstvo = escapeHTML(cleanVal(p.mnozstvo)) || '0';
+            let safeMernaJednotka = escapeHTML(cleanVal(p.merna_jednotka)) || 'ks';
+            let safeCena = (Number(p.cena) || 0).toFixed(2);
+            let safeDph = Number(p.dph) || 0;
+            let safeMena = escapeHTML(cleanVal(p.mena)) || MENA_DOKLADU;
+            let displayMena = safeMena ? ` ${safeMena}` : '';
+
+            // VIZUÁL NÁZVU
+            let nazovHtml = `
+                <div style="font-weight: 900; color: var(--slate-900); font-size: 14px;">${cleanKod}</div>
+                <div style="font-weight: 700; color: var(--slate-500); font-size: 12px; margin-top: 2px;">${cleanNazov}</div>
+            `;
+            
+            // 🚀 ISAS ARCHITECT FIX: Zobrazenie EAN a SKU pod názvom (bez None)
+            let extraBadges = '';
+            if (cleanEan) extraBadges += `<span style="background:#f1f5f9; border:1px solid #cbd5e1; padding:2px 6px; border-radius:4px; font-size:9px; color:#475569; margin-right:4px;">🔣 EAN: ${cleanEan}</span>`;
+            if (cleanSku) extraBadges += `<span style="background:#f0fdf4; border:1px solid #bbf7d0; padding:2px 6px; border-radius:4px; font-size:9px; color:#166534;">🏷️ SKU: ${cleanSku}</span>`;
+            if (extraBadges) nazovHtml += `<div style="margin-top: 6px;">${extraBadges}</div>`;
+
+            if (cleanVyrobca || cleanPopis || p.typ_on) {
+                let aiBadge = p.typ_on === 'O' ? '<span style="color: #059669;">(Originál 💎)</span>' : (p.typ_on === 'N' ? '<span style="color: #ea580c;">(Náhrada 🔄)</span>' : '');
+                let vyrobcaHtml = cleanVyrobca ? `🏭 ${cleanVyrobca}` : '';
+                
+                // Ošetrenie pomlčky, aby tam nevisela vo vzduchu, ak chýba výrobca aj AI badge
+                let popisHtml = cleanPopis ? (cleanVyrobca || aiBadge ? ` - ${cleanPopis}` : cleanPopis) : '';
+                
+                if (vyrobcaHtml || aiBadge || popisHtml) {
+                    nazovHtml += `<div style="font-size: 10px; color: #94a3b8; font-weight: 600; margin-top: 4px; padding-top: 4px; border-top: 1px dashed #e2e8f0;">${vyrobcaHtml} ${aiBadge}${popisHtml}</div>`;
+                }
+            }
+
+            // 🟢 VYKRESLENIE BEZ ZBYTOČNÉHO 7. STĹPCA (Pridaná Merná jednotka a DPH)
+            let tr = `
+                <tr class="${rowClass}" id="row-${safeId}">
+                    <td style="text-align: center;">${chkHtml}</td>
+                    <td>${nazovHtml}</td>
+                    <td style="text-align: left; vertical-align: middle;">${katDisplay}</td>
+                    <td style="text-align: center;">
+                        <div style="font-weight: 900; font-size: 15px; color: var(--primary);">${safeMnozstvo}</div>
+                        <div style="font-size: 10px; font-weight: 800; color: var(--slate-500); text-transform: uppercase;">${safeMernaJednotka}</div>
+                    </td>
+                    <td style="text-align: right;">
+                        <div style="font-weight: 800; color: var(--slate-900);">${safeCena}${displayMena}</div>
+                        <div style="font-size: 9px; font-weight: 700; color: #94a3b8;">DPH: ${safeDph}%</div>
+                    </td>
+                    <td style="text-align: center;">${statusHtml}</td>
+                </tr>
+            `;
+            tbody.append(tr);
+        });
+    }
+
+    renderTable();
+
+    // --- 🎛️ INICIALIZÁCIA UI PRVKOV ---
+    $('.select2-main').select2({ 
+        width: '100%', 
+        language: { noResults: function() { return "🚫 Žiadne výsledky"; } }
+    });
+
+    // Hromadný checkbox Logic
+    $('#chk-all').on('change', function() {
+        $('.row-chk').prop('checked', $(this).is(':checked'));
+    });
+
+    // --- ⚡ API EXECUTOR ---
+    function sendApiRequest(payload, btnElement, loadingText) {
+        window.ISASAction(payload, btnElement[0], {
+            url: API_URL,
+            loadingText: `⏳ ${loadingText}`,
+            reload: false,
+            onComplete: (data, btn, origHtml) => {
+                if (data.status === 'success') {
+                    showISASToast(data.message || "Operácia úspešne dokončená.", '✅', 'success');
+
+                    if (payload.action === 'naskladni_polozky') {
+                        payload.polozky_ids.forEach(id => {
+                            let item = polozkyData.find(p => p.id == id);
+                            if(item) item.uspesne = true;
+                        });
+                        renderTable();
+
+                        if (data.kompletne) {
+                            window.ISASModalEngine({
+                                maxWidth: "450px",
+                                icon: "📦",
+                                title: "Kompletne Naskladnené!",
+                                text: "Všetky položky boli úspešne spracované a notifikácie odoslané. 🚀",
+                                showClose: false,
+                                showCloseX: false,
+                                buttons: [{
+                                    id: "btn-naskladnene-redirect",
+                                    text: "Rozumiem",
+                                    style: "background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; padding: 12px 30px; border-radius: 10px; font-size: 14px; font-weight: 800; cursor: pointer; width: 100%; text-transform: uppercase; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);",
+                                    onClick: () => { window.location.href = "/admin/Evidencia/prichodziafaktura/"; }
+                                }]
+                            });
+                        }
+                    }
+                } else {
+                    window.showGlobalAlertModal('Chyba', data.message || 'Nastala neočakávaná chyba.', 'error');
+                }
+                btn.innerHTML = origHtml;
+                btn.classList.remove('is-processing');
+                btn.style.pointerEvents = 'auto';
+                $('#chk-all').prop('checked', false);
+            },
+            onError: () => {
+                showISASToast("Chyba spojenia so serverom. Skontrolujte pripojenie.", "🔌", "error");
+                $('#chk-all').prop('checked', false);
+            }
+        });
+    }
+
+    // --- 💾 ULOŽENIE NASTAVENÍ ---
+    $('#btn-uloz-nastavenia').on('click', function(e) {
+        e.preventDefault();
+        let payload = {
+            action: 'uloz_nastavenia_naskladnenia',
+            selected_ids: [FAKTURA_ID],
+            cielovy_sklad: $('#sel-zdrojovy-sklad').val(),
+            prijat_na_sklad: $('#chk-prijem-sklad').is(':checked'),
+            notif_prijem_tg: $('#chk-notif-tg').is(':checked'),
+            notif_prijem_mail: $('#chk-notif-mail').is(':checked')
+        };
+        sendApiRequest(payload, $(this), 'Ukladám...');
+    });
+
+    // --- 📦 HROMADNÉ NASKLADNENIE ---
+    $('#btn-hromadne-naskladnit').on('click', function(e) {
+        e.preventDefault();
+        let ids = [];
+        $('.row-chk:checked').each(function() { ids.push($(this).val()); });
+
+        if (ids.length === 0) {
+            showISASToast("Zaškrtnite aspoň jednu položku pre naskladnenie.", "📭", "warning");
+            return;
+        }
+        
+        let payload = { action: 'naskladni_polozky', selected_ids: [FAKTURA_ID], polozky_ids: ids };
+        sendApiRequest(payload, $(this), 'Naskladňujem...');
+    });
+
+});
+</script>
+{% endblock %}

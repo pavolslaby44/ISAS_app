@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="sk" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    {% if canonical_url %}<link rel="canonical" href="{{ canonical_url }}">{% endif %}
+    <title>{{ industry_terms.pas_title|default:"Digitálny Pas Zariadenia" }} | {{ zariadenie.vyrobne_cislo }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: { brand: '{{ nastavenia.hlavna_farba|default:"#0f172a" }}' }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans antialiased min-h-screen flex flex-col">
+
+    <!-- Hlavička -->
+    <nav class="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-50">
+        <div class="max-w-3xl mx-auto px-6 py-4 flex justify-between items-center gap-3">
+            <a href="{% url 'webbuilder:home' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="flex items-center">
+                {% if nastavenia.logo and nastavenia.logo.name %}
+                    <img src="{{ nastavenia.logo.url }}" alt="{{ identita.nazov_spolocnosti|default:'Logo' }}" class="h-8 object-contain">
+                {% elif identita.logo and identita.logo.name %}
+                    <img src="{{ identita.logo.url }}" alt="{{ identita.nazov_spolocnosti|default:'Logo' }}" class="h-8 object-contain">
+                {% else %}
+                    <span class="text-xl font-extrabold text-brand">{{ identita.nazov_spolocnosti|default:"Servisné Stredisko" }}</span>
+                {% endif %}
+            </a>
+            <div class="flex items-center gap-2">
+                {% if identita.email_vseobecny %}
+                    <a href="mailto:{{ identita.email_vseobecny }}" class="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold text-gray-700 bg-gray-50 border border-gray-200 px-3 py-1.5 rounded-full hover:bg-gray-100 transition" title="E-mail na dispečing">
+                        <span>✉️</span> {{ identita.email_vseobecny }}
+                    </a>
+                {% endif %}
+                {% if identita.telefon %}
+                    <a href="tel:{{ identita.telefon|cut:' '|cut:'/' }}" class="inline-flex items-center gap-1.5 text-xs font-bold text-red-600 bg-red-50 border border-red-200 px-3 py-1.5 rounded-full hover:bg-red-100 transition">
+                        <span>🚨 Hotline:</span> {{ identita.telefon }}
+                    </a>
+                {% endif %}
+                <span class="bg-brand/10 text-brand text-xs font-bold px-3 py-1 rounded-full">{{ industry_terms.pas_title|default:"Digitálny Pas" }}</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hlavný obsah -->
+    <main class="flex-grow max-w-3xl mx-auto w-full px-4 py-8">
+        
+        <!-- Karta stroja -->
+        <div class="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden mb-8">
+            <div class="bg-gray-900 text-white p-6 text-center relative overflow-hidden">
+                {% if zariadenie.obrazok_na_webe and zariadenie.obrazok_na_webe.name %}
+                    <div class="absolute inset-0 bg-cover bg-center opacity-15" style="background-image: url('{{ zariadenie.obrazok_na_webe.url }}');"></div>
+                {% endif %}
+                <div class="absolute top-0 right-0 opacity-10 text-9xl transform translate-x-4 -translate-y-4">⚙️</div>
+                <div class="flex flex-wrap justify-center gap-2 mb-2 relative z-10">
+                    {% if zariadenie.v_servisnom_rezime %}
+                        <span class="inline-block bg-amber-500/20 text-amber-300 border border-amber-400/30 text-xs font-bold px-3 py-1 rounded-full">🛠️ {{ industry_terms.servisny_rezim_title|default:"Zariadenie v servisnom režime" }}</span>
+                    {% endif %}
+                    {% if zariadenie.v_prenajme_od_isas %}
+                        <span class="inline-block bg-blue-500/20 text-blue-300 border border-blue-400/30 text-xs font-bold px-3 py-1 rounded-full">🤝 V prenájme</span>
+                    {% elif zariadenie.je_urcene_na_prenajom %}
+                        {% if zariadenie.zobrazit_na_webe_prenajom and zariadenie.slug %}
+                            <a href="{% url 'webbuilder:rental_detail' zariadenie.slug %}{% if is_preview %}?preview=ai_draft{% endif %}" class="inline-block bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-400/30 text-xs font-bold px-3 py-1 rounded-full transition" title="{{ industry_terms.rental_detail_label|default:'Zobraziť kartu v požičovni' }}">{{ industry_terms.rental_fallback_icon|default:"⚙️" }} Rental flotila{% if zariadenie.cena_prenajmu_na_den and zariadenie.cena_prenajmu_na_den > 0 %} ({{ zariadenie.cena_prenajmu_na_den }} {{ mena }}/deň){% else %} (Cena na vyžiadanie){% endif %} ↗</a>
+                        {% else %}
+                            <span class="inline-block bg-purple-500/20 text-purple-300 border border-purple-400/30 text-xs font-bold px-3 py-1 rounded-full">{{ industry_terms.rental_fallback_icon|default:"⚙️" }} Rental flotila{% if zariadenie.cena_prenajmu_na_den and zariadenie.cena_prenajmu_na_den > 0 %} ({{ zariadenie.cena_prenajmu_na_den }} {{ mena }}/deň){% else %} (Cena na vyžiadanie){% endif %}</span>
+                        {% endif %}
+                    {% endif %}
+                    {% if zariadenie.iot_je_aktivny %}
+                        {% if aktivne_alarmy %}
+                            <span class="inline-block bg-red-500/20 text-red-300 border border-red-400/30 text-xs font-bold px-3 py-1 rounded-full animate-pulse">🚨 Detekovaná porucha ({{ aktivne_alarmy|length }})</span>
+                        {% else %}
+                            <span class="inline-block bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-xs font-bold px-3 py-1 rounded-full">📡 IoT: Všetky systémy v norme</span>
+                        {% endif %}
+                    {% endif %}
+                </div>
+                <div class="flex items-center justify-center gap-3 relative z-10">
+                    {% if je_opravneny_personal and zariadenie.vyrobca and zariadenie.vyrobca.logo_na_webe and zariadenie.vyrobca.logo_na_webe.name %}
+                        <img src="{{ zariadenie.vyrobca.logo_na_webe.url }}" alt="{{ zariadenie.vyrobca.nazov_vyrobcu }}" class="h-8 max-w-[120px] object-contain bg-white/10 p-1 rounded-lg backdrop-blur-sm">
+                    {% endif %}
+                    <h1 class="text-2xl font-extrabold">
+                        {% if je_opravneny_personal and zariadenie.vyrobca %}{{ zariadenie.vyrobca.nazov_vyrobcu }} {% endif %}{{ zariadenie.model_zariadenia|default:zariadenie.nazov|default:"Zariadenie" }}
+                    </h1>
+                </div>
+                {% if zariadenie.nazov %}
+                    <p class="text-sm font-semibold text-gray-300 relative z-10 mt-0.5">{{ industry_terms.stanoviste|default:"Stanovište" }}: {{ zariadenie.nazov }}</p>
+                {% endif %}
+                <div class="flex items-center justify-center gap-2 mt-1 relative z-10">
+                    <p class="text-gray-400 font-mono">SN: {{ zariadenie.vyrobne_cislo }}{% if zariadenie.kategoria %} &bull; <span class="px-2 py-0.5 rounded-md font-sans text-xs font-bold {% if not kategoria_farba %}text-gray-300 bg-white/10{% endif %}" {% if kategoria_farba %}style="background-color: {{ kategoria_farba }}33; color: {{ kategoria_farba }}; border: 1px solid {{ kategoria_farba }}66;"{% endif %}>{{ zariadenie.get_kategoria_display }}</span>{% endif %}</p>
+                    {% if zariadenie.obrazok_na_webe and zariadenie.obrazok_na_webe.name %}
+                        <a href="{{ zariadenie.obrazok_na_webe.url }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-[11px] font-bold text-gray-300 hover:text-white bg-white/10 hover:bg-white/20 border border-white/20 rounded-full px-2.5 py-0.5 transition" title="Zobraziť fotografiu zariadenia">
+                            <span>📸 Foto zariadenia</span>
+                        </a>
+                    {% endif %}
+                    {% if zariadenie.qr_kod and zariadenie.qr_kod.name %}
+                        <button type="button" onclick="document.getElementById('qrModal').classList.remove('hidden')" class="inline-flex items-center gap-1 text-[11px] font-bold text-gray-300 hover:text-white bg-white/10 hover:bg-white/20 border border-white/20 rounded-full px-2.5 py-0.5 transition" title="Zobraziť a vytlačiť QR servisný štítok">
+                            <span>🖨️ QR Štítok</span>
+                        </button>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="p-6 grid grid-cols-2 sm:grid-cols-3 gap-4">
+                <div class="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                    <p class="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">Prevádzka / Zákazník</p>
+                    <p class="font-semibold text-gray-900">
+                        {% if zariadenie.zakaznik and not zariadenie.zakaznik.je_interny_profil %}
+                            {% if je_vlastnik_stroja or je_opravneny_personal %}
+                                {{ zariadenie.zakaznik.Nazov_spolocnosti }}{% if zariadenie.zakaznik.ulica_a_cislo or zariadenie.zakaznik.mesto %} &bull; {% if zariadenie.zakaznik.ulica_a_cislo %}{{ zariadenie.zakaznik.ulica_a_cislo }}, {% endif %}{% if zariadenie.zakaznik.psc %}{{ zariadenie.zakaznik.psc }} {% endif %}{{ zariadenie.zakaznik.mesto }}{% endif %}
+                            {% elif zariadenie.zakaznik.zobrazit_ako_referenciu %}
+                                {{ zariadenie.zakaznik.Nazov_spolocnosti }}{% if zariadenie.zakaznik.mesto %} &bull; {% if zariadenie.zakaznik.psc %}{{ zariadenie.zakaznik.psc }} {% endif %}{{ zariadenie.zakaznik.mesto }}{% endif %}
+                            {% else %}
+                                Privátna prevádzka klienta
+                            {% endif %}
+                        {% else %}
+                            Centrálna flotila
+                        {% endif %}
+                    </p>
+                    {% if zariadenie.zakaznik and not zariadenie.zakaznik.je_interny_profil %}
+                        {% if je_vlastnik_stroja or je_opravneny_personal %}
+                            {% if zariadenie.zakaznik.kontaktna_osoba or zariadenie.zakaznik.telefon or zariadenie.zakaznik.email or zariadenie.zakaznik.lat and zariadenie.zakaznik.lon %}
+                                <p class="text-xs text-gray-500 mt-0.5 truncate">
+                                    {% if zariadenie.zakaznik.kontaktna_osoba %}<span title="{{ zariadenie.zakaznik.kontaktna_osoba }}">👤 {{ zariadenie.zakaznik.kontaktna_osoba }}</span>{% endif %}
+                                    {% if zariadenie.zakaznik.telefon %}{% if zariadenie.zakaznik.kontaktna_osoba %} &bull; {% endif %}<a href="tel:{{ zariadenie.zakaznik.telefon|cut:' '|cut:'/' }}" class="hover:underline">📞 {{ zariadenie.zakaznik.telefon }}</a>{% endif %}
+                                    {% if zariadenie.zakaznik.email %}{% if zariadenie.zakaznik.kontaktna_osoba or zariadenie.zakaznik.telefon %} &bull; {% endif %}<a href="mailto:{{ zariadenie.zakaznik.email }}" class="hover:underline">✉️ {{ zariadenie.zakaznik.email }}</a>{% endif %}
+                                    {% if zariadenie.zakaznik.lat and zariadenie.zakaznik.lon %}{% if zariadenie.zakaznik.kontaktna_osoba or zariadenie.zakaznik.telefon or zariadenie.zakaznik.email %} &bull; {% endif %}<a href="https://www.google.com/maps/search/?api=1&query={{ zariadenie.zakaznik.lat }},{{ zariadenie.zakaznik.lon }}" target="_blank" rel="noopener noreferrer" class="text-brand font-bold hover:underline" title="Otvoriť navigáciu k zákazníkovi">🗺️ GPS</a>{% endif %}
+                                </p>
+                            {% endif %}
+                        {% endif %}
+                    {% endif %}
+                </div>
+                <div class="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                    <p class="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">{{ industry_terms.umiestnenie|default:"Umiestnenie" }}</p>
+                    <p class="font-semibold text-gray-900">{{ zariadenie.umiestnenie|default:"Nezadané" }}</p>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                    <p class="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">{{ industry_terms.zaruka|default:"Záruka" }}</p>
+                    <p class="font-semibold {% if zariadenie.je_v_zaruke %}text-emerald-600{% else %}text-gray-900{% endif %}">
+                        {% if zariadenie.predlzena_zaruka_do and dnes and zariadenie.predlzena_zaruka_do >= dnes %}
+                            Predĺžená záruka (do {{ zariadenie.predlzena_zaruka_do|date:"d.m.Y" }})
+                        {% elif zariadenie.zaruka_do and dnes and zariadenie.zaruka_do >= dnes %}
+                            V záruke (do {{ zariadenie.zaruka_do|date:"d.m.Y" }})
+                        {% elif zariadenie.predlzena_zaruka_do %}
+                            Po záruke (skončila {{ zariadenie.predlzena_zaruka_do|date:"d.m.Y" }})
+                        {% elif zariadenie.zaruka_do %}
+                            Po záruke (skončila {{ zariadenie.zaruka_do|date:"d.m.Y" }})
+                        {% else %}
+                            Neuvedené
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                    <p class="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">{{ industry_terms.rok_vyroby|default:"Rok výroby" }}{% if zariadenie.datum_instalacie %} / Spustenie{% endif %}</p>
+                    <p class="font-semibold text-gray-900">{{ zariadenie.rok_vyroby|default:"-" }}{% if zariadenie.datum_instalacie %} (spustené: {{ zariadenie.datum_instalacie|date:"d.m.Y" }}){% endif %}</p>
+                </div>
+                {% if zariadenie.hmotnost_kg %}
+                <div class="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                    <p class="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">{{ industry_terms.hmotnost|default:"Hmotnosť" }}</p>
+                    <p class="font-semibold text-gray-900">{{ zariadenie.hmotnost_kg }} {{ industry_terms.hmotnost_jednotka }}</p>
+                </div>
+                {% endif %}
+                <div class="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                    <p class="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">{{ zariadenie.meter_label }}</p>
+                    <p class="font-semibold text-gray-900">{{ zariadenie.meter_display }}</p>
+                    {% if zariadenie.posledna_aktualizacia_stavu %}
+                        <p class="text-[10px] text-gray-400 mt-1 font-mono">K: {{ zariadenie.posledna_aktualizacia_stavu|date:"d.m.Y H:i" }}</p>
+                    {% endif %}
+                </div>
+                {% if zariadenie.motohodiny_v_zatazi and zariadenie.motohodiny_v_zatazi > 0 %}
+                <div class="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                    <p class="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">{{ zariadenie.meter_load_label }}</p>
+                    <p class="font-semibold text-gray-900">{{ zariadenie.meter_load_display }}</p>
+                    {% if zariadenie.aktualne_motohodiny and zariadenie.aktualne_motohodiny > 0 and zariadenie.motohodiny_v_zatazi <= zariadenie.aktualne_motohodiny %}
+                        <p class="text-[10px] text-gray-500 mt-1 font-semibold">{{ industry_terms.zataz_pomer_label|default:"Záťaž" }}: {% widthratio zariadenie.motohodiny_v_zatazi zariadenie.aktualne_motohodiny 100 %}%</p>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+            {% if zariadenie.poznamka %}
+                {% if je_vlastnik_stroja or je_opravneny_personal %}
+                    <div class="px-6 pb-6 pt-0">
+                        <div class="bg-blue-50/70 border border-blue-100 rounded-2xl p-3.5 text-xs text-blue-900">
+                            <span class="font-bold">📝 Prevádzkové špecifiká zariadenia:</span> {{ zariadenie.poznamka }}
+                        </div>
+                    </div>
+                {% endif %}
+            {% endif %}
+        </div>
+
+        <!-- Aktívne IoT Alarmy (Čierna skrinka) -->
+        {% if aktivne_alarmy %}
+        <div class="bg-red-50 border-2 border-red-200 rounded-3xl p-5 mb-8 shadow-sm">
+            <div class="flex items-center gap-2 mb-3">
+                <span class="text-xl">🚨</span>
+                <h3 class="text-xs font-extrabold text-red-900 uppercase tracking-wider">Aktívne výstrahy z riadiacej jednotky zariadenia</h3>
+            </div>
+            <div class="space-y-2">
+                {% for alarm in aktivne_alarmy %}
+                    <div class="bg-white p-3.5 rounded-2xl border border-red-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-xs">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="font-mono font-bold text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded-md">{{ alarm.kod_chyby|default:"ALARM" }}</span>
+                                <span class="text-xs text-gray-400 font-mono">{{ alarm.casova_peciatka|date:"d.m.Y H:i" }}</span>
+                                <span class="text-[11px] font-semibold {% if alarm.zavaznost == 'CRITICAL' %}text-red-600{% else %}text-amber-600{% endif %}">{{ alarm.get_zavaznost_display }}</span>
+                            </div>
+                            <p class="text-xs font-medium text-gray-800 mt-1">{{ alarm.popis }}</p>
+                        </div>
+                        <button type="button" onclick="predvyplnitAlarm('Porucha [{{ alarm.kod_chyby|default:"ALARM" }}]: {{ alarm.popis|escapejs }} (zistené: {{ alarm.casova_peciatka|date:"d.m.Y H:i" }})')" class="self-start sm:self-center text-xs font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl px-3 py-1.5 transition">
+                            Riešiť túto poruchu ↘
+                        </button>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Živá IoT Telemetria senzorov -->
+        {% if live_telemetria or live_diagnostika %}
+        <div class="bg-white rounded-3xl shadow-sm border border-emerald-100 p-6 mb-8 relative overflow-hidden">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-2">
+                    <span class="relative flex h-2.5 w-2.5">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                    </span>
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-gray-700">Živé prevádzkové dáta senzorov (Live IoT)</h3>
+                </div>
+                {% if posledna_telemetria_cas %}
+                    <span class="text-[10px] font-mono text-gray-400">Prijaté: {{ posledna_telemetria_cas|date:"d.m.Y H:i:s" }}</span>
+                {% endif %}
+            </div>
+            {% if live_diagnostika %}
+                <div class="mb-4 space-y-2">
+                    {% for diag in live_diagnostika %}
+                        <div class="p-3 rounded-2xl border text-xs flex items-center justify-between {% if diag.farba == 'red' or diag.alarm_zavaznost == 'CRITICAL' %}bg-red-50 border-red-200 text-red-900{% elif diag.farba == 'orange' or diag.alarm_zavaznost == 'WARNING' %}bg-amber-50 border-amber-200 text-amber-900{% else %}bg-emerald-50 border-emerald-200 text-emerald-900{% endif %}">
+                            <span class="font-bold flex items-center gap-1.5">
+                                <span>{{ diag.ikona|default:"🧠" }}</span>
+                                <span>{{ diag.nazov }}</span>
+                            </span>
+                            <span class="font-mono font-extrabold">{{ diag.hodnota|default:"—" }}</span>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {% for senzor in live_telemetria %}
+                    <div class="bg-slate-50/80 p-3 rounded-2xl border border-slate-100 flex flex-col justify-between">
+                        <span class="text-xs text-gray-500 block mb-1 truncate" title="{{ senzor.nazov }}">{{ senzor.nazov }}</span>
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-xs">{{ senzor.ikona }}</span>
+                            <span class="font-mono font-extrabold text-sm {% if senzor.typ == 'DIGITAL' and senzor.je_aktivny %}text-emerald-700{% elif senzor.typ == 'DIGITAL' %}text-gray-400{% else %}text-gray-900{% endif %}">
+                                {{ senzor.hodnota }}
+                            </span>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Technické parametre odvetvia -->
+        {% if zariadenie.ui_parametre %}
+        <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 mb-8">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-gray-500 mb-4">Technické parametre zariadenia</h3>
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {% for param in zariadenie.ui_parametre %}
+                    <div class="bg-gray-50 p-3 rounded-2xl border border-gray-100">
+                        <span class="text-xs text-gray-500 block mb-0.5">{{ param.nazov }}</span>
+                        <span class="font-bold text-gray-900 text-sm">{{ param.hodnota }}</span>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- 🛡️ INTERNÝ TECHNICKÝ PANEL (Striktne prístupný výhradne pre personál a superadmina - Zero Data Leak) -->
+        {% if je_opravneny_personal %}
+        <div class="bg-amber-50/50 rounded-3xl shadow-sm border-2 border-amber-300 p-6 mb-8">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-2">
+                    <span class="text-base">🔒</span>
+                    <h3 class="text-xs font-extrabold uppercase tracking-wider text-amber-900">Interná servisná zóna technika</h3>
+                </div>
+                <span class="text-[10px] font-bold bg-amber-200 text-amber-900 px-2.5 py-0.5 rounded-full">Len zamestnanci</span>
+            </div>
+
+            {% if zariadenie.zakaznik.telefon_vratnica %}
+                <div class="bg-white p-3 rounded-2xl border border-amber-200 mb-4 text-xs flex items-center justify-between">
+                    <span class="text-gray-600 font-medium">Dispečing / Vrátnica areálu (napr. otvorenie rampy):</span>
+                    <a href="tel:{{ zariadenie.zakaznik.telefon_vratnica|cut:' '|cut:'/' }}" class="text-amber-800 font-bold hover:underline">📞 {{ zariadenie.zakaznik.telefon_vratnica }}</a>
+                </div>
+            {% endif %}
+
+            <!-- Aktívne dispečerské úlohy pre technika -->
+            {% if aktivne_ulohy %}
+                <div class="bg-white p-4 rounded-2xl border border-amber-300 mb-4 text-xs">
+                    <p class="font-extrabold text-amber-950 mb-2 flex items-center gap-1.5">
+                        <span>📋</span> Aktívne výjazdové úlohy k tomuto zariadeniu (Dispečing):
+                    </p>
+                    <div class="space-y-2">
+                        {% for uloha in aktivne_ulohy %}
+                            <div class="p-3 bg-amber-50/80 rounded-xl border border-amber-200">
+                                <div class="flex items-center justify-between gap-2 mb-1">
+                                    <span class="font-bold text-gray-900">
+                                        Úloha #{{ uloha.id }} &bull; {% for t in uloha.typ_servisu.all %}{{ t.nazov }}{% if not forloop.last %}, {% endif %}{% empty %}Servisný výjazd{% endfor %}
+                                    </span>
+                                    {% if uloha.je_reklamacia %}
+                                        <span class="bg-red-100 text-red-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-red-300">⚠️ Reklamácia</span>
+                                    {% endif %}
+                                </div>
+                                <p class="text-gray-600 font-mono text-[11px]">
+                                    🕒 Termín: {{ uloha.zaciatok|date:"d.m.Y H:i" }}{% if uloha.koniec %} – {{ uloha.koniec|date:"H:i" }}{% endif %}
+                                </p>
+                                {% if uloha.technici.all %}
+                                    <p class="text-gray-600 text-[11px] mt-0.5">
+                                        👨‍🔧 Priradený tím: {% for tech in uloha.technici.all %}{{ tech.meno }} {{ tech.priezvisko }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                                    </p>
+                                {% endif %}
+                                {% if uloha.blizsie_informacie %}
+                                    <p class="text-amber-900 mt-1.5 p-2 bg-white rounded-lg border border-amber-200 font-sans leading-relaxed">
+                                        <span class="font-bold">📝 Inštrukcie:</span> {{ uloha.blizsie_informacie }}
+                                    </p>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Servisné predpisy a predpísané položky dielov -->
+            {% if servisne_predpisy %}
+                <div class="bg-white p-4 rounded-2xl border border-amber-200 mb-4 text-xs">
+                    <p class="font-bold text-amber-950 mb-2">📑 Servisné predpisy výrobcu a normované diely:</p>
+                    <div class="space-y-2">
+                        {% for predpis in servisne_predpisy %}
+                            <div class="p-2.5 bg-amber-50/60 rounded-xl border border-amber-100">
+                                <span class="font-bold text-gray-900 block mb-1">🛠️ {{ predpis.typ_prace.nazov }}</span>
+                                <div class="flex flex-wrap gap-1.5">
+                                    {% for pol in predpis.polozky.all %}
+                                        <span class="bg-white text-gray-800 font-mono text-[11px] px-2 py-0.5 rounded border border-amber-200">
+                                            {{ pol.mnozstvo }}x {% if pol.diel %}{{ pol.diel }}{% else %}{{ pol.content_type }}{% endif %}
+                                        </span>
+                                    {% empty %}
+                                        <span class="text-gray-400 italic text-[11px]">K tomuto úkonu nie sú definované skladové položky.</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Interná technická poznámka výrobcu a lokálna IoT sieť -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                {% if zariadenie.vyrobca %}
+                    <div class="bg-white p-3.5 rounded-2xl border border-amber-200">
+                        <span class="font-bold text-gray-900 block mb-1">🔒 Interné dodávateľské špecifiká – {{ zariadenie.vyrobca.nazov_vyrobcu }} (Obchodné tajomstvo):</span>
+                        {% if zariadenie.vyrobca.typ_vyroby %}<p class="text-gray-600 text-[11px] font-medium mb-0.5">⚙️ Typ dielov: {{ zariadenie.vyrobca.get_typ_vyroby_display }}</p>{% endif %}
+                        {% if zariadenie.vyrobca.krajina_povodu %}<p class="text-gray-600 text-[11px] font-medium mb-0.5">🌍 Krajina pôvodu: {{ zariadenie.vyrobca.krajina_povodu }}</p>{% endif %}
+                        {% if zariadenie.vyrobca.katalog_dielov_url %}
+                            <p class="mb-1"><a href="{{ zariadenie.vyrobca.katalog_dielov_url }}" target="_blank" rel="noopener noreferrer" class="text-sky-700 font-bold hover:underline text-[11px]">🛠️ Servisný katalóg náhradných dielov ↗</a></p>
+                        {% endif %}
+                        {% if zariadenie.vyrobca.domena %}
+                            <p class="mb-1"><a href="{% if '://' in zariadenie.vyrobca.domena %}{{ zariadenie.vyrobca.domena }}{% else %}https://{{ zariadenie.vyrobca.domena }}{% endif %}" target="_blank" rel="noopener noreferrer" class="text-sky-700 hover:underline text-[11px]">🌐 Portál výrobcu ↗</a></p>
+                        {% endif %}
+                        {% if zariadenie.vyrobca.technicka_poznamka %}<p class="text-gray-700 leading-relaxed mt-1 border-t border-amber-100 pt-1 text-[11px]">{{ zariadenie.vyrobca.technicka_poznamka }}</p>{% endif %}
+                    </div>
+                {% endif %}
+                {% if zariadenie.iot_ip_adresa or zariadenie.iot_protokol or zariadenie.iot_mac_adresa %}
+                    <div class="bg-white p-3.5 rounded-2xl border border-amber-200">
+                        <span class="font-bold text-gray-900 block mb-1">🔌 IoT Sieťové parametre zariadenia:</span>
+                        {% if zariadenie.iot_mac_adresa %}<p class="text-gray-700 font-mono">MAC: {{ zariadenie.iot_mac_adresa }}</p>{% endif %}
+                        {% if zariadenie.iot_ip_adresa %}<p class="text-gray-700 font-mono">IP: {{ zariadenie.iot_ip_adresa }}</p>{% endif %}
+                        {% if zariadenie.iot_protokol %}<p class="text-gray-700 font-mono">Protokol: {{ zariadenie.get_iot_protokol_display }}</p>{% endif %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Servisná história -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+            <!-- Posledný servis -->
+            <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="bg-emerald-100 text-emerald-600 p-2 rounded-xl">✅</div>
+                    <h3 class="font-bold text-gray-900">Posledný servis</h3>
+                </div>
+                {% if posledny_servis %}
+                    <p class="text-2xl font-extrabold text-gray-900">{{ posledny_servis.vytvorene|date:"d.m.Y" }} <span class="text-xs font-semibold text-gray-400 font-mono">#{{ posledny_servis.poradove_cislo }}</span></p>
+                    {% if posledny_servis.typ_servisu.all %}
+                        <p class="text-xs font-bold text-emerald-700 mt-1">
+                            {% for t in posledny_servis.typ_servisu.all %}{{ t.nazov }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                        </p>
+                    {% endif %}
+                    {% if posledny_servis.aktivni_technici %}
+                        <p class="text-xs font-semibold text-gray-500 mt-0.5">
+                            👨‍🔧 Zásah vykonal: {% for tech in posledny_servis.aktivni_technici %}{{ tech.meno }} {{ tech.priezvisko }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                        </p>
+                    {% endif %}
+                    <p class="text-sm text-gray-600 mt-1">{{ posledny_servis.formalne_zhodnotenie_ai|default:posledny_servis.poruchy|default:posledny_servis.typ_servisu.all.0.nazov }}</p>
+                    {% if je_opravneny_personal and posledny_servis.formalne_zhodnotenie_ai and posledny_servis.poruchy %}
+                        <p class="text-xs text-amber-900 bg-amber-50/70 border border-amber-200 rounded-xl p-2 mt-1.5 font-mono leading-relaxed"><span class="font-bold">🔧 Zápis technika z terénu:</span> {{ posledny_servis.poruchy }}</p>
+                    {% endif %}
+                    {% if posledny_servis.zmena_hardveru %}
+                        <p class="text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-0.5 mt-1 inline-block">⚠️ Došlo k zmene parametrov zariadenia</p>
+                    {% endif %}
+                    {% if je_opravneny_personal and posledny_servis.koren_problemu and posledny_servis.koren_problemu != 'NEHODNOTENE' %}
+                        <p class="text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-md px-2 py-0.5 mt-1 inline-block" title="Interná ISO analýza (viditeľná len pre personál)">🔒 Interná príčina: {{ posledny_servis.get_koren_problemu_display }}</p>
+                    {% endif %}
+                    {% if posledny_servis.hodnotenie_zakaznika %}
+                        {% if je_vlastnik_stroja or je_opravneny_personal %}
+                            <p class="text-xs font-bold text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-2 py-0.5 mt-1 inline-block">⭐ Spokojnosť zákazníka: {{ posledny_servis.hodnotenie_zakaznika }}/5</p>
+                        {% endif %}
+                    {% endif %}
+                    {% if posledny_servis.zaruka_prace_do %}
+                        <div class="mt-1.5">
+                            {% if posledny_servis.zaruka_prace_je_platna %}
+                                <span class="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-md px-2 py-0.5">
+                                    🛡️ Záruka na práce: platná do {{ posledny_servis.zaruka_prace_do|date:"d.m.Y" }} ({{ posledny_servis.zaruka_prace_mesiace }} mes.)
+                                </span>
+                            {% else %}
+                                <span class="inline-flex items-center gap-1 text-[11px] font-medium text-gray-500 bg-gray-100 border border-gray-200 rounded-md px-2 py-0.5">
+                                    🛡️ Záruka na práce: uplynula {{ posledny_servis.zaruka_prace_do|date:"d.m.Y" }}
+                                </span>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                    {% if posledny_servis.stav_motohodin is not None %}
+                        <p class="text-xs text-gray-400 mt-1 font-mono">Pri: {{ posledny_servis.meter_display }}{% if posledny_servis.motohodiny_v_zatazi is not None %} &bull; {{ industry_terms.meter_load_label_short|default:posledny_servis.meter_load_label }}: {{ posledny_servis.meter_load_display }}{% endif %}</p>
+                    {% endif %}
+                    
+                    {% if posledny_servis.namerane_hodnoty %}
+                        <div class="mt-2.5 p-2 bg-slate-50 rounded-xl border border-slate-100 text-xs">
+                            <span class="font-bold text-slate-700 block mb-0.5">📊 Namerané hodnoty:</span>
+                            <p class="text-slate-600 font-mono leading-relaxed whitespace-pre-line">{{ posledny_servis.namerane_hodnoty }}</p>
+                        </div>
+                    {% endif %}
+
+                    {% if posledny_servis.pouzite_polozky_zaznamu.all %}
+                        <div class="mt-2">
+                            <span class="text-xs font-bold text-gray-500 block mb-1">📦 Vymenené diely:</span>
+                            <div class="flex flex-wrap gap-1">
+                                {% for polozka in posledny_servis.pouzite_polozky_zaznamu.all %}
+                                    <span class="inline-block bg-gray-100 text-gray-700 text-xs px-2 py-0.5 rounded-md font-mono">
+                                        {{ polozka.pocet }} {{ polozka.merna_jednotka_zobrazenie }} {% if je_opravneny_personal %}{{ polozka.cisty_nazov }}{% if polozka.seriove_cislo_text %} (SN: {{ polozka.seriove_cislo_text }}){% endif %}{% else %}{{ polozka.obchodny_nazov|default:polozka.kategoria_zobrazenie }}{% endif %}
+                                    </span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    {% if je_vlastnik_stroja or je_opravneny_personal %}
+                        {% if posledny_servis.foto_pred and posledny_servis.foto_pred.name or posledny_servis.foto_po and posledny_servis.foto_po.name or posledny_servis.video and posledny_servis.video.name %}
+                            <div class="mt-3 flex flex-wrap items-start gap-3">
+                                {% if posledny_servis.foto_pred and posledny_servis.foto_pred.name %}
+                                    <div>
+                                        <span class="text-xs font-bold text-gray-500 block mb-1">📸 Stav pred servisom:</span>
+                                        <a href="{{ posledny_servis.foto_pred.url }}" target="_blank" rel="noopener noreferrer" class="inline-block">
+                                            <img src="{{ posledny_servis.foto_pred.url }}" alt="Foto pred servisom" class="h-20 w-32 object-cover rounded-xl border border-gray-200 hover:opacity-90 transition">
+                                        </a>
+                                    </div>
+                                {% endif %}
+                                {% if posledny_servis.foto_po and posledny_servis.foto_po.name %}
+                                    <div>
+                                        <span class="text-xs font-bold text-gray-500 block mb-1">📸 Stav po servise:</span>
+                                        <a href="{{ posledny_servis.foto_po.url }}" target="_blank" rel="noopener noreferrer" class="inline-block">
+                                            <img src="{{ posledny_servis.foto_po.url }}" alt="Foto po servise" class="h-20 w-32 object-cover rounded-xl border border-gray-200 hover:opacity-90 transition">
+                                        </a>
+                                    </div>
+                                {% endif %}
+                                {% if posledny_servis.video and posledny_servis.video.name %}
+                                    <div>
+                                        <span class="text-xs font-bold text-gray-500 block mb-1">🎥 Video záznam:</span>
+                                        <video src="{{ posledny_servis.video.url }}" controls preload="metadata" playsinline class="h-20 w-36 object-cover rounded-xl border border-gray-200 bg-black"></video>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                    {% endif %}
+
+                    {% if posledny_servis.protokol_uzavrety %}
+                        <div class="mt-3 space-y-1.5">
+                            {% if je_vlastnik_stroja or je_opravneny_personal %}
+                                {% if posledny_servis.uzavrety_pdf_dokument and posledny_servis.uzavrety_pdf_dokument.name %}
+                                    <a href="{{ posledny_servis.uzavrety_pdf_dokument.url }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 text-xs font-bold text-brand hover:underline">
+                                        <span>📄 Stiahnuť servisný protokol (PDF){% if posledny_servis.cas_podpisu %} &bull; Podpísané {{ posledny_servis.cas_podpisu|date:"d.m.Y" }}{% if posledny_servis.meno_podpisujuceho %} ({{ posledny_servis.meno_podpisujuceho }}){% endif %}{% endif %}</span>
+                                    </a>
+                                {% elif posledny_servis.cas_podpisu %}
+                                    <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-600">
+                                        <span>✍️ Elektronicky podpísané: {{ posledny_servis.cas_podpisu|date:"d.m.Y" }}{% if posledny_servis.meno_podpisujuceho %} ({{ posledny_servis.meno_podpisujuceho }}){% endif %}</span>
+                                    </span>
+                                {% endif %}
+                            {% endif %}
+                            {% if posledny_servis.bezpecnostny_hash %}
+                                <div class="flex items-center gap-1 text-[10px] text-gray-400 font-mono" title="Digitálna pečať garantujúca integritu záznamu: {{ posledny_servis.bezpecnostny_hash }}">
+                                    <span>🔒 Pečať integrity:</span>
+                                    <span class="bg-gray-100 text-gray-700 font-bold px-1.5 py-0.5 rounded">{{ posledny_servis.bezpecnostny_hash|slice:":16" }}...</span>
+                                    <span class="text-emerald-600 font-bold">✓ Overené</span>
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <p class="text-gray-500 italic">Zatiaľ žiadny záznam.</p>
+                {% endif %}
+            </div>
+
+            <!-- Ďalší servis -->
+            <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="bg-amber-100 text-amber-600 p-2 rounded-xl">⏳</div>
+                        <h3 class="font-bold text-gray-900">Plánovaná údržba</h3>
+                    </div>
+                    {% if dalsi_servis %}
+                        {% if dalsi_servis.rozdiel_meter is not None and dalsi_servis.rozdiel_meter <= 0 %}
+                            <span class="bg-red-100 text-red-700 text-xs font-bold px-2.5 py-1 rounded-full animate-pulse">⚠️ Prekročený limit ({{ zariadenie.meter_unit }})!</span>
+                        {% elif dalsi_servis.rozdiel_meter_zataz is not None and dalsi_servis.rozdiel_meter_zataz <= 0 %}
+                            <span class="bg-red-100 text-red-700 text-xs font-bold px-2.5 py-1 rounded-full animate-pulse">⚠️ Prekročený limit ({{ industry_terms.meter_load_label_short|default:zariadenie.meter_load_label }})!</span>
+                        {% elif dalsi_servis.rozdiel_dni is not None and dalsi_servis.rozdiel_dni < 0 %}
+                            <span class="bg-red-100 text-red-700 text-xs font-bold px-2.5 py-1 rounded-full animate-pulse">⚠️ Po plánovanom termíne!</span>
+                        {% elif dalsi_servis.rozdiel_dni is not None and dalsi_servis.rozdiel_dni == 0 %}
+                            <span class="bg-amber-100 text-amber-800 text-xs font-bold px-2.5 py-1 rounded-full animate-pulse">⚠️ Termín je dnes!</span>
+                        {% else %}
+                            <span class="bg-emerald-100 text-emerald-800 text-xs font-bold px-2.5 py-1 rounded-full">🟢 V pláne</span>
+                        {% endif %}
+                    {% endif %}
+                </div>
+                {% if dalsi_servis %}
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <p class="text-lg font-bold text-gray-900">{{ dalsi_servis.typ_servisu.nazov|default:"Údržba" }}</p>
+                        {% if dalsi_servis.typ_servisu %}
+                            <button type="button" onclick="predvyplnitUdrzbu('{{ dalsi_servis.typ_servisu.id }}', '{{ dalsi_servis.typ_servisu.nazov|escapejs }}')" class="text-xs font-bold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl px-3 py-1 transition shadow-2xs">
+                                Objednať údržbu ↘
+                            </button>
+                        {% endif %}
+                    </div>
+                    <div class="text-sm text-gray-600 mt-2 space-y-1">
+                        {% if dalsi_servis.planovany_datum %}
+                            <p>
+                                <span class="font-semibold text-gray-700">Dátum:</span> {{ dalsi_servis.planovany_datum|date:"d.m.Y" }}
+                                {% if dalsi_servis.rozdiel_dni is not None %}
+                                    {% if dalsi_servis.rozdiel_dni < 0 %}
+                                        <span class="text-xs font-bold text-red-600 bg-red-50 border border-red-200 rounded px-1.5 py-0.5 ml-1">po termíne o {{ dalsi_servis.abs_rozdiel_dni }} dní</span>
+                                    {% elif dalsi_servis.rozdiel_dni == 0 %}
+                                        <span class="text-xs font-bold text-amber-600 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 ml-1">termín je dnes</span>
+                                    {% else %}
+                                        <span class="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-1.5 py-0.5 ml-1">zostáva {{ dalsi_servis.rozdiel_dni }} dní</span>
+                                    {% endif %}
+                                {% endif %}
+                            </p>
+                        {% endif %}
+                        {% if dalsi_servis.planovane_motohodiny is not None %}
+                            <p>
+                                <span class="font-semibold text-gray-700">Pri:</span> {{ dalsi_servis.planovane_motohodiny }} {{ zariadenie.meter_unit }}
+                                {% if dalsi_servis.rozdiel_meter is not None %}
+                                    {% if dalsi_servis.rozdiel_meter < 0 %}
+                                        <span class="text-xs font-bold text-red-600 bg-red-50 border border-red-200 rounded px-1.5 py-0.5 ml-1">prekročené o {{ dalsi_servis.abs_rozdiel_meter }} {{ zariadenie.meter_unit }}</span>
+                                    {% elif dalsi_servis.rozdiel_meter == 0 %}
+                                        <span class="text-xs font-bold text-amber-600 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 ml-1">limit dosiahnutý</span>
+                                    {% else %}
+                                        <span class="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-1.5 py-0.5 ml-1">zostáva {{ dalsi_servis.rozdiel_meter }} {{ zariadenie.meter_unit }}</span>
+                                    {% endif %}
+                                {% endif %}
+                            </p>
+                        {% endif %}
+                        {% if dalsi_servis.planovane_motohodiny_zataz is not None %}
+                            <p>
+                                <span class="font-semibold text-gray-700">{{ zariadenie.meter_load_label }}:</span> {{ dalsi_servis.planovane_motohodiny_zataz }} {{ industry_terms.meter_load_unit|default:zariadenie.meter_unit }}
+                                {% if dalsi_servis.rozdiel_meter_zataz is not None %}
+                                    {% if dalsi_servis.rozdiel_meter_zataz < 0 %}
+                                        <span class="text-xs font-bold text-red-600 bg-red-50 border border-red-200 rounded px-1.5 py-0.5 ml-1">prekročené o {{ dalsi_servis.abs_rozdiel_meter_zataz }} {{ industry_terms.meter_load_unit|default:zariadenie.meter_unit }}</span>
+                                    {% elif dalsi_servis.rozdiel_meter_zataz == 0 %}
+                                        <span class="text-xs font-bold text-amber-600 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 ml-1">limit dosiahnutý</span>
+                                    {% else %}
+                                        <span class="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-1.5 py-0.5 ml-1">zostáva {{ dalsi_servis.rozdiel_meter_zataz }} {{ industry_terms.meter_load_unit|default:zariadenie.meter_unit }}</span>
+                                    {% endif %}
+                                {% endif %}
+                            </p>
+                        {% endif %}
+                        {% if je_opravneny_personal and dalsi_servis.typ_servisu.normohodiny %}
+                            <p><span class="font-semibold text-gray-700">Odhad trvania:</span> {{ dalsi_servis.typ_servisu.normohodiny }} h</p>
+                        {% endif %}
+                        {% if dalsi_servis.typ_servisu.zaruka_mesiace %}
+                            <p><span class="font-semibold text-gray-700">Garantovaná záruka na prácu:</span> {{ dalsi_servis.typ_servisu.zaruka_mesiace }} mes.</p>
+                        {% endif %}
+                        {% if je_opravneny_personal and dalsi_servis.typ_servisu.pracovny_postup %}
+                            <div class="mt-2 p-2.5 bg-amber-50/70 border border-amber-200 rounded-xl text-xs text-amber-900">
+                                <span class="font-bold block mb-0.5">📋 Predpísaný pracovný postup (SOP):</span>
+                                <p class="whitespace-pre-line leading-relaxed">{{ dalsi_servis.typ_servisu.pracovny_postup }}</p>
+                            </div>
+                        {% endif %}
+                        {% if dalsie_plany %}
+                            <div class="mt-3 pt-2.5 border-t border-gray-100">
+                                <span class="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Nadväzujúce plánované úkony:</span>
+                                <div class="space-y-1">
+                                    {% for plan in dalsie_plany %}
+                                        <div class="text-xs text-gray-600 flex flex-wrap justify-between items-center bg-gray-50 p-2 rounded-lg gap-2">
+                                            <div class="flex items-center gap-2">
+                                                <span class="font-semibold">{{ plan.typ_servisu.nazov }}</span>
+                                                <span class="font-mono text-[11px] text-gray-500">
+                                                    {% if plan.planovany_datum %}{{ plan.planovany_datum|date:"d.m.Y" }}{% endif %}
+                                                    {% if plan.planovane_motohodiny %}{% if plan.planovany_datum %} &bull; {% endif %}{{ plan.planovane_motohodiny }} {{ zariadenie.meter_unit }}{% endif %}
+                                                    {% if plan.planovane_motohodiny_zataz %}{% if plan.planovany_datum or plan.planovane_motohodiny %} &bull; {% endif %}{{ plan.planovane_motohodiny_zataz }} {{ industry_terms.meter_load_unit|default:zariadenie.meter_unit }} ({{ zariadenie.meter_load_label }}){% endif %}
+                                                </span>
+                                            </div>
+                                            {% if plan.typ_servisu %}
+                                                <button type="button" onclick="predvyplnitUdrzbu('{{ plan.typ_servisu.id }}', '{{ plan.typ_servisu.nazov|escapejs }}')" class="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 hover:underline">
+                                                    Objednať ↘
+                                                </button>
+                                            {% endif %}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                {% else %}
+                    <p class="text-gray-500 italic">Podľa potreby / Neplánované.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Predchádzajúca servisná história -->
+        {% if predchadzajuce_servisy %}
+        <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 mb-8">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-gray-500">Predchádzajúce servisné záznamy</h3>
+                {% if celkovy_pocet_servisov %}
+                    <span class="text-xs font-bold text-gray-600 bg-gray-100 border border-gray-200 px-2.5 py-0.5 rounded-full" title="Celkový počet evidovaných servisných protokolov v databáze">
+                        Celkovo záznamov: {{ celkovy_pocet_servisov }}
+                    </span>
+                {% endif %}
+            </div>
+            <div class="space-y-3">
+                {% for hist in predchadzajuce_servisy %}
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 bg-gray-50 rounded-2xl border border-gray-100 text-xs gap-2">
+                        <div>
+                            <span class="font-extrabold text-gray-900 text-sm">{{ hist.vytvorene|date:"d.m.Y" }} <span class="text-xs font-semibold text-gray-400 font-mono">#{{ hist.poradove_cislo }}</span></span>
+                            {% if hist.typ_servisu.all %}
+                                <span class="font-semibold text-gray-600 ml-2">
+                                    {% for t in hist.typ_servisu.all %}{{ t.nazov }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                                </span>
+                            {% endif %}
+                            {% if hist.aktivni_technici %}
+                                <span class="text-xs text-gray-400 font-medium ml-2">({% for tech in hist.aktivni_technici %}{{ tech.meno }} {{ tech.priezvisko }}{% if not forloop.last %}, {% endif %}{% endfor %})</span>
+                            {% endif %}
+                            <p class="text-gray-500 mt-0.5">{{ hist.formalne_zhodnotenie_ai|default:hist.poruchy|default:hist.typ_servisu.all.0.nazov|truncatewords:15 }}</p>
+                            {% if je_opravneny_personal and hist.formalne_zhodnotenie_ai and hist.poruchy %}
+                                <p class="text-[11px] text-amber-900 bg-amber-50/60 rounded px-1.5 py-0.5 mt-0.5 font-mono truncate" title="{{ hist.poruchy }}">🔧 Zápis: {{ hist.poruchy }}</p>
+                            {% endif %}
+                            {% if hist.namerane_hodnoty %}
+                                <p class="text-[11px] text-slate-600 font-mono mt-0.5 truncate" title="{{ hist.namerane_hodnoty }}">📊 Namerané: {{ hist.namerane_hodnoty }}</p>
+                            {% endif %}
+                            {% if hist.zaruka_prace_do and hist.zaruka_prace_je_platna %}
+                                <span class="text-[10px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 rounded px-1.5 py-0.5 mt-1 inline-block">🛡️ Záruka na práce do {{ hist.zaruka_prace_do|date:"d.m.Y" }}</span>
+                            {% endif %}
+                            {% if hist.zmena_hardveru %}
+                                <span class="text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 mt-1 inline-block">⚠️ Došlo k zmene parametrov zariadenia</span>
+                            {% endif %}
+                            {% if hist.hodnotenie_zakaznika %}
+                                {% if je_vlastnik_stroja or je_opravneny_personal %}
+                                    <span class="text-[10px] font-bold text-amber-800 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 mt-1 inline-block">⭐ {{ hist.hodnotenie_zakaznika }}/5</span>
+                                {% endif %}
+                            {% endif %}
+                            {% if je_opravneny_personal and hist.koren_problemu and hist.koren_problemu != 'NEHODNOTENE' %}
+                                <span class="text-[10px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded px-1.5 py-0.5 mt-1 inline-block" title="Interná ISO analýza (viditeľná len pre personál)">🔒 Interná príčina: {{ hist.get_koren_problemu_display }}</span>
+                            {% endif %}
+                            {% if hist.pouzite_polozky_zaznamu.all %}
+                                <div class="flex flex-wrap gap-1 mt-1">
+                                    {% for polozka in hist.pouzite_polozky_zaznamu.all %}
+                                        <span class="inline-block bg-white text-gray-600 text-[10px] px-1.5 py-0.5 rounded border border-gray-200 font-mono">
+                                            {{ polozka.pocet }} {{ polozka.merna_jednotka_zobrazenie }} {% if je_opravneny_personal %}{{ polozka.cisty_nazov }}{% if polozka.seriove_cislo_text %} (SN: {{ polozka.seriove_cislo_text }}){% endif %}{% else %}{{ polozka.obchodny_nazov|default:polozka.kategoria_zobrazenie }}{% endif %}
+                                        </span>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            {% if je_vlastnik_stroja or je_opravneny_personal %}
+                                {% if hist.foto_pred and hist.foto_pred.name or hist.foto_po and hist.foto_po.name or hist.video and hist.video.name %}
+                                    <div class="flex items-center gap-2 mt-1.5">
+                                        {% if hist.foto_pred and hist.foto_pred.name %}
+                                            <a href="{{ hist.foto_pred.url }}" target="_blank" rel="noopener noreferrer" class="text-[10px] font-bold text-gray-600 hover:text-brand bg-white border border-gray-200 px-1.5 py-0.5 rounded">📸 Foto pred</a>
+                                        {% endif %}
+                                        {% if hist.foto_po and hist.foto_po.name %}
+                                            <a href="{{ hist.foto_po.url }}" target="_blank" rel="noopener noreferrer" class="text-[10px] font-bold text-gray-600 hover:text-brand bg-white border border-gray-200 px-1.5 py-0.5 rounded">📸 Foto po</a>
+                                        {% endif %}
+                                        {% if hist.video and hist.video.name %}
+                                            <a href="{{ hist.video.url }}" target="_blank" rel="noopener noreferrer" class="text-[10px] font-bold text-gray-600 hover:text-brand bg-white border border-gray-200 px-1.5 py-0.5 rounded">🎥 Video</a>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                        <div class="flex flex-col sm:flex-row items-start sm:items-center gap-2 self-start sm:self-center">
+                            {% if hist.stav_motohodin is not None %}
+                                <span class="font-mono text-gray-500 bg-white px-2 py-1 rounded-lg border border-gray-200">{{ hist.meter_display }}{% if hist.motohodiny_v_zatazi is not None %} ({{ industry_terms.meter_load_label_short|default:hist.meter_load_label }}: {{ hist.meter_load_display }}){% endif %}</span>
+                            {% endif %}
+                            {% if hist.protokol_uzavrety and hist.uzavrety_pdf_dokument and hist.uzavrety_pdf_dokument.name %}{% if je_vlastnik_stroja or je_opravneny_personal %}
+                                <div class="flex items-center gap-1.5">
+                                    <a href="{{ hist.uzavrety_pdf_dokument.url }}" target="_blank" rel="noopener noreferrer" class="text-brand font-bold hover:underline" {% if hist.cas_podpisu or hist.meno_podpisujuceho %}title="Podpísané: {{ hist.cas_podpisu|date:'d.m.Y' }}{% if hist.meno_podpisujuceho %} ({{ hist.meno_podpisujuceho }}){% endif %}"{% endif %}>PDF ↗</a>
+                                    {% if hist.bezpecnostny_hash %}
+                                        <span class="text-[10px] text-emerald-600 font-bold font-mono" title="Pečať integrity: {{ hist.bezpecnostny_hash }}">🔒 Overené</span>
+                                    {% endif %}
+                                </div>
+                            {% endif %}{% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Zákonné revízie a odborné inšpekcie (Compliance) -->
+        {% if compliance_audity %}
+        <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 mb-8">
+            <div class="flex items-center gap-2 mb-4">
+                <span class="text-base">⚖️</span>
+                <h3 class="text-xs font-bold uppercase tracking-wider text-gray-700">Zákonné revízie a odborné inšpekcie</h3>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                {% for audit in compliance_audity %}
+                    <div class="p-3.5 rounded-2xl border text-xs {% if audit.stav == 'PREPADNUTA' or audit.stav == 'CHYBA_KONTROLA' or audit.stav == 'CRITICAL' %}bg-red-50/80 border-red-200 text-red-900{% elif audit.stav == 'BLIZI_SA' or audit.stav == 'WARNING' %}bg-amber-50/80 border-amber-300 text-amber-900{% elif audit.stav == 'BEZ_POVINNOSTI' %}bg-gray-50 border-gray-200 text-gray-600{% else %}bg-emerald-50/70 border-emerald-200 text-emerald-900{% endif %}" title="{{ audit.upozornenie_text|default:''|striptags }}">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="font-bold flex items-center gap-1">
+                                <span>{{ audit.ikona|default:"⚖️" }}</span>
+                                <span>{{ audit.nazov|default:"Odborná prehliadka" }}</span>
+                            </span>
+                            <span class="font-mono font-bold flex-shrink-0">
+                                {% if audit.stav == 'CHYBA_KONTROLA' %}
+                                    ⚠️ Chýba záznam
+                                {% elif audit.stav == 'BEZ_POVINNOSTI' %}
+                                    {{ audit.hodnota_ui|default:"Bez povinnosti" }}
+                                {% elif audit.termin %}
+                                    {{ audit.termin|date:"d.m.Y" }}
+                                {% else %}
+                                    {{ audit.termin_str|default:"Neuvedený" }}
+                                {% endif %}
+                            </span>
+                        </div>
+                        {% if audit.stav_str %}
+                            <p class="text-[11px] opacity-80 mt-0.5">{{ audit.stav_str }}</p>
+                        {% endif %}
+                        {% if audit.stav == 'PREPADNUTA' or audit.stav == 'CHYBA_KONTROLA' or audit.stav == 'CRITICAL' or audit.stav == 'BLIZI_SA' or audit.stav == 'WARNING' %}
+                            <button type="button" onclick="predvyplnitAlarm('Zákonná revízia / inšpekcia [{{ audit.nazov|default:"Odborná prehliadka"|escapejs }}]: vyžaduje sa vykonanie kontroly (termín: {% if audit.termin %}{{ audit.termin|date:"d.m.Y" }}{% else %}{{ audit.termin_str|default:"neodkladne"|escapejs }}{% endif %}).')" class="mt-2 text-[11px] font-bold text-red-700 hover:text-red-900 bg-red-100/60 hover:bg-red-200/60 border border-red-300 rounded-lg px-2.5 py-1 transition self-start">
+                                Objednať revíziu ↘
+                            </button>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+            {% if legal_disclaimer %}
+                <p class="text-[10px] text-gray-400 leading-relaxed">{{ legal_disclaimer }}</p>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Stav otvorených tiketov a naplánovaných výjazdov (Prevencia duplicity) -->
+        {% if otvorene_objednavky or aktivne_ulohy %}
+        <div class="bg-sky-50 border-2 border-sky-200 rounded-3xl p-5 mb-8 shadow-sm">
+            <div class="flex items-center gap-2 mb-3">
+                <span class="text-xl">ℹ️</span>
+                <h3 class="text-xs font-extrabold text-sky-900 uppercase tracking-wider">Aktuálne prebiehajúce riešenie tohto zariadenia</h3>
+            </div>
+            {% if otvorene_objednavky %}
+                <div class="space-y-2 mb-2">
+                    {% for obj in otvorene_objednavky %}
+                        <div class="bg-white p-3 rounded-2xl border border-sky-100 flex items-center justify-between text-xs">
+                            <div>
+                                <span class="font-mono font-bold text-sky-800 bg-sky-100 px-2 py-0.5 rounded">Tiket: {{ obj.cislo_objednavky_interne }}</span>
+                                {% if obj.cislo_objednavky_klienta %}{% if je_vlastnik_stroja or je_opravneny_personal %}<span class="text-gray-500 font-mono ml-1">({{ obj.cislo_objednavky_klienta }})</span>{% endif %}{% endif %}
+                                <p class="text-gray-600 mt-1">Prijaté dňa: {{ obj.datum_prijatia|date:"d.m.Y" }} &bull; Priorita: {{ obj.get_priorita_display }}</p>
+                            </div>
+                            <span class="bg-sky-100 text-sky-800 font-bold px-2.5 py-1 rounded-full text-[11px]">{{ obj.get_stav_display }}</span>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            {% if aktivne_ulohy %}
+                <div class="space-y-2">
+                    {% for uloha in aktivne_ulohy %}
+                        <div class="bg-white p-3 rounded-2xl border border-sky-100 flex items-center justify-between text-xs">
+                            <div>
+                                <span class="font-bold text-gray-900">🗓️ Naplánovaný výjazd servisného technika</span>
+                                <p class="text-gray-600 font-mono mt-0.5">Termín: {{ uloha.zaciatok|date:"d.m.Y H:i" }}</p>
+                            </div>
+                            <span class="bg-emerald-100 text-emerald-800 font-bold px-2.5 py-1 rounded-full text-[11px]">Potvrdený termín</span>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            <p class="text-[11px] text-sky-700 mt-2 italic">Naša technická podpora už na požiadavke pracuje. Nie je potrebné zadávať hlásenie opakovane.</p>
+        </div>
+        {% endif %}
+
+        <!-- Formulár na nahlásenie poruchy -->
+        <div class="bg-white rounded-3xl shadow-xl border border-gray-100 p-6 md:p-8">
+            <h2 class="text-2xl font-bold mb-2 text-gray-900">🚨 Nahlásiť poruchu / servis</h2>
+            <p class="text-gray-500 text-sm mb-6">Odošlite požiadavku priamo na náš dispečing. Zariadenie bude automaticky spárované.</p>
+            
+            <form id="dopytForm" class="space-y-4" enctype="multipart/form-data">
+                {% csrf_token %}
+                <!-- 🛡️ HONEYPOT -->
+                <input type="text" name="website_url" class="hidden" tabindex="-1" autocomplete="off">
+                <input type="hidden" name="zariadenie_id" value="{{ zariadenie.bezpecnostny_kluc }}">
+                {% if b2b_klient and request.user.is_authenticated %}
+                    <input type="hidden" name="is_b2b_direct" value="true">
+                {% endif %}
+                
+                <div>
+                    <label for="passport_firma" class="block text-sm font-bold text-gray-700 mb-1">Vaše Meno / Firma</label>
+                    <input type="text" id="passport_firma" name="firma" value="{% if b2b_klient and request.user.is_authenticated %}{% if b2b_klient.kontaktna_osoba %}{{ b2b_klient.kontaktna_osoba }} ({{ b2b_klient.Nazov_spolocnosti }}){% else %}{{ b2b_klient.Nazov_spolocnosti }}{% endif %}{% elif je_opravneny_personal and zariadenie.zakaznik and not zariadenie.zakaznik.je_interny_profil %}{{ zariadenie.zakaznik.Nazov_spolocnosti }}{% endif %}" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 ring-brand transition">
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="passport_email" class="block text-sm font-bold text-gray-700 mb-1">E-mail *</label>
+                        <input type="email" id="passport_email" name="email" required value="{% if b2b_klient and request.user.is_authenticated and b2b_klient.email %}{{ b2b_klient.email }}{% elif je_opravneny_personal and zariadenie.zakaznik and not zariadenie.zakaznik.je_interny_profil and zariadenie.zakaznik.email %}{{ zariadenie.zakaznik.email }}{% endif %}" placeholder="vas@email.com" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 ring-brand transition">
+                    </div>
+                    <div>
+                        <label for="passport_telefon" class="block text-sm font-bold text-gray-700 mb-1">Telefón</label>
+                        <input type="text" id="passport_telefon" name="telefon" value="{% if b2b_klient and request.user.is_authenticated and b2b_klient.telefon %}{{ b2b_klient.telefon }}{% elif je_opravneny_personal and zariadenie.zakaznik and not zariadenie.zakaznik.je_interny_profil and zariadenie.zakaznik.telefon %}{{ zariadenie.zakaznik.telefon }}{% endif %}" placeholder="Telefónne číslo" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 ring-brand transition">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="passport_sluzba" class="block text-sm font-bold text-gray-700 mb-1">Typ požiadavky <span class="text-gray-400 font-normal">(Voliteľné)</span></label>
+                        <select id="passport_sluzba" name="sluzba_id" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 ring-brand transition appearance-none">
+                            <option value="">-- Vyberte typ --</option>
+                            {% for sluzba in sluzby %}
+                                <option value="{{ sluzba.id }}">{{ sluzba.nazov }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label for="passport_priorita" class="block text-sm font-bold text-gray-700 mb-1">Závažnosť situácie</label>
+                        <select id="passport_priorita" name="priorita" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 ring-brand transition appearance-none font-semibold">
+                            <option value="STREDNA" selected>🟡 Štandardná požiadavka</option>
+                            <option value="VYSOKA" class="text-red-600 font-bold">🔴 Havária / Zariadenie stojí (Urgent)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                        <label for="passport_stav_pocitadla" class="block text-sm font-bold text-gray-700 mb-1">
+                            Stav: {{ zariadenie.meter_label }} <span class="text-gray-400 font-normal">({{ zariadenie.meter_unit }})</span>
+                        </label>
+                        <input type="number" id="passport_stav_pocitadla" name="stav_pocitadla" min="{% if zariadenie.aktualne_motohodiny is not None and zariadenie.aktualne_motohodiny >= 0 %}{{ zariadenie.aktualne_motohodiny }}{% else %}0{% endif %}" step="1" placeholder="Evidované: {{ zariadenie.meter_display }}" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 ring-brand transition font-mono">
+                    </div>
+                    <div>
+                        <label for="passport_po_number" class="block text-sm font-bold text-gray-700 mb-1">Číslo objednávky / PO <span class="text-gray-400 font-normal">(B2B autorizácia)</span></label>
+                        <input type="text" id="passport_po_number" name="cislo_objednavky_klienta" placeholder="Napr. PO-{{ dnes|date:'Y' }}" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 ring-brand transition">
+                    </div>
+                    <div>
+                        <label for="passport_termin" class="block text-sm font-bold text-gray-700 mb-1">Požadovaný termín servisu <span class="text-gray-400 font-normal">(Voliteľné)</span></label>
+                        <input type="date" id="passport_termin" name="termin_dodania" min="{% if dnes %}{{ dnes|date:'Y-m-d' }}{% endif %}" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 ring-brand transition">
+                    </div>
+                </div>
+                <div>
+                    <label for="passport_poziadavka" class="block text-sm font-bold text-gray-700 mb-1">Popis poruchy / Požiadavka *</label>
+                    <textarea id="passport_poziadavka" name="poziadavka" rows="3" required class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 ring-brand transition" placeholder="{{ industry_terms.poziadavka_placeholder }}"></textarea>
+                </div>
+                <div>
+                    <label for="passport_priloha" class="block text-sm font-bold text-gray-700 mb-1">📸 Odfotiť poruchu / Priložiť protokol (Obrázok, Video, PDF)</label>
+                    <input type="file" id="passport_priloha" name="priloha" accept="image/*,video/*,.pdf" capture="environment" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 ring-brand transition text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-brand/10 file:text-brand hover:file:bg-brand/20">
+                </div>
+                <div class="flex items-start gap-3 mt-2 mb-4">
+                    <input type="checkbox" name="gdpr_suhlas" id="gdpr_suhlas" required class="mt-1 w-5 h-5 text-brand border-gray-300 rounded focus:ring-brand">
+                    <label for="gdpr_suhlas" class="text-xs text-gray-500">Súhlasím so spracovaním osobných údajov (GDPR). *</label>
+                </div>
+                
+                <button type="submit" id="submitBtn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold text-lg py-4 rounded-xl transition duration-300 shadow-lg flex justify-center items-center gap-2">
+                    <span id="btnText">Odoslať na dispečing</span>
+                    <svg id="btnSpinner" class="hidden animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                </button>
+            </form>
+            
+            <div id="formMessage" class="hidden mt-6 text-center p-6 rounded-2xl border"></div>
+        </div>
+
+        <!-- 🖨️ Modálne okno: Tlačiteľný QR servisný štítok stroja -->
+        {% if zariadenie.qr_kod and zariadenie.qr_kod.name %}
+        <div id="qrModal" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
+            <div class="bg-white rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl relative border border-gray-100">
+                <button type="button" onclick="document.getElementById('qrModal').classList.add('hidden')" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-lg font-bold p-1">✕</button>
+                <p class="text-[10px] uppercase font-extrabold text-gray-400 tracking-wider mb-1">{{ industry_terms.pas_title|default:"Digitálny pas" }} &bull; Servisný štítok</p>
+                <h4 class="text-base font-extrabold text-gray-900 leading-tight mb-0.5">
+                    {% if je_opravneny_personal and zariadenie.vyrobca %}{{ zariadenie.vyrobca.nazov_vyrobcu }} {% endif %}{{ zariadenie.model_zariadenia|default:zariadenie.nazov|default:"Zariadenie" }}
+                </h4>
+                <p class="text-xs font-mono text-gray-500 mb-3">SN: {{ zariadenie.vyrobne_cislo }}</p>
+                <div class="bg-white p-3 rounded-2xl border border-gray-200 inline-block shadow-inner mb-3">
+                    <img src="{{ zariadenie.qr_kod.url }}" alt="QR Pas: {{ zariadenie.vyrobne_cislo }}" class="w-48 h-48 object-contain mx-auto">
+                </div>
+                {% if identita.telefon %}
+                    <p class="text-xs text-red-600 font-bold mb-4">🚨 Hotline: {{ identita.telefon }}</p>
+                {% endif %}
+                <div class="flex gap-2 justify-center">
+                    <a href="{{ zariadenie.qr_kod.url }}" download="QR_{{ zariadenie.vyrobne_cislo }}.png" class="text-xs font-bold bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded-xl transition">
+                        💾 Stiahnuť PNG
+                    </a>
+                    <button type="button" onclick="window.print()" class="text-xs font-bold bg-brand text-white hover:opacity-90 px-4 py-2 rounded-xl transition shadow">
+                        🖨️ Vytlačiť
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </main>
+
+    <footer class="bg-gray-900 text-gray-400 py-8 text-xs mt-auto border-t border-gray-800">
+        <div class="max-w-3xl mx-auto px-6 text-center space-y-3">
+            <div class="flex flex-wrap justify-center items-center gap-4 text-gray-300 font-medium">
+                {% if identita.telefon %}
+                    <a href="tel:{{ identita.telefon|cut:' '|cut:'/' }}" class="hover:text-white transition">📞 {{ identita.telefon }}</a>
+                {% endif %}
+                {% if identita.email_vseobecny %}
+                    <a href="mailto:{{ identita.email_vseobecny }}" class="hover:text-white transition">✉️ {{ identita.email_vseobecny }}</a>
+                {% endif %}
+                {% if identita.web %}
+                    <a href="{{ identita.web }}" target="_blank" rel="noopener noreferrer" class="hover:text-white transition">🌐 {{ identita.web|cut:"https://"|cut:"http://"|cut:"/" }}</a>
+                {% endif %}
+            </div>
+            {% if identita.sidlo_ulica and identita.sidlo_mesto %}
+                <p class="text-gray-500 text-[11px]">{{ identita.sidlo_ulica }} {{ identita.sidlo_cislo }}, {{ identita.sidlo_psc }} {{ identita.sidlo_mesto }}{% if identita.sidlo_stat %}, {{ identita.sidlo_stat }}{% endif %}</p>
+            {% endif %}
+            <p class="text-gray-500 text-[11px]">&copy; {{ dnes|date:"Y" }} {{ identita.nazov_spolocnosti|default:"Servisné Stredisko" }}. Všetky práva vyhradené.</p>
+        </div>
+    </footer>
+
+    <script>
+        function predvyplnitAlarm(popisPoruchy) {
+            const textarea = document.getElementById('passport_poziadavka');
+            const priorita = document.getElementById('passport_priorita');
+            if (textarea) {
+                textarea.value = popisPoruchy + '\n\n';
+                if (priorita) { priorita.value = 'VYSOKA'; }
+                textarea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                textarea.focus();
+            }
+        }
+
+        function predvyplnitUdrzbu(sluzbaId, nazovUkonu) {
+            const select = document.getElementById('passport_sluzba');
+            const textarea = document.getElementById('passport_poziadavka');
+            
+            if (select && sluzbaId) {
+                const sIdStr = String(sluzbaId).trim();
+                let optionExists = false;
+                for (let i = 0; i < select.options.length; i++) {
+                    if (select.options[i].value === sIdStr) {
+                        optionExists = true;
+                        break;
+                    }
+                }
+                if (!optionExists && sIdStr) {
+                    const newOpt = document.createElement('option');
+                    newOpt.value = sIdStr;
+                    newOpt.textContent = '🛠️ ' + (nazovUkonu || 'Plánovaný servis');
+                    select.appendChild(newOpt);
+                }
+                select.value = sIdStr;
+            }
+            
+            if (textarea) {
+                const prefix = nazovUkonu ? 'Objednávka plánovanej údržby: ' + nazovUkonu : 'Objednávka plánovanej údržby';
+                textarea.value = prefix + '\n\n';
+                textarea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                textarea.focus();
+            }
+        }
+
+        document.getElementById('dopytForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const form = this;
+            const fileInput = form.querySelector('input[type="file"]');
+            if (fileInput && fileInput.files.length > 0 && fileInput.files[0].size > 10 * 1024 * 1024) {
+                alert('⚠️ Priložený súbor je príliš veľký. Maximálna povolená veľkosť je 10 MB.');
+                return;
+            }
+            const formData = new FormData(form);
+            const msgDiv = document.getElementById('formMessage');
+            const btn = form.querySelector('button[type="submit"]');
+            const btnSpinner = document.getElementById('btnSpinner');
+            const btnText = document.getElementById('btnText');
+            
+            btn.disabled = true;
+            btn.classList.add('opacity-75', 'cursor-not-allowed');
+            btnSpinner.classList.remove('hidden');
+            btnText.innerText = 'Odosielam...';
+            
+            fetch('{% url "webbuilder:submit_inquiry" %}', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+                }
+            })
+            .then(response => response.json().then(data => ({ ok: response.ok, data })).catch(() => ({ ok: false, data: null })))
+            .then(({ ok, data }) => {
+                msgDiv.classList.remove('hidden', 'bg-green-50', 'border-green-200', 'text-green-700', 'bg-red-50', 'border-red-200', 'text-red-700');
+                if(ok && data && data.status === 'success') {
+                    form.classList.add('hidden');
+                    msgDiv.classList.add('bg-green-50', 'border-green-200', 'text-green-700');
+                    msgDiv.innerHTML = `
+                        <div class="text-4xl mb-2">✅</div>
+                        <h4 class="text-xl font-bold mb-1 text-gray-900">Porucha nahlásená!</h4>
+                        <p class="text-gray-500 text-sm">Dispečing bol informovaný. Číslo ticketu: <b class="ticket-id"></b></p>
+                    `;
+                    msgDiv.querySelector('.ticket-id').textContent = data.cislo_objednavky || '';
+                } else {
+                    msgDiv.classList.add('bg-red-50', 'border-red-200', 'text-red-700');
+                    msgDiv.innerHTML = '<b>Chyba:</b> <span class="error-text"></span>';
+                    msgDiv.querySelector('.error-text').textContent = (data && data.message) ? data.message : 'Požiadavku sa nepodarilo odoslať.';
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-75', 'cursor-not-allowed');
+                    btnSpinner.classList.add('hidden');
+                    btnText.innerText = 'Odoslať na dispečing';
+                }
+            })
+            .catch(() => {
+                msgDiv.classList.remove('hidden', 'bg-green-50', 'border-green-200', 'text-green-700');
+                msgDiv.classList.add('bg-red-50', 'border-red-200', 'text-red-700');
+                msgDiv.innerHTML = '<b>Chyba:</b> Nastala chyba pri komunikácii so serverom.';
+                btn.disabled = false;
+                btn.classList.remove('opacity-75', 'cursor-not-allowed');
+                btnSpinner.classList.add('hidden');
+                btnText.innerText = 'Odoslať na dispečing';
+            });
+        });
+    </script>
+</body>
+</html>

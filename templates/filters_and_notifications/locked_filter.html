@@ -1,0 +1,49 @@
+<!-- 
+  🧹 VIZUÁLNA ÚPRAVA: Skrytie globálneho tlačidla "Zrušiť všetky filtre"
+  Kombinujeme CSS (pre rýchlosť) a JS (ako absolútnu poistku pre tvoju custom tému).
+-->
+<style>
+    /* Skrytie štandardných Django tried pre zrušenie filtrov */
+    #changelist-filter-clear,
+    #changelist-filter a.clearfilters {
+        display: none !important;
+    }
+</style>
+
+<script>
+    // 🛡️ JS POISTKA: Nájde presný text v pravom paneli a skryje ho.
+    // Zabezpečí, že to zmizne bez ohľadu na to, aké HTML tagy tvoja téma používa.
+    document.addEventListener("DOMContentLoaded", function() {
+        const filterPanel = document.getElementById('changelist-filter');
+        if (filterPanel) {
+            // Hľadáme v nadpisoch a odkazoch
+            const elements = filterPanel.querySelectorAll('h3, a, div');
+            elements.forEach(el => {
+                // Ak element obsahuje tvoj text (ignorujeme veľkosť písmen)
+                if (el.textContent.toUpperCase().includes('ZRUŠIŤ VŠETKY FILTRE')) {
+                    el.style.display = 'none';
+                }
+            });
+        }
+    });
+</script>
+
+<!-- 🎯 Samotný uzamknutý filter -->
+<h3>Podľa: {{ title }}</h3>
+
+<div title="🔒 Tento filter je uzamknutý. Pre zmenu kategórie choďte naspäť na výber hlavnej kategórie." style="cursor: not-allowed;">
+    <ul style="pointer-events: none; opacity: 0.5; margin: 0; padding-left: 10px;">
+        {% for choice in choices %}
+            
+            {# 🚫 Preskočíme prvú voľbu (Všetko) #}
+            {% if not forloop.first %}
+                <li{% if choice.selected %} class="selected"{% endif %}>
+                    <a href="{{ choice.query_string|iriencode }}">
+                        {% if choice.selected %}✅ {% endif %}{{ choice.display }}
+                    </a>
+                </li>
+            {% endif %}
+            
+        {% endfor %}
+    </ul>
+</div>

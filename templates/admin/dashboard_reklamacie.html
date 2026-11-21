@@ -1,0 +1,439 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}📊 Prehľad reklamácií a kvality | ISAS Command Center{% endblock %}
+
+{% block content %}
+<style>
+    :root {
+        --slate-50: #f8fafc; --slate-100: #f1f5f9; --slate-200: #e2e8f0; --slate-300: #cbd5e1;
+        --slate-500: #64748b; --slate-700: #334155; --slate-800: #1e293b; --slate-900: #0f172a;
+        --emerald-500: #10b981; --emerald-50: #ecfdf5;
+        --rose-500: #ef4444; --rose-50: #fff1f2;
+        --indigo-500: #6366f1; --indigo-50: #eef2ff;
+        --amber-500: #f59e0b;
+        --glass-bg: rgba(255, 255, 255, 0.95);
+    }
+    
+    #content { background: transparent !important; padding: 20px 30px !important; min-height: 90vh; font-family: system-ui, -apple-system, sans-serif; }
+    .breadcrumbs, #content > h1 { display: none !important; }
+    
+    /* Hlavička */
+    .dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; animation: fadeDown 0.5s ease; }
+    .header-left { display: flex; align-items: center; gap: 20px; }
+    .dashboard-header h1 { font-size: 24px; font-weight: 800; color: var(--slate-900); margin: 0; display: flex; align-items: center; gap: 10px; letter-spacing: -0.5px; }
+    
+    .btn-back { display: flex; align-items: center; gap: 8px; background: white; color: var(--slate-700); padding: 10px 20px; border-radius: 10px; font-weight: 700; font-size: 14px; border: 1px solid var(--slate-200); box-shadow: 0 2px 4px rgba(0,0,0,0.02); cursor: pointer; transition: all 0.2s ease; }
+    .btn-back:hover { background: var(--slate-50); color: var(--slate-900); transform: translateX(-4px); border-color: var(--slate-300); }
+    
+    .header-info-box { background: white; border: 1px solid var(--indigo-500); color: var(--indigo-500); padding: 12px 20px; border-radius: 10px; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1); }
+    
+    @media (max-width: 900px) { .dashboard-header { flex-direction: column; align-items: flex-start; gap: 15px; } .header-info-box { width: 100%; box-sizing: border-box; } }
+
+    /* KPI WIDGETY */
+    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-bottom: 30px; animation: fadeDown 0.6s ease; }
+    .kpi-card { background: white; border-radius: 16px; padding: 20px; border: 1px solid var(--slate-100); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 16px; transition: transform 0.2s ease, box-shadow 0.2s ease; }
+    .kpi-card:hover { transform: translateY(-3px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.08); }
+    .kpi-icon { width: 54px; height: 54px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 24px; }
+    .kpi-info h3 { margin: 0; font-size: 26px; font-weight: 800; color: var(--slate-900); line-height: 1.2; }
+    .kpi-info p { margin: 0; font-size: 12px; font-weight: 600; color: var(--slate-500); text-transform: uppercase; letter-spacing: 0.5px; }
+    
+    /* 📱 Responzivita pre KPI karty (Tablet a Mobil) */
+    @media (max-width: 1024px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 768px) { 
+        .kpi-grid { 
+            grid-template-columns: 1fr; /* Na mobile uloží karty pekne pod seba */
+            gap: 16px; /* Zmenší medzeru pre šetrenie miesta na malej obrazovke */
+        } 
+    }
+
+    /* HLAVNÝ GRID PRE PANELY */
+    .grid-container { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; align-items: stretch; animation: fadeUp 0.6s ease; }
+    .panel-wide { grid-column: span 4; }
+    .panel-standard { grid-column: span 1; display: flex; flex-direction: column; }
+    @media (max-width: 1400px) { .grid-container { grid-template-columns: repeat(2, 1fr); } .panel-wide { grid-column: span 2; } }
+    @media (max-width: 900px) { .grid-container { grid-template-columns: 1fr; } .panel-wide, .panel-standard { grid-column: span 1; } }
+
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* DIZAJN PANELOV */
+    .panel { background: var(--glass-bg); border-radius: 20px; border: 1px solid var(--slate-200); box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); padding: 24px; }
+    .panel-title { font-size: 16px; font-weight: 800; color: var(--slate-900); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+    .panel-subtitle { font-size: 12px; color: var(--slate-500); font-weight: 500; margin-top: 0; margin-bottom: 20px; line-height: 1.4; padding-bottom: 15px; border-bottom: 1px solid var(--slate-100); }
+
+    /* SLA TABUĽKA */
+    .sla-table { width: 100%; border-collapse: separate; border-spacing: 0 8px; }
+    .sla-table th { text-align: left; font-size: 11px; font-weight: 700; color: var(--slate-500); text-transform: uppercase; letter-spacing: 0.5px; padding: 0 15px 8px 15px; border-bottom: 1px solid var(--slate-200); }
+    .sla-table td { background: white; padding: 16px 15px; border-top: 1px solid var(--slate-100); border-bottom: 1px solid var(--slate-100); font-size: 14px; font-weight: 600; color: var(--slate-800); }
+    .sla-table tr td:first-child { border-left: 1px solid var(--slate-100); border-radius: 12px 0 0 12px; }
+    .sla-table tr td:last-child { border-right: 1px solid var(--slate-100); border-radius: 0 12px 12px 0; }
+    .sla-table tr:hover td { background: var(--slate-50); }
+    
+    .progress-bg { width: 100%; height: 6px; background: var(--slate-100); border-radius: 10px; overflow: hidden; margin-top: 6px; }
+    .progress-bar { height: 100%; border-radius: 10px; transition: width 0.5s ease; }
+    .badge { padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; display: inline-block; }
+
+    /* SCROLLOVATEĽNÉ TABUĽKY (Pre široké panely) */
+    .table-responsive { max-height: 320px; overflow-y: auto; padding-right: 5px; margin-top: 10px; }
+    .table-responsive::-webkit-scrollbar { width: 6px; }
+    .table-responsive::-webkit-scrollbar-track { background: transparent; }
+    .table-responsive::-webkit-scrollbar-thumb { background: var(--slate-200); border-radius: 10px; }
+    .table-responsive::-webkit-scrollbar-thumb:hover { background: var(--slate-300); }
+    
+    /* Prilepená hlavička tabuľky pri scrollovaní */
+    .sla-table th { position: sticky; top: 0; background: var(--glass-bg); z-index: 10; backdrop-filter: blur(10px); box-shadow: 0 2px 4px -2px rgba(0,0,0,0.05); }
+
+    /* VYHĽADÁVACIE POLE (Select2 štýl) */
+    .search-container { position: relative; margin-bottom: 12px; }
+    .widget-search { 
+        width: 100%; 
+        height: 42px; 
+        padding-top: 10px !important;
+        padding-right: 15px !important;
+        padding-bottom: 10px !important;
+        padding-left: 45px !important; /* TOTO NATVRDO ODSUNIE TEXT OD LUPY */
+        border: 1px solid var(--slate-200); 
+        border-radius: 10px; 
+        font-size: 13px; 
+        font-weight: 600; 
+        color: var(--slate-800); 
+        background-color: var(--slate-50); 
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E"); 
+        background-repeat: no-repeat; 
+        background-position: 14px center !important; 
+        transition: all 0.2s ease; 
+        box-sizing: border-box; 
+        line-height: normal !important;
+    }
+    .widget-search:focus { outline: none; background-color: white; border-color: var(--indigo-500); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15); }
+    .widget-search::placeholder { color: var(--slate-500); font-weight: 500; }
+
+    /* SCROLLOVATEĽNÉ ZOZNAMY A KARTIČKY */
+    .scrollable-list { flex-grow: 1; height: 280px; overflow-y: auto; padding-right: 6px; display: flex; flex-direction: column; gap: 8px; }
+    .scrollable-list::-webkit-scrollbar { width: 5px; }
+    .scrollable-list::-webkit-scrollbar-track { background: transparent; }
+    .scrollable-list::-webkit-scrollbar-thumb { background: var(--slate-200); border-radius: 10px; }
+    .scrollable-list::-webkit-scrollbar-thumb:hover { background: var(--slate-300); }
+
+    .list-item { display: flex; justify-content: space-between; align-items: center; background: white; padding: 12px 16px; border-radius: 10px; border: 1px solid var(--slate-200); transition: all 0.2s ease; }
+    .list-item:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.04); border-color: var(--slate-300); }
+    
+    .item-title { font-size: 14px; font-weight: 700; color: var(--slate-800); display: flex; align-items: center; gap: 10px; }
+    
+    /* Špecifické odznaky pre zoznamy */
+    .badge-rose { background: var(--rose-50); color: var(--rose-500); padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 13px; border: 1px solid rgba(239, 68, 68, 0.2); }
+    .badge-emerald { background: var(--emerald-50); color: var(--emerald-500); padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 13px; border: 1px solid rgba(16, 185, 129, 0.2); }
+    .badge-indigo { background: var(--indigo-50); color: var(--indigo-500); padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 13px; border: 1px solid rgba(99, 102, 241, 0.2); }
+
+    /* BIZNIS METRIKY (Oprávnené/Neoprávnené) */
+    .metric-box-container { display: flex; gap: 12px; margin-bottom: 16px; }
+    .metric-box { flex: 1; padding: 12px; border-radius: 10px; text-align: center; border: 1px solid; }
+    .metric-box.rose { background: var(--rose-50); border-color: rgba(239, 68, 68, 0.2); }
+    .metric-box.emerald { background: var(--emerald-50); border-color: rgba(16, 185, 129, 0.2); }
+    .metric-label { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .metric-value { font-size: 18px; font-weight: 800; }
+    
+    .section-divider { font-size: 11px; font-weight: 800; color: var(--slate-500); text-transform: uppercase; letter-spacing: 0.5px; margin: 10px 0 4px 4px; }
+</style>
+
+<div class="dashboard-header">
+    <div class="header-left">
+        <button type="button" onclick="window.history.back();" class="btn-back" title="Vrátiť sa na predchádzajúcu stránku">
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            Naspäť
+        </button>
+        <h1>📊 Prehľad kvality a SLA</h1>
+    </div>
+</div>
+
+<!-- KPI WIDGETY -->
+<div class="kpi-grid">
+    <div class="kpi-card">
+        <div class="kpi-icon" style="background: var(--indigo-50); color: var(--indigo-500);">📋</div>
+        <div class="kpi-info">
+            <h3>{{ aktivne_reklamacie_pocet }}</h3>
+            <p>Aktívne reklamácie</p>
+        </div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon" style="background: var(--rose-50); color: var(--rose-500);">🚨</div>
+        <div class="kpi-info">
+            <h3>{{ kritickych_sla }}</h3>
+            <p>SLA v ohrození / po lehote</p>
+        </div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon" style="background: var(--emerald-50); color: var(--emerald-500);">⭐</div>
+        <div class="kpi-info">
+            <h3>{{ priemerne_nps }}</h3>
+            <p>Priemerné NPS Skóre</p>
+        </div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon" style="background: var(--slate-100); color: var(--slate-700);">⏱️</div>
+        <div class="kpi-info">
+            <h3>{{ priemerny_cas_dni }} dní</h3>
+            <p>Priemerný čas vybavenia</p>
+        </div>
+    </div>
+</div>
+
+<div class="grid-container">
+    
+    <!-- HORNÝ PANEL: SLA MONITOR -->
+    <div class="panel panel-wide">
+        <div class="panel-title">⏱️ Aktívne reklamácie (SLA Monitor)</div>
+        <p class="panel-subtitle">Zoznam aktuálne riešených reklamácií a sledovanie dohodnutých a zákonných lehôt na ich vybavenie.</p>
+        
+        {% if sla_data %}
+        <div class="search-container">
+            <input type="text" class="widget-search" placeholder="Hľadať zákazníka, zariadenie alebo technika..." oninput="filterList(this, 'sla-list')">
+        </div>
+        
+        <div class="table-responsive" id="sla-list">
+            <table class="sla-table">
+                <thead>
+                    <tr>
+                        <th style="width: 40px; text-align: center;">Stav</th>
+                        <th>Zákazník</th>
+                        <th>Zariadenie</th>
+                        <th>Priorita</th>
+                        <th>Priradení technici</th>
+                        <th style="text-align: center; width: 150px;">Dni v riešení</th>
+                        <th style="text-align: right;">Zostáva do limitu</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in sla_data %}
+                    <tr class="filter-item">
+                        <td style="text-align: center; font-size: 16px;">{{ item.ikona }}</td>
+                        <td><a href="/admin/Evidencia/uloha/{{ item.id }}/change/" style="color: var(--indigo-500); text-decoration: none; font-weight: 800;">{{ item.zakaznik }}</a></td>
+                        <td style="font-size: 13px; color: var(--slate-700);">{{ item.zariadenie }}</td>
+                        <td style="font-size: 12px; font-weight: 700;">{{ item.priorita }}</td>
+                        <td style="color: var(--slate-500); font-size: 13px;">{{ item.technici|default:"Zatiaľ nepriradené" }}</td>
+                        <td style="text-align: center;">
+                            <div style="display: flex; flex-direction: column; align-items: center;">
+                                <span style="font-size: 14px; font-weight: 800; color: {{ item.color }};">
+                                    {{ item.dni }}{% if item.platna_lehota %} / {{ item.platna_lehota }} d.{% else %} dní{% endif %}
+                                </span>
+                                {% if item.percento is not None %}
+                                <div class="progress-bg">
+                                    <div class="progress-bar" style="width: {{ item.percento }}%; background: {{ item.color }};"></div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td style="text-align: right;">
+                            <span class="badge" style="background: {{ item.color }}15; color: {{ item.color }}; border: 1px solid {{ item.color }}40;">
+                                {% if item.platna_lehota %}
+                                    {% if item.je_po_lehote %}⚠️ Po limite o {{ item.dni_po_lehote|default:item.zostava_dni }} dní{% else %}Zostáva {{ item.zostava_dni }} dní{% endif %}
+                                {% else %}
+                                    ℹ️ Bez fixnej lehoty
+                                {% endif %}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 40px; background: var(--emerald-50); border-radius: 12px; border: 1px dashed rgba(16, 185, 129, 0.4);">
+            <div style="font-size: 36px; margin-bottom: 10px;">🎉</div>
+            <h3 style="color: #065f46; margin: 0; font-weight: 800;">Všetko je čisté!</h3>
+            <p style="color: #047857; margin-top: 5px; font-weight: 500; font-size: 14px;">Aktuálne nemáte žiadne nevybavené reklamácie.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- PANEL 1: ANALÝZA POCHYBENÍ -->
+    <div class="panel panel-standard">
+        <div class="panel-title">👨‍🔧 Analýza pochybení technikov</div>
+        <p class="panel-subtitle">Technici s najvyšším počtom reklamácií spôsobených nesprávnym postupom.</p>
+
+        <div class="search-container">
+            <input type="text" class="widget-search" placeholder="Hľadať technika..." oninput="filterList(this, 'shame-list')">
+        </div>
+        <div id="shame-list" class="scrollable-list">
+            {% if rebricek_technikov %}
+                {% for tech in rebricek_technikov %}
+                <div class="list-item filter-item" style="border-left: 4px solid var(--rose-500);">
+                    <div class="item-title">
+                        <span style="font-size: 18px;">{% if forloop.counter == 1 %}🚩{% else %}👷‍♂️{% endif %}</span>
+                        {{ tech.meno }}
+                    </div>
+                    <div class="badge-rose">{{ tech.pocet }} chýb</div>
+                </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- PANEL 2: NAJLEPŠIE HODNOTENÍ -->
+    <div class="panel panel-standard">
+        <div class="panel-title">⭐ Najlepšie hodnotení technici</div>
+        <p class="panel-subtitle">Priemerné hodnotenie kvality práce na základe spätnej väzby od zákazníkov.</p>
+
+        <div class="search-container">
+            <input type="text" class="widget-search" placeholder="Hľadať technika..." oninput="filterList(this, 'fame-list')">
+        </div>
+        <div id="fame-list" class="scrollable-list">
+            {% if rebricek_nps %}
+                {% for tech in rebricek_nps %}
+                <div class="list-item filter-item" style="border-left: 4px solid var(--emerald-500);">
+                    <div class="item-title">
+                        <span style="font-size: 18px;">{% if forloop.counter == 1 %}🥇{% elif forloop.counter == 2 %}🥈{% elif forloop.counter == 3 %}🥉{% else %}👷‍♂️{% endif %}</span>
+                        {{ tech.meno }}
+                    </div>
+                    <div class="badge-emerald">{{ tech.priemer }} ⭐</div>
+                </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- PANEL 3: PÔVOD REKLAMÁCIÍ -->
+    <div class="panel panel-standard">
+        <div class="panel-title">🔍 Pôvod reklamácií</div>
+        <p class="panel-subtitle">Rozdelenie historických reklamácií podľa hlavnej príčiny vzniku.</p>
+        
+        <div class="metric-box-container">
+            <div class="metric-box rose">
+                <div class="metric-label" style="color: var(--rose-500);">Oprávnené (Naše náklady)</div>
+                <div class="metric-value" style="color: #991b1b;">{{ opravnene_percento }} %</div>
+            </div>
+            <div class="metric-box emerald">
+                <div class="metric-label" style="color: var(--emerald-500);">Neoprávnené (Fakturujeme)</div>
+                <div class="metric-value" style="color: #065f46;">{{ neopravnene_percento }} %</div>
+            </div>
+        </div>
+
+        <div class="search-container">
+            <input type="text" class="widget-search" placeholder="Hľadať príčinu..." oninput="filterList(this, 'korene-list')">
+        </div>
+        <div id="korene-list" class="scrollable-list" style="height: 180px;">
+            {% if korene_data %}
+                {% for koren in korene_data %}
+                <div class="list-item filter-item">
+                    <div class="item-title">{{ koren.nazov }}</div>
+                    <div>
+                        <span class="badge-indigo">{{ koren.pocet }}x</span>
+                        <span style="font-size: 12px; color: var(--slate-500); font-weight: 600; margin-left: 6px;">({{ koren.percento }}%)</span>
+                    </div>
+                </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- PANEL 4: NAJČASTEJŠIE PORUCHY -->
+    <div class="panel panel-standard">
+        <div class="panel-title">🏭 Najčastejšie poruchy zariadení</div>
+        <p class="panel-subtitle">Výrobcovia a kategórie s najvyšším počtom výrobných a softvérových vád.</p>
+
+        <div class="search-container">
+            <input type="text" class="widget-search" placeholder="Hľadať značku alebo kategóriu..." oninput="filterList(this, 'brand-list')">
+        </div>
+        <div id="brand-list" class="scrollable-list">
+            {% if kazove_znacky or kazove_kategorie %}
+                
+                {% if kazove_znacky %}
+                <div class="section-divider">Podľa výrobcu</div>
+                {% for znacka in kazove_znacky %}
+                <div class="list-item filter-item">
+                    <div class="item-title">
+                        <span style="font-size: 16px;">📉</span> {{ znacka.nazov }}
+                    </div>
+                    <div class="badge-rose">{{ znacka.pocet }} vád</div>
+                </div>
+                {% endfor %}
+                {% endif %}
+                
+                {% if kazove_kategorie %}
+                <div class="section-divider" style="margin-top: 12px;">Podľa kategórie</div>
+                {% for kat in kazove_kategorie %}
+                <div class="list-item filter-item">
+                    <div class="item-title">
+                        <span style="font-size: 16px;">⚙️</span> {{ kat.nazov }}
+                    </div>
+                    <div class="badge-rose">{{ kat.pocet }} vád</div>
+                </div>
+                {% endfor %}
+                {% endif %}
+
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- SPODNÝ PANEL: CHRONICKÉ PORUCHY (Opakované reklamácie) -->
+    <div class="panel panel-wide" style="margin-top: 10px;">
+        <div class="panel-title">🚨 Rizikové zariadenia (Opakované reklamácie)</div>
+        <p class="panel-subtitle">Konkrétne zariadenia u zákazníkov, ktoré boli reklamované viac ako jedenkrát. Vyžadujú manažérsku pozornosť alebo návrh na výmenu.</p>
+        
+        {% if chronicke_stroje %}
+        <div class="search-container">
+            <input type="text" class="widget-search" placeholder="Hľadať zákazníka, sériové číslo alebo model..." oninput="filterList(this, 'riziko-list')">
+        </div>
+
+        <div class="table-responsive" id="riziko-list">
+            <table class="sla-table">
+                <thead>
+                    <tr>
+                        <th style="width: 40px; text-align: center;">⚠️</th>
+                        <th>Zákazník</th>
+                        <th>Zariadenie (Model)</th>
+                        <th>Sériové číslo (SN)</th>
+                        <th>Výrobca</th>
+                        <th style="text-align: center;">Počet reklamácií</th>
+                        <th style="text-align: right;">Akcia</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stroj in chronicke_stroje %}
+                    <tr class="filter-item">
+                        <td style="text-align: center; font-size: 16px;">🔥</td>
+                        <td><span style="font-weight: 800; color: var(--slate-800);">{{ stroj.zakaznik }}</span></td>
+                        <td style="font-size: 13px; color: var(--slate-700); font-weight: 600;">{{ stroj.nazov }}</td>
+                        <td><span class="badge" style="background: var(--slate-100); color: var(--slate-700); font-family: monospace; font-size: 13px;">{{ stroj.sn }}</span></td>
+                        <td style="font-size: 13px; color: var(--slate-500);">{{ stroj.vyrobca }}</td>
+                        <td style="text-align: center;">
+                            <span class="badge-rose" style="font-size: 14px;">{{ stroj.pocet }}x</span>
+                        </td>
+                        <td style="text-align: right;">
+                            <a href="/admin/Evidencia/servisovanezariadenie/{{ stroj.id }}/change/" class="badge" style="background: var(--indigo-50); color: var(--indigo-500); text-decoration: none; border: 1px solid rgba(99, 102, 241, 0.2); transition: 0.2s;">
+                                Karta zariadenia &rarr;
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 30px; background: var(--slate-50); border-radius: 12px; border: 1px dashed var(--slate-200); margin-top: 15px;">
+            <div style="font-size: 24px; margin-bottom: 8px;">🛡️</div>
+            <h3 style="color: var(--slate-700); margin: 0; font-weight: 700; font-size: 15px;">Žiadne chronické poruchy</h3>
+            <p style="color: var(--slate-500); margin-top: 4px; font-weight: 500; font-size: 13px;">Aktuálne neevidujeme žiadne zariadenie, ktoré by sa opakovane kazilo.</p>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+
+<script>
+    // Rýchly Live Search filter pre widgety (Defenzívny Zero-Crash engine)
+    function filterList(inputElement, listId) {
+        if (!inputElement || !listId) return;
+        const list = document.getElementById(listId);
+        if (!list) return;
+        const filter = (inputElement.value || '').toLowerCase().trim();
+        const items = list.getElementsByClassName('filter-item');
+        
+        for (let i = 0; i < items.length; i++) {
+            const text = (items[i].textContent || items[i].innerText || '').toLowerCase();
+            items[i].style.display = text.indexOf(filter) > -1 ? "" : "none";
+        }
+    }
+</script>
+{% endblock %}

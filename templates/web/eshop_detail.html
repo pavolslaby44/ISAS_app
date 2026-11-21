@@ -1,0 +1,271 @@
+{% extends 'web/base.html' %}
+
+{% block title %}{{ diel.nazov|default:industry_terms.polozka_fallback_nazov }} | {{ industry_terms.nav_katalog_label|default:"Katalóg" }} | {{ nastavenia.titulok_webu|default:identita.nazov_spolocnosti }}{% endblock %}
+{% block description %}{{ diel.popis_na_webe|default:diel.nazov|default:industry_terms.polozka_fallback_nazov|striptags|truncatechars:155 }}{% endblock %}
+
+{% block og_type %}product{% endblock %}
+{% block og_url %}{{ request.scheme }}://{{ request.get_host }}{% url 'webbuilder:eshop_detail' diel.slug %}{% endblock %}
+{% block og_title %}{{ diel.nazov|default:industry_terms.polozka_fallback_nazov }} | {{ industry_terms.nav_katalog_label|default:"Katalóg" }}{% endblock %}
+{% block og_description %}{{ diel.popis_na_webe|default:diel.nazov|default:industry_terms.polozka_fallback_nazov|striptags|truncatechars:155 }}{% endblock %}
+
+{% block og_image_tag %}
+    {% if diel.obrazok_na_webe and diel.obrazok_na_webe.name %}
+    <meta property="og:image" content="{% if '://' in diel.obrazok_na_webe.url %}{{ diel.obrazok_na_webe.url }}{% else %}{{ request.scheme }}://{{ request.get_host }}{{ diel.obrazok_na_webe.url }}{% endif %}">
+    {% else %}
+    {{ block.super }}
+    {% endif %}
+{% endblock %}
+
+{% block extra_head %}
+    <link rel="canonical" href="{{ request.scheme }}://{{ request.get_host }}{% url 'webbuilder:eshop_detail' diel.slug %}">
+    <meta name="twitter:card" content="summary_large_image">
+    {% if not diel.zobrazit_na_webe or is_preview %}
+    <meta name="robots" content="noindex, nofollow">
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+<nav aria-label="Omrvinková navigácia" class="bg-gray-100 py-4 border-b border-gray-200 print:hidden">
+    <div class="max-w-7xl mx-auto px-6 text-sm text-gray-500 font-medium">
+        <ol class="flex items-center flex-wrap gap-2">
+            <li>
+                <a href="{% url 'webbuilder:home' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="hover:text-brand transition">Domov</a>
+            </li>
+            <li aria-hidden="true" class="text-gray-400">/</li>
+            <li>
+                <a href="{% url 'webbuilder:eshop_list' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="hover:text-brand transition">{{ industry_terms.nav_katalog_label|default:"Katalóg" }}</a>
+            </li>
+            <li aria-hidden="true" class="text-gray-400">/</li>
+            <li aria-current="page" class="text-gray-900 font-bold truncate max-w-xs md:max-w-md">{{ diel.nazov|default:industry_terms.polozka_fallback_nazov }}</li>
+        </ol>
+    </div>
+</nav>
+
+<section class="py-16 bg-white px-6">
+    <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+        
+        <!-- Obrázok -->
+        <div class="bg-gray-50 rounded-3xl p-8 border border-gray-100 flex items-center justify-center min-h-[400px] relative">
+            {% if diel.obrazok_na_webe and diel.obrazok_na_webe.name %}
+                <img src="{{ diel.obrazok_na_webe.url }}" alt="{{ diel.nazov|default:industry_terms.polozka_fallback_nazov|striptags }}" fetchpriority="high" class="max-w-full max-h-[400px] object-contain drop-shadow-xl">
+            {% else %}
+                <span class="text-9xl opacity-10">📦</span>
+            {% endif %}
+            
+            <div class="absolute top-6 right-6 text-right">
+                {% if diel.pocet_na_sklade and diel.pocet_na_sklade > 0 %}
+                    <span class="bg-emerald-100 text-emerald-700 text-sm font-extrabold px-4 py-2 rounded-full shadow-sm border border-emerald-200 inline-block">Skladom ({{ diel.pocet_na_sklade }}{% if diel.merna_jednotka %} {{ diel.merna_jednotka }}{% endif %})</span>
+                {% elif diel.skladom %}
+                    <span class="bg-emerald-100 text-emerald-700 text-sm font-extrabold px-4 py-2 rounded-full shadow-sm border border-emerald-200 inline-block">Skladom</span>
+                {% else %}
+                    <span class="bg-amber-100 text-amber-700 text-sm font-extrabold px-4 py-2 rounded-full shadow-sm border border-amber-200 inline-block">Na objednávku</span>
+                    <span class="block text-[11px] text-gray-500 font-medium mt-1">Termín dodania upresníme v ponuke</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Informácie -->
+        <div>
+            <div class="flex flex-wrap items-center gap-3 text-sm text-gray-400 font-mono mb-2">
+                {% if diel.katalogove_cislo %}
+                <button type="button" onclick="copyTextSafely('{{ diel.katalogove_cislo|escapejs }}', 'SKU')" class="cursor-pointer hover:text-gray-900 transition flex items-center gap-1 group text-left bg-transparent border-0 p-0 font-mono text-sm text-gray-400" title="Kliknutím skopírujete SKU do schránky">
+                    <span>SKU:</span>
+                    <strong class="text-gray-700 underline decoration-dotted underline-offset-4 group-hover:text-brand">{{ diel.katalogove_cislo }}</strong>
+                    <span class="text-xs opacity-60 group-hover:opacity-100">📋</span>
+                </button>
+                {% else %}
+                <span class="flex items-center gap-1">
+                    <span>SKU:</span>
+                    <strong class="text-gray-700">{{ diel.seriove_cislo|default:"N/A" }}</strong>
+                </span>
+                {% endif %}
+                {% if diel.ean_kod %}
+                <button type="button" onclick="copyTextSafely('{{ diel.ean_kod|escapejs }}', 'EAN')" class="cursor-pointer hover:text-gray-900 transition flex items-center gap-1 group text-left bg-transparent border-0 p-0 font-mono text-sm text-gray-400" title="Kliknutím skopírujete EAN">
+                    <span>| EAN:</span>
+                    <strong class="text-gray-700 underline decoration-dotted underline-offset-4 group-hover:text-brand">{{ diel.ean_kod }}</strong>
+                    <span class="text-xs opacity-60 group-hover:opacity-100">📋</span>
+                </button>
+                {% endif %}
+                <span id="copyEshopToast" role="status" aria-live="polite" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-2xl z-[110] pointer-events-none"></span>
+                {% if not diel.skryt_vyrobcu and diel.vyrobca %}
+                    <span class="inline-flex items-center gap-1.5">| Výrobca: 
+                        <strong class="text-gray-700 font-semibold">{{ diel.vyrobca.nazov_vyrobcu|default:"Výrobca" }}</strong>
+                        {% if diel.vyrobca.krajina_povodu %}<span class="text-xs text-gray-400 font-normal">({{ diel.vyrobca.krajina_povodu }})</span>{% endif %}
+                        {% if diel.vyrobca.logo_na_webe and diel.vyrobca.logo_na_webe.name %}<img src="{{ diel.vyrobca.logo_na_webe.url }}" alt="{{ diel.vyrobca.nazov_vyrobcu|default:'Logo výrobcu' }}" loading="lazy" class="h-4 max-w-[70px] object-contain inline-block ml-1">{% endif %}
+                    </span>
+                {% endif %}
+                {% if diel.typ == 'O' %}
+                    <span class="bg-blue-50 text-blue-700 border border-blue-200 text-xs px-2.5 py-0.5 rounded-full font-bold">💎 Originál (OEM)</span>
+                {% elif diel.typ == 'N' %}
+                    <span class="bg-gray-100 text-gray-700 border border-gray-200 text-xs px-2.5 py-0.5 rounded-full font-bold">🔄 Kompatibilná alternatíva</span>
+                {% endif %}
+            </div>
+
+            <h1 class="text-4xl font-extrabold text-gray-900 mb-4">{{ diel.nazov|default:industry_terms.polozka_fallback_nazov }}</h1>
+            {% if not diel.zobrazit_na_webe %}
+            <div class="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs font-bold inline-flex items-center gap-2">
+                <span>⚠️ Táto položka je skrytá (neaktívna). Ako administrátor vidíte neverejný náhľad.</span>
+            </div>
+            {% endif %}
+            
+            <div class="bg-gray-50 p-6 rounded-2xl border border-gray-100 mb-8">
+                <div class="flex items-end justify-between">
+                    <div>
+                        {% if cena_bez_dph %}
+                            {% if povodna_cena_bez_dph %}
+                                <div class="text-lg text-gray-400 line-through mb-1">{{ povodna_cena_bez_dph }} {{ mena }}</div>
+                                <div class="text-4xl font-extrabold text-emerald-600">{{ cena_bez_dph }} {{ mena }} <span class="text-sm bg-emerald-100 text-emerald-700 px-2 py-1 rounded-lg ml-2 align-middle">Vaša B2B cena{% if zlava_percent and zlava_percent > 0 %} (-{{ zlava_percent }}%){% endif %}</span></div>
+                            {% else %}
+                                <div class="text-4xl font-extrabold text-brand">{{ cena_bez_dph }} {{ mena }}</div>
+                            {% endif %}
+                            <div class="text-sm text-gray-500 font-medium mt-1">bez DPH{% if diel.merna_jednotka %} / {{ diel.merna_jednotka }}{% endif %}</div>
+                        {% else %}
+                            <div class="text-2xl font-extrabold text-brand">Na vyžiadanie</div>
+                        {% endif %}
+                    </div>
+                    <div class="text-right">
+                        {% if cena_s_dph %}
+                            <div class="text-xl font-bold text-gray-700">{{ cena_s_dph }} {{ mena }}</div>
+                            <div class="text-sm text-gray-400">s DPH{% if sadzba_dph and sadzba_dph > 0 %} ({{ sadzba_dph }}%){% endif %}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-10">
+                <h3 class="text-lg font-bold text-gray-900 mb-3">Popis produktu</h3>
+                <p class="text-gray-600 leading-relaxed">{{ diel.popis_na_webe|default:"Podrobné technické informácie a špecifikáciu tejto položky vám radi poskytneme na vyžiadanie."|linebreaksbr }}</p>
+            </div>
+
+            <div class="flex gap-4 items-center print:hidden">
+                <div class="w-40">
+                    <label for="qtyInput" class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Množstvo{% if diel.merna_jednotka %} ({{ diel.merna_jednotka }}){% endif %}</label>
+                    <div class="relative flex items-center bg-gray-50 border border-gray-200 rounded-xl">
+                        <button type="button" aria-label="Znížiť množstvo" onclick="const q = document.getElementById('qtyInput'); q.value = Math.max(1, (parseInt(q.value, 10) || 1) - 1);" class="px-3 py-4 text-gray-500 hover:text-gray-900 font-bold text-lg focus:outline-none select-none">–</button>
+                        <input type="number" id="qtyInput" value="1" min="1" max="999" step="1" aria-label="Množstvo položky" oninput="if(this.value < 1 && this.value !== '') this.value = 1; if(this.value > 999) this.value = 999;" onchange="if(!this.value || this.value < 1) this.value = 1; if(this.value > 999) this.value = 999;" class="w-full bg-transparent border-0 text-center font-bold text-lg focus:outline-none focus:ring-0 p-0">
+                        <button type="button" aria-label="Zvýšiť množstvo" onclick="const q = document.getElementById('qtyInput'); q.value = Math.min(999, (parseInt(q.value, 10) || 1) + 1);" class="px-3 py-4 text-gray-500 hover:text-gray-900 font-bold text-lg focus:outline-none select-none">+</button>
+                    </div>
+                </div>
+                <button type="button" onclick="addToCart('POLOZKA', '{{ diel.nazov|default:industry_terms.polozka_fallback_nazov|striptags|escapejs }}', 'SKU: {{ diel.katalogove_cislo|default:diel.seriove_cislo|default:'N/A'|escapejs }}', (document.getElementById('qtyInput') ? parseInt(document.getElementById('qtyInput').value, 10) : 1) || 1)" class="flex-grow block text-center mt-5 {% if is_b2b or request.user.zakaznik_profil %}bg-emerald-600 hover:bg-emerald-700{% else %}bg-gray-900 hover:bg-brand{% endif %} text-white font-bold text-lg py-4 rounded-xl transition duration-300 shadow-lg">
+                    {{ industry_terms.cart_inquiry_btn|default:"Pridať do dopytu" }}
+                </button>
+            </div>
+            {% if identita.telefon %}
+            <div class="mt-4 flex items-center gap-2 text-xs text-gray-500 font-medium print:hidden">
+                <span>📞 Potrebujete overiť kompatibilitu alebo špecifikáciu?</span>
+                <a href="tel:{{ identita.telefon|cut:' '|cut:'/' }}" class="text-gray-900 hover:text-brand font-bold underline transition">{{ identita.telefon }}</a>
+            </div>
+            {% endif %}
+
+            <div class="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between print:hidden">
+                <a href="{% url 'webbuilder:eshop_list' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="text-sm font-bold text-gray-500 hover:text-brand transition flex items-center gap-1.5">
+                    &larr; Späť na {{ industry_terms.nav_katalog_label|default:"katalóg"|lower }}
+                </a>
+            </div>
+
+            <!-- 🛡️ B2B BENEFIT & SERVISNÝ BOX -->
+            <div class="mt-6 pt-6 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs text-gray-600">
+                <div class="flex items-center gap-2">
+                    <span class="text-lg">🤝</span>
+                    <span>Odborná <strong>podpora a implementácia</strong> špecialistami</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-lg">🚚</span>
+                    <span>Rýchle a spoľahlivé vybavenie požiadavky</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-lg">🛡️</span>
+                    <span>Garancia funkčnosti a technická podpora</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 🚀 ISAS SEO ENGINE: Structured Data pre Google (Product Schema) -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Domov",
+          "item": "{{ request.scheme }}://{{ request.get_host }}{% url 'webbuilder:home' %}"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "{{ industry_terms.nav_katalog_label|default:'Katalóg'|escapejs }}",
+          "item": "{{ request.scheme }}://{{ request.get_host }}{% url 'webbuilder:eshop_list' %}"
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": "{{ diel.nazov|default:industry_terms.polozka_fallback_nazov|striptags|escapejs }}",
+          "item": "{{ request.scheme }}://{{ request.get_host }}{% url 'webbuilder:eshop_detail' diel.slug %}"
+        }
+      ]
+    },
+    {
+      "@type": "Product",
+      "url": "{{ request.scheme }}://{{ request.get_host }}{% url 'webbuilder:eshop_detail' diel.slug %}",
+      "name": "{{ diel.nazov|default:industry_terms.polozka_fallback_nazov|striptags|escapejs }}",
+      {% if diel.obrazok_na_webe and diel.obrazok_na_webe.name %}
+      "image": [
+        "{% if '://' in diel.obrazok_na_webe.url %}{{ diel.obrazok_na_webe.url|escapejs }}{% else %}{{ request.scheme }}://{{ request.get_host }}{{ diel.obrazok_na_webe.url|escapejs }}{% endif %}"
+      ],
+      {% endif %}
+      "description": "{{ diel.popis_na_webe|default:'Podrobné technické informácie a špecifikáciu tejto položky vám radi poskytneme na vyžiadanie.'|striptags|truncatechars:300|escapejs }}",
+      "sku": "{{ diel.katalogove_cislo|default:diel.seriove_cislo|default:'N/A'|escapejs }}",
+      {% if diel.ean_kod %}"gtin": "{{ diel.ean_kod|escapejs }}",{% endif %}
+      "brand": {
+        "@type": "Brand",
+        "name": "{% if not diel.skryt_vyrobcu and diel.vyrobca.nazov_vyrobcu %}{{ diel.vyrobca.nazov_vyrobcu|escapejs }}{% else %}{{ identita.nazov_spolocnosti|default:nastavenia.titulok_webu|default:'ISAS CORE'|escapejs }}{% endif %}"
+      }{% if not is_b2b and not request.user.zakaznik_profil and cena_bez_dph %},
+      "offers": {
+        "@type": "Offer",
+        "url": "{{ request.scheme }}://{{ request.get_host }}{% url 'webbuilder:eshop_detail' diel.slug %}",
+        "priceCurrency": "{{ mena|cut:' '|escapejs }}",
+        "price": "{% if cena_s_dph %}{{ cena_s_dph|stringformat:'s' }}{% else %}{{ cena_bez_dph|stringformat:'s' }}{% endif %}",
+        "availability": "{% if diel.pocet_na_sklade and diel.pocet_na_sklade > 0 or diel.skladom %}https://schema.org/InStock{% else %}https://schema.org/PreOrder{% endif %}",
+        "itemCondition": "https://schema.org/NewCondition"
+      }{% endif %}
+    }
+  ]
+}
+</script>
+
+<script>
+let copyEshopToastTimer = null;
+function copyTextSafely(text, label) {
+    if (!text) return;
+    const toast = document.getElementById('copyEshopToast');
+    const onSuccess = () => {
+        if (!toast) return;
+        if (copyEshopToastTimer) clearTimeout(copyEshopToastTimer);
+        toast.textContent = `${label || 'Hodnota'} bola skopírovaná do schránky! ✅`;
+        toast.classList.remove('hidden');
+        copyEshopToastTimer = setTimeout(() => toast.classList.add('hidden'), 2000);
+    };
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(onSuccess).catch(() => fallbackCopy(text, onSuccess));
+    } else {
+        fallbackCopy(text, onSuccess);
+    }
+}
+function fallbackCopy(text, cb) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { if (document.execCommand('copy')) cb(); } catch (e) {}
+    document.body.removeChild(ta);
+}
+</script>
+{% endblock %}

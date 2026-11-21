@@ -1,32 +1,110 @@
-# Python
+# ==========================================
+# 1. PYTHON RUNTIME & VIRTUAL ENVS
+# ==========================================
 __pycache__/
 *.py[cod]
+*$py.class
 *.pyo
 *.pyd
 *.so
 *.egg
 *.egg-info/
-*.manifest
-*.spec
+dist/
+build/
 
-# Virtual environment
+# Virtual Environments
 venv/
+.venv/
+env/
+ENV/
+
+# ==========================================
+# 2. ENVIRONMENT VARIABLES & TAJNÉ KĽÚČE
+# ==========================================
+# Načítavané cez python-dotenv v settings.py
 .env
+.env.*
+!.env.example
 
-# SQLite database
-db.sqlite3
+# ==========================================
+# 3. DJANGO STATIC & MEDIA (Z SETTINGS.PY)
+# ==========================================
+# MEDIA_ROOT = BASE_DIR / 'media'
+media/
+media_data/
 
-# Django static files
-static/
-staticfiles/*
-!staticfiles/admin/
-!staticfiles/admin/**
+# STATIC_ROOT = BASE_DIR / 'staticfiles'
+# Poznámka: Zložka 'static/' sa NEIGNORUJE, lebo obsahuje zdrojové súbory (STATICFILES_DIRS)
+staticfiles/
 
-# VS Code / IDE
+# SQLite fallback (ak by sa použil lokálne)
+*.sqlite3
+*.db
+
+# ==========================================
+# 4. BOTI & TRVALÁ PAMÄŤ (Z DOCKER-COMPOSE.YML)
+# ==========================================
+# Volume: bot_data:/app/data (telegram_bot.py / discord_bot.py)
+data/
+bot_data/
+*.pickle
+
+# ==========================================
+# 5. CELERY & ASYNCHRÓNNE SLUŽBY
+# ==========================================
+# Celery Beat schedule z CELERY_BEAT_SCHEDULE
+celerybeat-schedule
+celerybeat-schedule.*
+celerybeat.pid
+
+# ==========================================
+# 6. DOCKER VOLUMES (AK SA VYTVORIA LOKÁLNE)
+# ==========================================
+postgres_data/
+redis_data/
+.dockerenv
+
+# ==========================================
+# 7. LOGS, TEMP & BACKUPS
+# ==========================================
+*.log
+logs/
+tmp/
+temp/
+*.tar.gz
+*.dump
+*.sql
+
+# ==========================================
+# 8. IDE & OPERAČNÝ SYSTÉM
+# ==========================================
+.DS_Store
+Thumbs.db
 .vscode/
 .idea/
 
-# OS files
-.DS_Store
-Thumbs.db
+# Cache z linterov a testov
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
 
+# Záložné virtuálne prostredia a zálohy DB
+venv_*/
+backups/
+isas_backups/
+
+# Generovaný AI kontext a dočasné audit skripty
+isas_full_context_logic.txt
+
+# Dokumentácia a audit pre Django kompatibilitu
+dokumentacia_django_6_0+.txt
+audit_django_6_0+.py
+
+# Dokumentácia a audit pre Django kompatibilitu
+dokumentacia_django_6_0+.txt
+audit_django_6_0+.py
+
+# Lokálne binárky, tunely a serverovo-špecifický compose
+*.exe
+ngrok.exe
+docker-compose.server.yml

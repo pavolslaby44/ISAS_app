@@ -1,0 +1,2102 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}📡 IoT Telemetria | ISAS CORE{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        var failsafe = setTimeout(function() { document.body.classList.add('isas-ready'); }, 2500);
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                clearTimeout(failsafe);
+                document.body.classList.add('isas-ready');
+            }, 700); 
+        });
+    });
+</script>
+
+<!-- Chart.js a Select2 zrážky -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- 🧠 ISAS CORE: Knižnice pre prémiový Zoom a Pan v grafoch -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<style>
+    /* =========================================================
+       🎨 VIVID LIGHT SPA DESIGN SYSTEM (ISAS CORE)
+       ========================================================= */
+    :root {
+        --bg-gradient: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        --glass-bg: rgba(255, 255, 255, 0.75);
+        --glass-border: rgba(255, 255, 255, 0.6);
+        --glass-shadow: 0 8px 32px rgba(30, 41, 59, 0.08);
+            
+        --text-main: #1e293b;
+        --text-muted: #64748b;
+            
+        --color-primary: #3b82f6;
+        --color-success: #10b981;
+        --color-warning: #f59e0b;
+        --color-danger: #ef4444;
+            
+        --radius-lg: 16px;
+        --radius-md: 12px;
+    }
+
+    /* 🛡️ ISAS FIX: Bezpečný reset, ktorý nekazí AI asistenta (odstránené margin:0 a padding:0) */
+    *, *::before, *::after { box-sizing: border-box; }
+
+    /* 🚀 OVERRIDE DJANGO ADMIN CONTAINER - FULL WIDTH ROZTIAHNUTIE */
+    #container { width: 100% !important; min-width: 100% !important; }
+    #content { 
+        background: transparent !important; 
+        padding: 20px 30px !important; 
+        min-height: 90vh; 
+        width: 100% !important; 
+        max-width: 100% !important; 
+        box-sizing: border-box !important; 
+    }
+    .breadcrumbs, #content > h1 { display: none !important; }
+
+    /* Skrytie hlavného obsahu počas načítavania OKREM samotného preloaderu */
+    #content > *:not(#isas-preloader-wrapper), #content-main > *:not(#isas-preloader-wrapper) {
+        opacity: 0 !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+    }
+
+    /* Fixný neviditeľný obal pre vycentrovanie preloaderu */
+    #isas-preloader-wrapper {
+        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+        display: flex; align-items: center; justify-content: center;
+        z-index: 9999999; pointer-events: none;
+    }
+
+    /* Prémiová bublina s Blur efektom */
+    .isas-loader-box {
+        background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);
+        padding: 20px 40px; border-radius: 50px; border: 2px solid #bae6fd;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15); display: flex; align-items: center; gap: 15px;
+        font-size: 16px; font-weight: 800; color: #0f172a; transition: all 0.5s ease;
+    }
+
+    /* Animovaný točiaci sa spinner */
+    .isas-spinner {
+        width: 24px; height: 24px; border: 4px solid #e0f2fe; border-top: 4px solid #0284c7;
+        border-radius: 50%; animation: isas-spin 0.8s linear infinite;
+    }
+    @keyframes isas-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    /* Rozsvietenie tabuľky a dashboardu po načítaní */
+    body.isas-ready #content > *:not(#isas-preloader-wrapper), body.isas-ready #content-main > *:not(#isas-preloader-wrapper) {
+        opacity: 1 !important; visibility: visible !important; pointer-events: auto !important;
+        transition: opacity 0.6s ease-in-out !important;
+    }
+    body.isas-ready .isas-loader-box { opacity: 0 !important; transform: scale(0.9) translateY(-20px) !important; }
+
+    @media (max-width: 768px) {
+        .isas-loader-box {
+            flex-direction: column !important; text-align: center !important;
+            padding: 25px 20px !important; border-radius: 24px !important;
+            width: 85% !important; box-sizing: border-box !important; gap: 12px !important;
+        }
+        .isas-loader-box span { font-size: 14px !important; line-height: 1.4 !important; }
+        #isas-preloader-wrapper { height: 100vh !important; height: 100svh !important; }
+    }
+        
+    body { background: var(--bg-gradient); color: var(--text-main); font-family: 'Segoe UI', system-ui, sans-serif; overflow-x: hidden; }
+
+    /* 💎 VIVID BUTTONS (Zjednotené s Modbusom) */
+    .btn { padding: 10px 20px; border-radius: 10px; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; border: none; transition: 0.3s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; }
+    .btn-ghost { background: #f1f5f9; color: #1e293b; border: 1px solid #cbd5e1; }
+    .btn-ghost:hover { background: #e2e8f0; }
+
+    /* --- GLASSMORPHISM KOMPONENTY --- */
+    .glass-panel {
+        background: var(--glass-bg);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--glass-border);
+        box-shadow: var(--glass-shadow);
+        border-radius: var(--radius-lg);
+        padding: 20px;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .glass-panel:hover {
+        box-shadow: 0 12px 40px rgba(30, 41, 59, 0.12);
+    }
+
+    /* --- LAYOUT --- */
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+    .header h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; display: flex; align-items: center; gap: 10px; }
+    .header-badge { background: var(--color-primary); color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; text-transform: uppercase; }
+
+    .filters-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        
+    /* 🎨 ISAS CORE: Select2 VIVID LIGHT Overrides */
+    .select2-container { width: 100% !important; }
+    .select2-container--default .select2-selection--single {
+        height: 46px; padding: 8px 15px; border-radius: var(--radius-md);
+        border: 1px solid #cbd5e1; background: rgba(255, 255, 255, 0.9);
+        font-size: 14px; font-weight: 600; color: var(--text-main);
+        display: flex; align-items: center;
+        box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+    }
+    .select2-container--default .select2-selection--single:focus,
+    .select2-container--default.select2-container--open .select2-selection--single {
+        border-color: var(--color-primary); outline: none;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    }
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 44px; right: 10px;
+    }
+    .select2-dropdown {
+        border: 1px solid #cbd5e1; border-radius: var(--radius-md);
+        box-shadow: 0 10px 25px rgba(30, 41, 59, 0.1); overflow: hidden;
+    }
+    .select2-results__option { padding: 10px 15px; font-size: 14px; font-weight: 500; }
+    .select2-container--default .select2-results__option--highlighted[aria-selected] {
+        background-color: var(--color-primary); color: white;
+    }
+
+    .dashboard-grid { display: grid; grid-template-columns: 1fr 350px; gap: 25px; }
+    @media (max-width: 1024px) { .dashboard-grid { grid-template-columns: 1fr; } }
+
+    /* --- BUDÍKY (ULTRA PREMIUM GAUGES) --- */
+    .gauges-container { display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 25px; }
+    .gauge-card { 
+        width: 240px; flex-grow: 0; /* 🚀 ISAS FIX: Pevná šírka zabráni roztiahnutiu na celú obrazovku */
+        text-align: center; position: relative; background: rgba(255, 255, 255, 0.8); 
+        border: 1px solid #ffffff; border-radius: 24px; padding: 20px 10px;
+        box-shadow: 0 10px 30px rgba(30, 41, 59, 0.04), inset 0 2px 5px rgba(255,255,255,1);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease;
+    }
+    .gauge-card:hover { 
+        transform: translateY(-5px); 
+        box-shadow: 0 20px 40px rgba(30, 41, 59, 0.08), inset 0 2px 5px rgba(255,255,255,1); 
+    }
+    .gauge-value-overlay { position: absolute; bottom: 35px; left: 0; width: 100%; text-align: center; }
+    .gauge-value-overlay .val { 
+        font-size: 34px; font-weight: 900; line-height: 1; letter-spacing: -1px;
+        background: linear-gradient(135deg, #0f172a 0%, #475569 100%);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .gauge-value-overlay .unit { font-size: 12px; color: #64748b; font-weight: 800; text-transform: uppercase; margin-top: 2px; }
+    .gauge-title { font-size: 12px; font-weight: 800; color: #475569; margin-top: 15px; text-transform: uppercase; letter-spacing: 1px; }
+
+    /* --- DIGITÁLNE STAVY --- */
+    .digital-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-bottom: 25px; }
+    .digital-badge { padding: 10px; border-radius: var(--radius-md); text-align: center; font-size: 12px; font-weight: bold; border: 1px solid rgba(0,0,0,0.05); }
+    .digital-badge.on { background: #dcfce7; color: #166534; }
+    .digital-badge.off { background: #f1f5f9; color: #475569; }
+
+    /* --- ČIERNA SKRINKA (TABUĽKA) --- */
+    .table-container { overflow-x: auto; max-height: 350px; overflow-y: auto; padding-right: 5px; }
+    .table-container::-webkit-scrollbar { width: 6px; }
+    .table-container::-webkit-scrollbar-track { background: transparent; }
+    .table-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    .table-container::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { text-align: left; padding: 12px; color: var(--text-muted); font-weight: 700; border-bottom: 2px solid #e2e8f0; text-transform: uppercase; position: sticky; top: 0; background: var(--glass-bg); z-index: 10; backdrop-filter: blur(10px); }
+    
+    /* 🚨 ČISTÉ KARTY ALARMOV (Minimalistický dizajn + Animácie) */
+    .alarms-scroll-container { max-height: 350px; overflow-y: auto; padding-right: 5px; overflow-x: hidden; }
+    .alarms-scroll-container::-webkit-scrollbar { width: 6px; }
+    .alarms-scroll-container::-webkit-scrollbar-track { background: transparent; }
+    .alarms-scroll-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    .alarms-scroll-container::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+    .alarm-card { display: flex; align-items: flex-start; gap: 12px; padding: 16px; border-radius: 12px; margin-bottom: 12px; background: #ffffff; border: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.02); transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); position: relative; overflow: hidden; max-height: 200px; opacity: 1; transform: translateX(0); }
+    .alarm-card:hover { box-shadow: 0 6px 15px rgba(0,0,0,0.05); transform: translateY(-2px); }
+    
+    /* 🪄 ISAS UX: Trieda pre plynulé zmiznutie po kliknutí na Vyriešiť */
+    .alarm-card.removing { opacity: 0; transform: translateX(50px); max-height: 0; margin-bottom: 0; padding-top: 0; padding-bottom: 0; border-width: 0; }
+    
+    /* Jemný farebný prúžok naľavo namiesto celého pozadia */
+    .alarm-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; }
+    .alarm-card.critical::before { background: #ef4444; }
+    .alarm-card.warning::before { background: #f59e0b; }
+    .alarm-card.resolved::before { background: #10b981; }
+    .alarm-card.resolved { opacity: 0.6; background: #f8fafc; }
+    
+    .alarm-icon { font-size: 20px; flex-shrink: 0; margin-top: 2px; }
+    
+    .alarm-content { flex-grow: 1; }
+    .alarm-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 8px; }
+    
+    /* Elegantný badge pre kód chyby */
+    .alarm-code { font-weight: 800; font-size: 11px; padding: 3px 8px; border-radius: 6px; letter-spacing: 0.5px; }
+    .alarm-card.critical .alarm-code { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+    .alarm-card.warning .alarm-code { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+    .alarm-card.resolved .alarm-code { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+    
+    .alarm-time { font-size: 11px; color: #94a3b8; font-weight: 600; }
+    .alarm-desc { font-size: 13px; color: #1e293b; margin: 0 0 8px 0; line-height: 1.5; font-weight: 500; }
+    .alarm-device { font-size: 11px; font-weight: 700; color: #64748b; display: inline-flex; align-items: center; gap: 4px; }
+    
+    /* Decentné tlačidlo na vyriešenie */
+    .btn-resolve-alarm { background: #ffffff; border: 1px solid #cbd5e1; color: #475569; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 4px; margin-top: 8px; }
+    .btn-resolve-alarm:hover { background: #f0fdf4; border-color: #10b981; color: #10b981; }
+
+    /* --- STATUS BAR (ULTRA PREMIUM DARK) --- */
+    .status-bar { 
+        display: flex; justify-content: space-between; align-items: stretch; padding: 15px 20px; 
+        background: linear-gradient(145deg, #0f172a 0%, #1e293b 100%); color: white; 
+        border-radius: var(--radius-lg); margin-bottom: 25px; 
+        box-shadow: 0 15px 35px rgba(15, 23, 42, 0.25), inset 0 1px 0 rgba(255,255,255,0.1); 
+        border: 1px solid #334155; flex-wrap: wrap; gap: 15px; 
+    }
+    
+    /* Svietiaca pilulka pre Status */
+    .status-indicator { 
+        display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 14px; 
+        padding: 8px 18px; background: rgba(0,0,0,0.4); border-radius: 30px; 
+        border: 1px solid rgba(255,255,255,0.05); box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
+    }
+    
+    /* Interaktívne KPI Kartičky (Apple Style) */
+    .kpi-badges-wrapper { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; flex-grow: 1; justify-content: flex-end; }
+    .kpi-card { 
+        position: relative; display: flex; align-items: center; gap: 8px; padding: 8px 16px; 
+        background: linear-gradient(180deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%); 
+        border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; font-size: 13px; color: #cbd5e1; 
+        cursor: help; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+        box-shadow: 0 4px 10px rgba(0,0,0,0.2), inset 0 1px 1px rgba(255,255,255,0.1);
+    }
+    .kpi-card:hover { 
+        transform: translateY(-3px); 
+        background: linear-gradient(180deg, rgba(51, 65, 85, 0.9) 0%, rgba(30, 41, 59, 1) 100%); 
+        box-shadow: 0 10px 25px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.2); z-index: 10; 
+    }
+    
+    /* Špecifické farby pri hoveri (Glow efekt) */
+    .kpi-card.kpi-efektivita:hover { border-color: rgba(16, 185, 129, 0.5); box-shadow: 0 10px 25px rgba(16, 185, 129, 0.2), inset 0 1px 1px rgba(255,255,255,0.2); }
+    .kpi-card.kpi-strata:hover { border-color: rgba(239, 68, 68, 0.5); box-shadow: 0 10px 25px rgba(239, 68, 68, 0.2), inset 0 1px 1px rgba(255,255,255,0.2); }
+    .kpi-card.kpi-esg:hover { border-color: rgba(52, 211, 153, 0.5); box-shadow: 0 10px 25px rgba(52, 211, 153, 0.2), inset 0 1px 1px rgba(255,255,255,0.2); }
+    
+    /* Elegantné Tooltipy */
+    .kpi-tooltip { visibility: hidden; opacity: 0; position: absolute; bottom: 130%; left: 50%; transform: translateX(-50%) translateY(10px); background: rgba(2, 6, 23, 0.95); backdrop-filter: blur(10px); color: #f8fafc; padding: 14px 18px; border-radius: 12px; font-size: 12px; font-weight: 500; line-height: 1.6; width: max-content; max-width: 280px; text-align: center; border: 1px solid #334155; box-shadow: 0 20px 40px rgba(0,0,0,0.6); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); pointer-events: none; }
+    .kpi-tooltip::after { content: ''; position: absolute; top: 100%; left: 50%; margin-left: -6px; border-width: 6px; border-style: solid; border-color: #334155 transparent transparent transparent; }
+    .kpi-card:hover .kpi-tooltip { visibility: visible; opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* Technická mriežka pre Digitálne dvojča */
+    .digital-twin-panel {
+        background-color: #0f172a;
+        background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+        background-size: 20px 20px;
+        border: 1px solid #1e293b;
+        box-shadow: inset 0 0 50px rgba(0,0,0,0.5);
+    }
+
+    /* QR Kód Rámik */
+    .qr-frame { padding: 3px; background: linear-gradient(135deg, #3b82f6, #8b5cf6, #3b82f6); background-size: 200% 200%; border-radius: 14px; animation: gradient-shift 3s ease infinite; display: inline-block; transition: transform 0.3s ease; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+    .qr-frame:hover { transform: scale(1.05) rotate(2deg); box-shadow: 0 10px 25px rgba(59, 130, 246, 0.5); }
+    .qr-frame img { display: block; border-radius: 11px; border: 2px solid #0f172a; }
+    @keyframes gradient-shift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+
+    /* Kruhový Progress (Ring) */
+    .service-ring-container { position: relative; width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; }
+    .service-ring-svg { transform: rotate(-90deg); width: 100%; height: 100%; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); }
+    .service-ring-bg { fill: none; stroke: rgba(255,255,255,0.05); stroke-width: 6; }
+    .service-ring-progress { fill: none; stroke: #10b981; stroke-width: 6; stroke-linecap: round; stroke-dasharray: 176; stroke-dashoffset: 176; transition: stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.5s ease; }
+    .service-ring-text { position: absolute; font-size: 14px; font-weight: 900; color: #ffffff; }
+
+    /* ==========================================================================
+       🔵 TLAČIDLÁ A POMOCNÉ PRVKY TELEMETRIE
+       ========================================================================== */
+    .btn-save { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 12px 24px; border-radius: 10px; font-weight: 800; border: none; cursor: pointer; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); transition: all 0.2s ease; }
+    .btn-save:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(59, 130, 246, 0.4); }
+    .btn-ghost { background: #f8fafc; color: #475569; border: 1px solid #cbd5e1; padding: 12px 24px; border-radius: 10px; font-weight: 800; cursor: pointer; transition: all 0.2s ease; }
+    .btn-ghost:hover { background: #f1f5f9; color: #0f172a; border-color: #94a3b8; }
+
+    #controls-wrapper select,
+    #controls-wrapper input[type="number"] {
+        height: auto !important;
+        min-height: 44px !important;
+        line-height: 1.4 !important;
+        padding: 10px 14px !important;
+        box-sizing: border-box !important;
+        min-width: 0;
+    }
+
+    /* 📱 ISAS MOBILE RESPONSIVENESS */
+    @media (max-width: 768px) {
+        .header { flex-direction: column; align-items: flex-start; gap: 15px; }
+        .status-bar { flex-direction: column; align-items: flex-start; }
+        .gauges-container { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+        .dashboard-grid { gap: 15px; }
+        .glass-panel { padding: 15px; }
+        .filters-grid { grid-template-columns: 1fr; }
+    }
+    .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--color-danger); box-shadow: 0 0 10px var(--color-danger); }
+    .dot.online { background: var(--color-success); box-shadow: 0 0 10px var(--color-success); animation: pulse 2s infinite; }
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+    
+    /* 🧠 ISAS CORE: Animácia pre aktualizáciu hodnôt (Heartbeat) */
+    .value-update-flash { animation: flash-green 0.8s ease-out; }
+    @keyframes flash-green { 0% { color: #10b981; text-shadow: 0 0 10px rgba(16, 185, 129, 0.5); transform: scale(1.05); } 100% { color: inherit; text-shadow: none; transform: scale(1); } }
+        
+    /* 🌫️ ISAS UX: Blur efekt pri načítavaní dát */
+    .dashboard-is-loading { filter: blur(5px) grayscale(30%); opacity: 0.7; pointer-events: none; transition: all 0.3s ease; }
+    
+    .loader { display: none; font-size: 12px; color: var(--color-primary); font-weight: bold; }
+</style>
+{% endblock %}
+
+{% block content %}
+    {% csrf_token %}
+    {{ is_client_portal|json_script:"is-client-portal-data" }}
+    <div id="isas-preloader-wrapper">
+        <div class="isas-loader-box">
+            <div class="isas-spinner"></div>
+            <span>{{ preloader_text|default:"📡 Vstupujete do sekcie IoT Telemetrie..." }}</span>
+        </div>
+    </div>
+
+    <div class="header">
+        <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+            <h1>
+                📡 ISAS CORE 
+                <span style="font-weight: 300; color: var(--text-muted);">| IoT Telemetria</span>
+            </h1>
+            <a href="javascript:void(0);" onclick="window.history.length > 1 ? window.history.back() : window.location.href='{% if is_client_portal %}{% url 'webbuilder:b2b_dashboard' %}{% else %}{% url 'admin:index' %}{% endif %}';" class="btn btn-ghost">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg> Naspäť
+            </a>
+        </div>
+        <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+            {% if not is_client_portal %}
+            <button id="btn-device-settings" class="btn btn-ghost" style="display: none; background: #ffffff; box-shadow: 0 2px 5px rgba(0,0,0,0.05);" onclick="openDeviceSettingsModal()">
+                ⚙️ Karta vybraného zariadenia
+            </button>
+            {% endif %}
+            
+            {% if is_client_portal %}
+                {% if servis_firma and servis_firma.telefon %}
+                <a href="tel:{{ servis_firma.telefon|cut:' '|cut:'/' }}" style="text-decoration: none; background: rgba(255,255,255,0.9); border: 1px solid #cbd5e1; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); transition: all 0.2s ease;" onmouseover="this.style.borderColor='#3b82f6'; this.style.color='#3b82f6'; this.style.transform='translateY(-2px)';" onmouseout="this.style.borderColor='#cbd5e1'; this.style.color='#0f172a'; this.style.transform='translateY(0)';">
+                    📞 Dispečing: {{ servis_firma.telefon }}
+                </a>
+                {% endif %}
+                <div class="header-badge">🏢 {{ tenant.Nazov_spolocnosti }}</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- KASKÁDOVÝ FILTER -->
+    <!-- KASKÁDOVÝ FILTER (Zjednotený s Modbus Konfigurátorom) -->
+    <div class="glass-panel filters-grid">
+        {% if not is_client_portal %}
+        <div>
+            <label style="font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 8px;">🏢 Zákazník</label>
+            <select id="filter-zakaznik" class="form-select" data-placeholder="🏢 Všetci zákazníci...">
+                <option></option>
+            </select>
+        </div>
+        {% endif %}
+        <div>
+            <label style="font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 8px;">📑 Kategória</label>
+            <select id="filter-kategoria" class="form-select" data-placeholder="📑 Vyberte kategóriu..." disabled>
+                <option></option>
+            </select>
+        </div>
+        <div>
+            <label style="font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 8px;">⚙️ IoT Zariadenie</label>
+            <select id="filter-zariadenie" class="form-select" data-placeholder="⚙️ Vyberte zariadenie..." disabled>
+                <option></option>
+            </select>
+        </div>
+        <div>
+            <label style="font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 8px;">⏳ Časový rozsah grafu</label>
+            <select id="filter-range" class="form-select" data-placeholder="⏳ Časový rozsah">
+                <option value="1h" selected>⚡ Posledná hodina</option>
+                <option value="24h">⏱️ Posledných 24 hodín</option>
+                <option value="3d">📅 Posledné 3 dni</option>
+                <option value="7d">📅 Posledných 7 dní</option>
+                <option value="14d">🗓️ Posledné 2 týždne</option>
+                <option value="30d">🗓️ Posledný mesiac (30 dní)</option>
+                <option value="90d">📊 Posledný kvartál (3 mesiace)</option>
+                <option value="180d">📈 Posledný polrok (6 mesiacov)</option>
+                <option value="365d">📅 Posledný rok (365 dní)</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- 🌍 GLOBÁLNY DASHBOARD (Zobrazí sa hneď po prihlásení) -->
+    <div id="global-dashboard">
+        <div class="glass-panel">
+            <h3 class="gauge-title" style="margin-bottom: 20px; font-size: 16px; color: #0f172a;">🚨 Najnovšie alarmy vo vašej prevádzke</h3>
+            <div class="alarms-scroll-container">
+                <div id="global-alarms-wrapper">
+                    <div style="text-align: center; padding: 30px; color: #64748b; font-weight: 600;">⏳ Načítavam dáta...</div>
+                </div>
+            </div>
+            
+            {% if is_client_portal and servis_firma %}
+            <div style="margin-top: 20px; padding: 15px 20px; background: linear-gradient(to right, #eff6ff, #ffffff); border: 1px solid #bfdbfe; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                <div>
+                    <div style="font-size: 14px; font-weight: 800; color: #1e293b;">Potrebujete okamžitý servisný zásah?</div>
+                    <div style="font-size: 12px; color: #64748b; margin-top: 2px;">Naši technici sú pripravení vyriešiť poruchu a minimalizovať prestoje.</div>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    {% if servis_firma.email_vseobecny %}
+                    <a href="mailto:{{ servis_firma.email_vseobecny }}" style="text-decoration: none; padding: 8px 16px; background: #ffffff; border: 1px solid #cbd5e1; color: #475569; font-size: 13px; font-weight: 700; border-radius: 8px; transition: 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='#ffffff'">✉️ Napísať e-mail</a>
+                    {% endif %}
+                    {% if servis_firma.telefon %}
+                    <a href="tel:{{ servis_firma.telefon|cut:' '|cut:'/' }}" style="text-decoration: none; padding: 8px 16px; background: #3b82f6; border: 1px solid #2563eb; color: #ffffff; font-size: 13px; font-weight: 700; border-radius: 8px; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3); transition: 0.2s;" onmouseover="this.style.background='#2563eb'" onmouseout="this.style.background='#3b82f6'">📞 Volať dispečing</a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- ⚙️ LOKÁLNY DASHBOARD STROJA (Skrytý kým nie je vybrané zariadenie) -->
+    <div id="dashboard-content" style="display: none;">
+        
+        <div class="status-bar">
+            <div class="status-indicator">
+                <div id="status-dot" class="dot"></div>
+                <span id="status-text">OFFLINE</span>
+                <span id="loader" class="loader" style="display: inline-block; visibility: hidden; opacity: 0; transition: opacity 0.2s ease;">🔄 Obnovujem dáta...</span>
+                <!-- 🛠️ ISAS BIZNIS: Badge servisného režimu -->
+                <span id="badge-servis" style="display: none; background: #f59e0b; color: white; padding: 4px 10px; border-radius: 12px; font-size: 11px; margin-left: 10px; font-weight: 800; letter-spacing: 0.5px; box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);">🛠️ V SERVISE (Alarmy vypnuté)</span>
+            </div>
+            <div class="kpi-badges-wrapper">
+                <div class="kpi-card">
+                    ⏱️ <span style="color: #94a3b8;" id="label-motohodiny">{{ meter_label|default:"Počítadlo" }}:</span> <strong id="val-motohodiny" style="color: #ffffff; font-size: 14px;">0</strong> <span id="unit-motohodiny" style="color: #64748b;">{{ meter_unit|default:"" }}</span>
+                    <span id="val-zataz-wrapper" style="display:none; color: #94a3b8; font-size: 11px; margin-left: 5px; background: rgba(0,0,0,0.2); padding: 2px 6px; border-radius: 6px;"><span id="label-zataz">{{ meter_load_label|default:"Záťaž" }}</span>: <strong id="val-zataz" style="color: #e2e8f0;">0</strong> <span id="unit-zataz">{{ meter_load_unit|default:"" }}</span></span>
+                </div>
+
+                <div id="kpi-efektivita" class="kpi-card kpi-efektivita" style="display: none;">
+                    ⚡ <span style="color: #94a3b8;">Efektivita:</span> <strong id="val-efektivita" style="color: #34d399; font-size: 14px;">0</strong> <span style="color: #64748b;">%</span>
+                    <div class="kpi-tooltip">
+                        <strong style="color: #34d399;">Energetická efektivita</strong><br>
+                        Pomer času chodu v záťaži voči celkovému prevádzkovému času zariadenia.<br>
+                        <span style="color: #94a3b8; font-size: 10px; margin-top: 4px; display: block;">Výpočet: (Záťaž / Celkovo) * 100</span>
+                    </div>
+                </div>
+                
+                <div id="kpi-strata" class="kpi-card kpi-strata" style="display: none;">
+                    💸 <span style="color: #94a3b8;" id="label-strata">Strata:</span> <strong id="val-strata" style="color: #f87171; font-size: 14px;">0</strong> <span id="val-strata-mena" style="color: #64748b;">{{ mena|default:servis_firma.predvolena_mena|default:"" }}</span>
+                    <div class="kpi-tooltip">
+                        <strong style="color: #f87171;">Finančná strata</strong><br>
+                        <span id="tooltip-strata-text">Odhadované náklady počas chodu bez užitočného výkonu.</span>
+                    </div>
+                </div>
+                
+                <div id="kpi-esg" class="kpi-card kpi-esg" style="display: none;">
+                    🍃 <span style="color: #94a3b8;">ESG Stopa:</span> <strong id="val-co2" style="color: #34d399; font-size: 14px;">0</strong> <span style="color: #64748b;">t CO₂</span>
+                    <div class="kpi-tooltip">
+                        <strong style="color: #34d399;">Uhlíková stopa (Scope 2)</strong><br>
+                        Vyprodukované emisie CO₂ na základe certifikovaného emisného faktora vášho dodávateľa elektriny.<br>
+                        <span style="color: #94a3b8; font-size: 10px; margin-top: 4px; display: block;">Výpočet: Celková spotreba (kWh) × Emisný faktor</span>
+                    </div>
+                </div>
+                
+                <div class="kpi-card" style="cursor: default;">
+                    🔄 <span style="color: #94a3b8;">Zápis:</span> <strong id="val-posledny-zapis" style="color: #ffffff;">Neznámy</strong>
+                </div>
+                
+                {% if not is_client_portal %}
+                <button id="btn-toggle-service" onclick="toggleServiceMode()" style="display: none; background: rgba(255,255,255,0.05); border: 1px solid #475569; color: #cbd5e1; padding: 10px 16px; border-radius: 12px; font-size: 12px; font-weight: 800; cursor: pointer; transition: all 0.2s; margin-left: auto;">
+                    🛠️ Servisný režim: VYP
+                </button>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <!-- ĽAVÝ STĹPEC: Budíky a Grafy -->
+            <div>
+                <!-- 🤖 ISAS PREDICTIVE & IDENTITA -->
+                <div class="glass-panel digital-twin-panel" style="margin-bottom: 25px; color: white; border-radius: 16px;">
+                    <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 20px; align-items: center;">
+                        <div style="display: flex; gap: 20px; align-items: center;">
+                            <div id="info-icon-wrapper" style="font-size: 40px; background: rgba(255,255,255,0.05); width: 75px; height: 75px; display: flex; align-items: center; justify-content: center; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1);">⚙️</div>
+                            
+                            <div id="qr-frame-wrapper" class="qr-frame" style="display: none;" title="Naskenujte pre zobrazenie servisnej histórie">
+                                <img id="info-qr-img" src="" alt="QR Kód" style="width: 67px; height: 67px;">
+                            </div>
+                            
+                            <div>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span style="font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; font-weight: 800;">Digitálne dvojča</span>
+                                    <span id="info-zaruka-badge" style="display: none; font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 12px;"></span>
+                                </div>
+                                <div id="info-model" style="font-size: 18px; font-weight: 900; color: #f8fafc; margin-bottom: 4px; letter-spacing: -0.5px;">--</div>
+                                <div style="font-size: 13px; color: #cbd5e1; font-weight: 500;">S/N: <span id="info-sn" style="font-family: monospace; color: #38bdf8; font-weight: bold; background: rgba(56, 189, 248, 0.1); padding: 2px 6px; border-radius: 4px;">--</span> | Rok: <span id="info-rok">--</span> <a id="info-passport-link" href="#" target="_blank" rel="noopener noreferrer" style="display: none; color: #38bdf8; font-weight: bold; text-decoration: underline; margin-left: 8px;">Digitálny pas ↗</a></div>
+                            </div>
+                        </div>
+                        
+                        <div style="background: rgba(0, 0, 0, 0.2); padding: 15px 20px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.05); min-width: 280px; flex-grow: 1; display: flex; align-items: center; gap: 20px;">
+                            <!-- Kruhový SVG Progress (Ring) -->
+                            <div id="service-ring-wrapper" class="service-ring-container" style="display: none;">
+                                <svg class="service-ring-svg" viewBox="0 0 64 64">
+                                    <circle class="service-ring-bg" cx="32" cy="32" r="28"></circle>
+                                    <circle id="service-ring-path" class="service-ring-progress" cx="32" cy="32" r="28"></circle>
+                                </svg>
+                                <div id="info-next-service-percent" class="service-ring-text">0%</div>
+                            </div>
+                            
+                            <div>
+                                <div style="font-size: 11px; color: #94a3b8; text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px; margin-bottom: 4px;">📅 Najbližší plánovaný servis</div>
+                                <div id="info-next-service-type" style="font-size: 15px; font-weight: 900; color: #ffffff;">Vypočítavam...</div>
+                                <div id="info-next-service-limit" style="font-size: 13px; color: #cbd5e1; margin-top: 4px; font-weight: 600;">--</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <h3 class="gauge-title" style="margin-bottom: 15px;">📈 Živé hodnoty (Analóg)</h3>
+                <div id="gauges-wrapper" class="gauges-container">
+                    <!-- Budíky sa vygenerujú dynamicky cez JS -->
+                </div>
+
+                <div class="glass-panel" style="margin-bottom: 25px;">
+                    <h3 class="gauge-title" style="margin-bottom: 15px;">📊 Trendové grafy</h3>
+                    <div id="charts-wrapper" style="display: flex; flex-direction: column; gap: 30px; width: 100%;">
+                        <!-- Grafy sa vygenerujú dynamicky pre každý parameter zvlášť -->
+                    </div>
+                </div>
+
+                {% if not is_client_portal %}
+                <div class="glass-panel" id="controls-panel" style="margin-bottom: 25px; display: none;">
+                    <h3 class="gauge-title" style="margin-bottom: 15px; color: #1e293b;">🎛️ Vzdialené riadenie (Zápis do zariadenia)</h3>
+                    <div id="controls-wrapper" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- PRAVÝ STĹPEC: Digitálne stavy a Čierna skrinka -->
+            <div>
+                <!-- ⚖️ ISAS DIAGNOSTIC ENGINE -->
+                <div class="glass-panel" id="diagnostic-panel" style="margin-bottom: 25px; display: none; background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%); border: 1px solid #e2e8f0;">
+                    <h3 class="gauge-title" style="margin-bottom: 15px; color: #0f172a;">⚖️ Legislatívny a Technický Status</h3>
+                    <div id="diagnostic-wrapper" style="display: flex; flex-direction: column; gap: 10px;">
+                        <!-- Diagnostika sa vygeneruje dynamicky -->
+                    </div>
+                </div>
+
+                <div class="glass-panel" style="margin-bottom: 25px;">
+                    <h3 class="gauge-title" style="margin-bottom: 15px;">💡 Stavy (Digitál)</h3>
+                    <div id="digital-wrapper" class="digital-grid">
+                        <!-- Stavy sa vygenerujú dynamicky -->
+                    </div>
+                </div>
+
+                <div class="glass-panel" style="margin-bottom: 25px;">
+                    <h3 class="gauge-title" style="margin-bottom: 15px;">🚨 Čierna skrinka (Aktívne alarmy zariadenia)</h3>
+                    <div class="alarms-scroll-container">
+                        <div id="local-alarms-wrapper">
+                            <!-- Alarmy sa vygenerujú dynamicky ako karty -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 🧠 ISAS CORE: História servisov -->
+                <div class="glass-panel">
+                    <h3 class="gauge-title" style="margin-bottom: 15px;">🛠️ História servisov</h3>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Dátum</th>
+                                    <th>Úkon</th>
+                                    <th style="text-align: center;">Protokol</th>
+                                </tr>
+                            </thead>
+                            <tbody id="servis-table-body">
+                                <!-- Servisy sa vygenerujú dynamicky -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =========================================================
+        // 🧠 ISAS CORE: SPA JAVASCRIPT ENGINE
+        // =========================================================
+        
+        // 🛡️ ISAS SECURITY: Globálna funkcia pre získanie CSRF tokenu
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        let allDevices = [];
+        let pollTimer = null; // 🧠 ISAS FIX: Zmenené z intervalu na inteligentný Timer
+        let globalPollTimer = null; 
+        let chartInstances = {}; 
+        let gaugeInstances = {}; 
+        let maximizedChartInstance = null; // 👈 PRIDANÉ: Inštancia maximalizovaného grafu
+        let maximizedChartKey = null;      // 👈 PRIDANÉ: Kľúč maximalizovaného grafu
+        let currentDeviceStatus = 'offline'; // Pamätá si stav pre adaptívny polling
+        let lastKnownValues = {}; // 🧠 ISAS FIX: Pamätá si posledné hodnoty pre Heartbeat animáciu
+        let lastTelemetryId = null; // 🚀 ISAS DELTA: ID posledného prijatého záznamu
+        let activeTimeRange = '1h';
+
+        const isClientPortal = JSON.parse(document.getElementById('is-client-portal-data').textContent);
+        
+        // 🧠 ISAS CORE: Inteligentný globálny polling (Zastaví sa, ak je tab skrytý)
+        async function fetchGlobalData() {
+            // 🛡️ ISAS RACE-CONDITION FIX: Ak sme medzitým prepli na konkrétny stroj, funkcia sa musí okamžite ukončiť!
+            if (document.getElementById('filter-zariadenie').value) return;
+
+            if (document.hidden) {
+                globalPollTimer = setTimeout(fetchGlobalData, 5000);
+                return; // Ak používateľ nevidí tab, neťaháme dáta z DB
+            }
+            try {
+                const response = await fetch("{% url 'evidencia:api_iot_get_devices' %}");
+                const data = await response.json();
+                renderAlarms(data.globalne_alarmy || [], 'global-alarms-wrapper', true);
+            } catch (e) {
+                console.error("Chyba pri obnove globálnych alarmov:", e);
+            }
+            
+            // 🛡️ ISAS RACE-CONDITION FIX: Ešte jedna kontrola, či technik neprepol stroj počas čakania na server
+            if (!document.getElementById('filter-zariadenie').value) {
+                globalPollTimer = setTimeout(fetchGlobalData, 5000);
+            }
+        }
+        
+        // DOM Elementy
+        const selZakaznik = document.getElementById('filter-zakaznik');
+        const selKategoria = document.getElementById('filter-kategoria');
+        const selZariadenie = document.getElementById('filter-zariadenie');
+        const dashboardContent = document.getElementById('dashboard-content');
+
+        // 1. NAČÍTANIE ZARIADENÍ PRI ŠTARTE A BEZPEČNÉ VYKRESLENIE ALARMOV
+        async function loadDevices() {
+            try {
+                const response = await fetch("{% url 'evidencia:api_iot_get_devices' %}");
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                allDevices = data.zariadenia || [];
+                
+                // 🚨 Bezpečné vykreslenie globálnych alarmov hneď po štarte (aj ak sú prázdne)
+                renderAlarms(data.globalne_alarmy || [], 'global-alarms-wrapper', true);
+                
+                if (!isClientPortal) populateZakaznici();
+                else {
+                    populateKategorie(allDevices);
+                }
+
+                // 🎯 ISAS DEEP-LINK: Automatický výber a otvorenie zariadenia z URL parametra (?zariadenie_id=...)
+                const urlParams = new URLSearchParams(window.location.search);
+                const preselectedId = urlParams.get('zariadenie_id');
+                if (preselectedId && allDevices.length > 0) {
+                    const targetDev = allDevices.find(d => String(d.id) === String(preselectedId));
+                    if (targetDev) {
+                        if (!isClientPortal && targetDev.zakaznik) {
+                            $('#filter-zakaznik').val(targetDev.zakaznik).trigger('change.select2');
+                        }
+                        if (targetDev.kategoria) {
+                            $('#filter-kategoria').val(targetDev.kategoria).trigger('change.select2');
+                        }
+                        $('#filter-zariadenie').val(targetDev.id).trigger('change');
+                    }
+                }
+            } catch (e) {
+                console.error("Chyba pri načítaní zariadení:", e);
+                showISASToast("Chyba spojenia so serverom. Skontrolujte pripojenie.", "🔌", "error");
+                renderAlarms([], 'global-alarms-wrapper', true);
+            }
+        }
+
+        // 🚀 ISAS CORE: Inicializácia Select2 pri štarte s podporou placeholderov
+        $(document).ready(function() {
+            $('.form-select').each(function() {
+                const placeholderText = $(this).attr('data-placeholder') || '';
+                $(this).select2({
+                    width: '100%',
+                    placeholder: placeholderText,
+                    // allowClear: true, // ❌ Odstránené: Spôsobovalo červené krížiky namiesto šípok
+                    language: { noResults: function() { return "❌ Žiadne výsledky"; } }
+                });
+            });
+            
+            // Prepojenie Select2 eventov na kaskádu
+            $('#filter-zakaznik').on('change', function() {
+                const val = $(this).val();
+                const filtered = val ? allDevices.filter(d => d.zakaznik === val) : allDevices;
+                populateKategorie(val ? filtered : []);
+                resetDashboard();
+            });
+
+            $('#filter-kategoria').on('change', function() {
+                const val = $(this).val();
+                const zakVal = $('#filter-zakaznik').val();
+                let filtered = allDevices;
+                if (zakVal) filtered = filtered.filter(d => d.zakaznik === zakVal);
+                if (val) filtered = filtered.filter(d => d.kategoria === val);
+                
+                populateZariadenia(val ? filtered : []);
+                resetDashboard();
+            });
+
+            $('#filter-zariadenie').on('change', function() {
+                if (pollTimer) clearTimeout(pollTimer);
+                if (globalPollTimer) { clearTimeout(globalPollTimer); globalPollTimer = null; }
+                
+                Object.values(chartInstances).forEach(chart => chart.destroy());
+                chartInstances = {};
+                lastKnownValues = {}; // Reset pamäte hodnôt
+                lastTelemetryId = null; // 🚀 ISAS DELTA: Reset pri zmene zariadenia
+                
+                if ($(this).val()) {
+                    document.getElementById('global-dashboard').style.display = 'none';
+                    dashboardContent.style.display = 'block';
+                    $('#btn-device-settings').fadeIn();
+                    fetchLiveData(); // Toto v sebe už obsahuje spustenie ďalšieho cyklu
+                } else {
+                    $('#btn-device-settings').hide();
+                    resetDashboard();
+                    fetchGlobalData(); // Okamžité vynútenie načítania globálnych alarmov bez čakania
+                }
+            });
+            
+            $('#filter-range').on('change', function() {
+                if ($('#filter-zariadenie').val()) {
+                    // 🌫️ ISAS UX: Namiesto agresívneho ničenia grafov aplikujeme plynulý Blur efekt
+                    document.getElementById('dashboard-content').classList.add('dashboard-is-loading');
+                    lastTelemetryId = null; // 🚀 ISAS DELTA: Reset pri zmene časového okna
+                    fetchLiveData();
+                }
+            });
+        });
+
+        function populateZakaznici() {
+            const zakaznici = [...new Set(allDevices.map(d => d.zakaznik))].filter(Boolean).sort();
+            let html = '<option></option>';
+            zakaznici.forEach(z => {
+                const safeZ = escapeHTML(z);
+                html += `<option value="${safeZ}">🏢 ${safeZ}</option>`;
+            });
+            
+            $('#filter-zakaznik').html(html).val(null).trigger('change.select2');
+        }
+
+        function populateKategorie(devices) {
+            const kategorie = [...new Set(devices.map(d => d.kategoria))].filter(Boolean).sort();
+            let html = '<option></option>';
+            kategorie.forEach(k => {
+                const safeK = escapeHTML(k);
+                html += `<option value="${safeK}">${safeK}</option>`;
+            });
+            
+            const $kat = $('#filter-kategoria');
+            $kat.html(html).val(null);
+            
+            if (devices.length > 0 && kategorie.length > 0) {
+                $kat.prop('disabled', false).trigger('change.select2');
+            } else {
+                $kat.prop('disabled', true).trigger('change.select2');
+            }
+            
+            $('#filter-zariadenie').html('<option></option>').val(null).prop('disabled', true).trigger('change.select2');
+        }
+
+        function populateZariadenia(devices) {
+            let html = '<option></option>';
+            devices.forEach(d => {
+                const safeId = escapeHTML(d.id);
+                const safeNazov = escapeHTML(d.nazov);
+                const safeSn = escapeHTML(d.sn);
+                html += `<option value="${safeId}">⚙️ ${safeNazov} (SN: ${safeSn})</option>`;
+            });
+            
+            const $zar = $('#filter-zariadenie');
+            $zar.html(html).val(null);
+            
+            if (devices.length > 0) {
+                $zar.prop('disabled', false).trigger('change.select2');
+            } else {
+                $zar.prop('disabled', true).trigger('change.select2');
+            }
+        }
+
+        function resetDashboard() {
+            dashboardContent.style.display = 'none';
+            document.getElementById('global-dashboard').style.display = 'block';
+            if (pollTimer) clearTimeout(pollTimer);
+            Object.values(chartInstances).forEach(chart => chart.destroy());
+            chartInstances = {};
+            lastKnownValues = {};
+            lastTelemetryId = null;
+            
+            // 🚀 ISAS FIX: Ak sme na globálnom dashboarde, spustíme polling alarmov
+            if (!globalPollTimer) {
+                fetchGlobalData(); // Okamžitý fetch (sám si nastaví ďalší Timer)
+            }
+        }
+
+        // 4. FETCH ŽIVÝCH DÁT (AJAX S DELTA STREAMINGOM)
+        async function fetchLiveData() {
+            const deviceId = selZariadenie.value;
+            const timeRange = document.getElementById('filter-range').value;
+            if (!deviceId) return;
+
+            if (timeRange !== activeTimeRange) {
+                lastTelemetryId = null;
+                activeTimeRange = timeRange;
+            }
+
+            // 🧠 ISAS SMART POLLING: Ak je tab skrytý, preskočíme fetch a skúsime o 5 sekúnd
+            if (document.hidden) {
+                pollTimer = setTimeout(fetchLiveData, 5000);
+                return;
+            }
+
+            const loaderEl = document.getElementById('loader');
+            loaderEl.style.visibility = 'visible';
+            loaderEl.style.opacity = '1';
+
+            try {
+                const baseUrl = "{% url 'evidencia:api_iot_get_live_data' 0 %}".replace('0', deviceId);
+                const deltaParam = lastTelemetryId ? `&last_id=${encodeURIComponent(lastTelemetryId)}` : '';
+                const response = await fetch(`${baseUrl}?range=${encodeURIComponent(timeRange)}${deltaParam}`);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const data = await response.json();
+
+                if (data.graf_data && data.graf_data.last_id) {
+                    lastTelemetryId = data.graf_data.last_id;
+                }
+                
+                currentDeviceStatus = data.status; // Uložíme stav pre výpočet ďalšieho intervalu
+                
+                // 🛡️ ISAS RACE-CONDITION FIX: Ak technik počas načítavania prepol na iný stroj, staré dáta zahodíme!
+                if (selZariadenie.value !== deviceId) return;
+                
+                renderDashboard(data);
+
+            } catch (e) {
+                console.error("Chyba pri ťahaní živých dát:", e);
+                showISASToast("Chyba spojenia so serverom. Skontrolujte pripojenie.", "🔌", "error");
+            } finally {
+                setTimeout(() => {
+                    loaderEl.style.opacity = '0';
+                    setTimeout(() => loaderEl.style.visibility = 'hidden', 200);
+                    // 🌫️ ISAS UX: Vypnutie Blur efektu po úspešnom načítaní
+                    document.getElementById('dashboard-content').classList.remove('dashboard-is-loading');
+                }, 500);
+                
+                // 🛡️ ISAS RACE-CONDITION FIX: Timer nastavíme LEN ak je stále vybraný ten istý stroj
+                if (selZariadenie.value === deviceId) {
+                    // 🧠 ISAS ADAPTIVE POLLING: Ak je stroj offline, pýtame sa len každých 15 sekúnd. Ak online, každých 5.
+                    const nextInterval = (currentDeviceStatus === 'offline') ? 15000 : 5000;
+                    pollTimer = setTimeout(fetchLiveData, nextInterval);
+                }
+            }
+        }
+
+        // 5. VYKRESLENIE DASHBOARDU
+        function renderDashboard(data) {
+            // Status Bar
+            const dot = document.getElementById('status-dot');
+            const txt = document.getElementById('status-text');
+            if (data.status === 'online') {
+                dot.className = 'dot online'; txt.innerText = 'ONLINE (LIVE)'; txt.style.color = 'var(--color-success)';
+            } else {
+                dot.className = 'dot'; txt.innerText = 'OFFLINE'; txt.style.color = 'var(--color-danger)';
+            }
+
+            const mhVal = Number(data.motohodiny) || 0;
+            const efektivitaVal = Number(data.efektivita) || 0;
+            document.getElementById('val-motohodiny').innerText = mhVal;
+            
+            // 🧠 ISAS INDUSTRY LEXICON: Dynamická zmena jednotiek a názvov počítadla z odvetvia
+            if (data.meter_label) document.getElementById('label-motohodiny').innerText = data.meter_label + ':';
+            if (data.meter_unit) document.getElementById('unit-motohodiny').innerText = data.meter_unit;
+            if (data.meter_load_label) document.getElementById('label-zataz').innerText = data.meter_load_label;
+            if (data.meter_load_unit) document.getElementById('unit-zataz').innerText = data.meter_load_unit;
+
+            // 🧠 ISAS ARCHITECT FIX: Dopočítanie a zobrazenie reálnych hodín v záťaži
+            if (data.efektivita !== undefined && mhVal > 0) {
+                const zatazH = Math.round((mhVal * efektivitaVal) / 100);
+                document.getElementById('val-zataz').innerText = zatazH;
+                document.getElementById('val-zataz-wrapper').style.display = 'inline';
+            } else {
+                document.getElementById('val-zataz-wrapper').style.display = 'none';
+            }
+
+            // ⏱️ ISAS UX: Uloženie presného času do atribútu pre výpočet "Time Ago"
+            const zapisEl = document.getElementById('val-posledny-zapis');
+            if (data.posledna_aktualizacia) {
+                zapisEl.setAttribute('data-timestamp', data.posledna_aktualizacia);
+                updateTimeAgo(); // Okamžitý prepočet
+            } else {
+                zapisEl.innerText = 'Žiadne dáta';
+                zapisEl.removeAttribute('data-timestamp');
+            }
+            
+            // ⚡ Zobrazenie efektivity
+            if (data.efektivita !== undefined) {
+                document.getElementById('kpi-efektivita').style.display = 'block';
+                const efEl = document.getElementById('val-efektivita');
+                efEl.innerText = efektivitaVal;
+                
+                // Farebné odlíšenie efektivity (Zelená > 80%, Oranžová > 50%, Červená < 50%)
+                if (efektivitaVal > 80) efEl.style.color = '#10b981'; 
+                else if (efektivitaVal > 50) efEl.style.color = '#f59e0b'; 
+                else efEl.style.color = '#ef4444'; 
+            }
+
+            // 🆔 Identita stroja
+            if (data.identita) {
+                const modelNazov = data.identita.vyrobca ? `${data.identita.vyrobca} ${data.identita.model}`.trim() : data.identita.model;
+                document.getElementById('info-model').innerText = modelNazov;
+                document.getElementById('info-sn').innerText = data.identita.sn;
+                document.getElementById('info-rok').innerText = data.identita.rok;
+
+                // 🛡️ Zobrazenie stavu záruky
+                const zarukaBadge = document.getElementById('info-zaruka-badge');
+                if (zarukaBadge) {
+                    zarukaBadge.style.display = 'inline-block';
+                    if (data.identita.je_v_zaruke) {
+                        zarukaBadge.style.background = 'rgba(16, 185, 129, 0.2)';
+                        zarukaBadge.style.color = '#34d399';
+                        zarukaBadge.style.border = '1px solid rgba(52, 211, 153, 0.4)';
+                        const datumZaruky = data.identita.predlzena_zaruka_do || data.identita.zaruka_do || '';
+                        zarukaBadge.innerText = datumZaruky ? `🛡️ V ZÁRUKE (do ${datumZaruky})` : '🛡️ V ZÁRUKE';
+                    } else {
+                        zarukaBadge.style.background = 'rgba(148, 163, 184, 0.15)';
+                        zarukaBadge.style.color = '#94a3b8';
+                        zarukaBadge.style.border = '1px solid rgba(148, 163, 184, 0.2)';
+                        zarukaBadge.innerText = 'Po záruke';
+                    }
+                }
+
+                // 🔗 Odkaz na digitálny pas stroja
+                const passportLink = document.getElementById('info-passport-link');
+                if (passportLink) {
+                    if (data.identita.passport_url) {
+                        passportLink.href = data.identita.passport_url;
+                        passportLink.style.display = 'inline';
+                    } else {
+                        passportLink.style.display = 'none';
+                    }
+                }
+                
+                // 🧠 ISAS CORE: Zobrazenie QR kódu servisnej histórie
+                const qrImg = document.getElementById('info-qr-img');
+                const iconWrapper = document.getElementById('info-icon-wrapper');
+                
+                if (data.identita.qr_kod_url) {
+                    qrImg.src = data.identita.qr_kod_url;
+                    document.getElementById('qr-frame-wrapper').style.display = 'inline-block';
+                    iconWrapper.style.display = 'none';
+                    
+                    // Po kliknutí na QR kód sa otvorí v prémiovom modálnom okne
+                    document.getElementById('qr-frame-wrapper').onclick = function() {
+                        openQrModal(data.identita.qr_kod_url);
+                    };
+                } else {
+                    document.getElementById('qr-frame-wrapper').style.display = 'none';
+                    iconWrapper.style.display = 'flex';
+                }
+            }
+
+            // 🔮 Predikcia servisu
+            const typeEl = document.getElementById('info-next-service-type');
+            const limitEl = document.getElementById('info-next-service-limit');
+            const ringWrapper = document.getElementById('service-ring-wrapper');
+            const ringPath = document.getElementById('service-ring-path');
+            const ringText = document.getElementById('info-next-service-percent');
+
+            if (data.predikcia) {
+                typeEl.innerText = data.predikcia.typ;
+                limitEl.innerText = data.predikcia.limit;
+                typeEl.style.color = '#ffffff';
+                
+                // 🧠 ISAS CORE: Vykreslenie opotrebenia (SVG Ring)
+                if (data.predikcia.percento !== undefined) {
+                    const percentoVal = Math.min(100, Math.max(0, Number(data.predikcia.percento) || 0));
+                    ringWrapper.style.display = 'flex';
+                    ringText.innerText = `${percentoVal}%`;
+                    
+                    // Výpočet pre SVG kruh (Obvod kruhu s r=28 je cca 176)
+                    const circumference = 176;
+                    const offset = circumference - (percentoVal / 100) * circumference;
+                    
+                    // Krátke oneskorenie pre plynulú animáciu po zobrazení
+                    setTimeout(() => {
+                        ringPath.style.strokeDashoffset = offset;
+                    }, 50);
+                    
+                    // Dynamická farba podľa opotrebenia
+                    if (data.predikcia.percento > 90) {
+                        ringPath.style.stroke = '#ef4444'; // Červená
+                        ringText.style.color = '#fca5a5';
+                    } else if (data.predikcia.percento > 75) {
+                        ringPath.style.stroke = '#f59e0b'; // Oranžová
+                        ringText.style.color = '#fcd34d';
+                    } else {
+                        ringPath.style.stroke = '#10b981'; // Zelená
+                        ringText.style.color = '#ffffff';
+                    }
+                }
+            } else {
+                typeEl.innerText = 'Žiadny plánovaný servis';
+                limitEl.innerText = 'Zariadenie nevyžaduje údržbu';
+                typeEl.style.color = '#6ee7b7';
+                
+                // Zobrazíme plný zelený kruh s textom OK
+                ringWrapper.style.display = 'flex';
+                ringText.innerText = 'OK';
+                ringText.style.color = '#10b981';
+                ringPath.style.stroke = '#10b981';
+                
+                setTimeout(() => {
+                    ringPath.style.strokeDashoffset = 0; // 0 znamená plný kruh
+                }, 50);
+            }
+
+            // Analógové Budíky (Gauges)
+            // 🚀 ISAS FIX: Posielame aj status a servisný režim pre vizuálnu zmenu budíkov
+            renderGauges(data.analog || {}, data.limity || {}, data.jednotky || {}, data.status, data.servisny_rezim);
+
+            // Digitálne Stavy
+            renderDigital(data.digital || {});
+            
+            // ⚖️ Legislatíva a Diagnostika
+            renderDiagnostics(data.legislativa || [], data.diagnostika || []);
+
+            // Čierna skrinka (Lokálna pre vybraný stroj)
+            renderAlarms(data.alarmy, 'local-alarms-wrapper', false);
+            
+            // História servisov
+            renderServisy(data.servisy);
+
+            // Trendový Graf
+            if (data.graf_data) {
+                // 📏 ISAS UX: Posielame aj limity, aby sme vedeli nakresliť kritické čiary
+                renderChart(data.graf_data, data.limity || {});
+            }
+
+            if (data.ovladanie) {
+                // 🛡️ ISAS FIX: Pridaný fallback || {}, aby skript nespadol, ak stroj ešte neposlal dáta (sú null)
+                renderControls(data.ovladanie, data.analog || {}, data.digital || {}, data.jednotky || {});
+            }
+
+            // 🛠️ Servisný režim (Badge a Tlačidlo)
+            const btnService = document.getElementById('btn-toggle-service');
+            if (data.servisny_rezim) {
+                document.getElementById('badge-servis').style.display = 'inline-block';
+                if (btnService) {
+                    btnService.style.display = 'inline-block';
+                    btnService.innerHTML = '🛠️ Servisný režim: ZAPNUTÝ';
+                    btnService.style.background = '#f59e0b';
+                    btnService.style.color = '#ffffff';
+                    btnService.style.borderColor = '#d97706';
+                }
+            } else {
+                document.getElementById('badge-servis').style.display = 'none';
+                if (btnService) {
+                    btnService.style.display = 'inline-block';
+                    btnService.innerHTML = '🛠️ Servisný režim: VYPNUTÝ';
+                    btnService.style.background = 'transparent';
+                    btnService.style.color = '#cbd5e1';
+                    btnService.style.borderColor = '#475569';
+                }
+            }
+
+            // 💸 Finančná strata (Dynamické formátovanie, mena aj odvetvový text z DB/API)
+            const strataVal = Number(data.strata_eur) || 0;
+            if (strataVal > 0) {
+                document.getElementById('kpi-strata').style.display = 'block';
+                document.getElementById('val-strata').innerText = strataVal.toLocaleString();
+                if (data.kpi_strata_label) document.getElementById('label-strata').innerText = data.kpi_strata_label + ':';
+                if (data.kpi_strata_tooltip) document.getElementById('tooltip-strata-text').innerText = data.kpi_strata_tooltip;
+                if (data.mena) {
+                    const menaEl = document.getElementById('val-strata-mena');
+                    if (menaEl) menaEl.innerText = data.mena;
+                }
+            } else {
+                document.getElementById('kpi-strata').style.display = 'none';
+            }
+
+            // 🍃 ESG CO2 Tracker (Formátovanie na 2 desatinné miesta, napr. 12,50 t)
+            const co2Val = Number(data.co2_tony) || 0;
+            if (co2Val > 0) {
+                document.getElementById('kpi-esg').style.display = 'block';
+                document.getElementById('val-co2').innerText = co2Val.toLocaleString(undefined, {
+                    minimumFractionDigits: 2, 
+                    maximumFractionDigits: 2
+                });
+            } else {
+                document.getElementById('kpi-esg').style.display = 'none';
+            }
+        }
+
+        // ⏱️ ISAS CORE: Výpočet relatívneho času (Live Time Ago)
+        function parseSlovakDate(dateStr) {
+            if (!dateStr) return null;
+            if (typeof dateStr !== 'string') return new Date(dateStr);
+            if (dateStr.includes('T') || (dateStr.includes('-') && !dateStr.includes('.'))) {
+                const parsed = new Date(dateStr);
+                if (!isNaN(parsed.getTime())) return parsed;
+            }
+            const parts = dateStr.match(/(\d+)/g); // "25.10.2023 14:30:00"
+            if (!parts || parts.length < 3) return null;
+            const day = parseInt(parts[0], 10);
+            const month = parseInt(parts[1], 10) - 1;
+            const year = parseInt(parts[2], 10);
+            const hours = parts.length > 3 ? parseInt(parts[3], 10) : 0;
+            const minutes = parts.length > 4 ? parseInt(parts[4], 10) : 0;
+            const seconds = parts.length > 5 ? parseInt(parts[5], 10) : 0;
+            return new Date(year, month, day, hours, minutes, seconds);
+        }
+
+        function updateTimeAgo() {
+            const el = document.getElementById('val-posledny-zapis');
+            if (!el) return;
+            const ts = el.getAttribute('data-timestamp');
+            if (!ts) return;
+            
+            const date = parseSlovakDate(ts);
+            if (!date || isNaN(date.getTime())) {
+                el.innerText = escapeHTML(ts);
+                return;
+            }
+            
+            // 🛡️ ISAS FIX: Math.max(0, ...) zabráni záporným hodnotám, ak má technik na PC posunutý čas voči serveru
+            const diffSeconds = Math.max(0, Math.floor((new Date() - date) / 1000));
+            if (isNaN(diffSeconds)) {
+                el.innerText = escapeHTML(ts);
+                return;
+            }
+            
+            // 🧠 ISAS UX: Zvýšená tolerancia na 10 sekúnd pre plynulejší zážitok
+            if (diffSeconds < 10) el.innerText = "Práve teraz";
+            else if (diffSeconds < 60) el.innerText = `Pred ${diffSeconds} sek.`;
+            else if (diffSeconds < 3600) el.innerText = `Pred ${Math.floor(diffSeconds/60)} min.`;
+            else el.innerText = `Pred ${Math.floor(diffSeconds/3600)} hod.`;
+        }
+        
+        // Spustenie hodín, ktoré každú sekundu aktualizujú text
+        setInterval(updateTimeAgo, 1000);
+
+        // 🎨 VYKRESLENIE BUDÍKOV (Cez Chart.js Doughnut)
+        function renderGauges(analogData, limity, jednotky, status, servisnyRezim) {
+            const wrapper = document.getElementById('gauges-wrapper');
+            const keys = Object.keys(analogData);
+            
+            // 🎨 ISAS UX FIX: Ak nie sú žiadne dáta, zobrazíme pekný placeholder
+            if (keys.length === 0) {
+                wrapper.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 30px; color: #94a3b8; font-weight: 600; background: rgba(255,255,255,0.5); border-radius: 12px; border: 1px dashed #cbd5e1;">📭 Zariadenie zatiaľ neposlalo žiadne analógové dáta.</div>';
+                return;
+            }
+
+            // 🧠 ISAS CORE FIX: Porovnávame presné názvy kľúčov, nie len ich počet!
+            const existingKeys = Object.keys(gaugeInstances);
+            const keysChanged = keys.length !== existingKeys.length || !keys.every(k => existingKeys.includes(k));
+
+            if (keysChanged) {
+                // 🛡️ ISAS FIX: Zničenie starých inštancií Chart.js pred vymazaním z DOM (Ochrana pred Memory Leakom)
+                Object.values(gaugeInstances).forEach(chart => chart.destroy());
+                
+                wrapper.innerHTML = '';
+                gaugeInstances = {};
+                
+                keys.forEach(key => {
+                    const unit = jednotky[key] || ''; // 🧠 ISAS CORE: Vytiahnutie jednotky z DB
+                    const safeKey = escapeHTML(key);
+                    const safeUnit = escapeHTML(unit);
+                    const safeTitle = escapeHTML(key.replace(/_/g, ' '));
+                    const div = document.createElement('div');
+                    div.className = 'glass-panel gauge-card';
+                    div.innerHTML = `
+                        <canvas id="gauge-${safeKey}" height="150"></canvas>
+                        <div class="gauge-value-overlay">
+                            <div class="val" id="val-${safeKey}">0</div>
+                            <div class="unit">${safeUnit}</div>
+                        </div>
+                        <div class="gauge-title">${safeTitle}</div>
+                    `;
+                    wrapper.appendChild(div);
+
+                    // Inicializácia Chart.js Budíka (Premium Look)
+                    const ctx = document.getElementById(`gauge-${key}`).getContext('2d');
+                    gaugeInstances[key] = new Chart(ctx, {
+                        type: 'doughnut',
+                        data: {
+                            datasets: [{
+                                data: [0, 100],
+                                backgroundColor: ['#3b82f6', '#f1f5f9'], // Svetlejšie pozadie pre kontrast
+                                borderWidth: 0,
+                                borderRadius: 20 // Maximálne oblé konce
+                            }]
+                        },
+                        options: {
+                            circumference: 180,
+                            rotation: -90,
+                            cutout: '86%', // Ešte tenšia a elegantnejšia čiara
+                            plugins: { tooltip: { enabled: false }, legend: { display: false } },
+                            animation: { duration: 800, easing: 'easeOutQuart' },
+                            layout: { padding: { bottom: 10 } } // Posunie graf kúsok hore
+                        }
+                    });
+                });
+            }
+
+            // Aktualizácia hodnôt v existujúcich budíkoch
+            keys.forEach(key => {
+                const val = analogData[key];
+                const unit = jednotky[key] || '';
+                document.getElementById(`val-${key}`).innerText = (Number(val) || 0).toFixed(1);
+                
+                let max = 100;
+                let color = '#3b82f6';
+                let hasDbLimit = false;
+                let realMax = 0;
+                
+                // 🧠 ISAS CORE: Bezpečné dvojúrovňové párovanie limitov (Presná zhoda -> Podreťazec min. 3 znaky)
+                let matchedLimit = null;
+                const keyLower = key.toLowerCase().trim();
+
+                for (const [limitKey, limitVal] of Object.entries(limity)) {
+                    const lKeyClean = limitKey.toLowerCase().trim();
+                    if (limitVal && (lKeyClean === keyLower || (lKeyClean.length >= 3 && keyLower.includes(lKeyClean)))) {
+                        matchedLimit = Number(limitVal);
+                        break;
+                    }
+                }
+
+                if (matchedLimit !== null && matchedLimit > 0) {
+                    // 🧠 REÁLNY LIMIT: matchedLimit je priamo hodnota alarmu z databázy
+                    realMax = matchedLimit;
+                    // Stupnica budíka dostane 20% priestor nad limitom, aby červená zóna bola viditeľná
+                    max = Math.ceil(realMax * 1.2); 
+                    hasDbLimit = true;
+                } else {
+                    // 🧠 SCADA HYSTERÉZIA: Štandardné inžinierske stupnice bez trasenia ručičky/oblúka
+                    const num = Math.max(0, Number(val) || 0);
+                    const unitLower = unit.toLowerCase();
+
+                    if (unitLower.includes('%')) {
+                        max = 100;
+                    } else {
+                        const standardScales = [10, 16, 25, 40, 60, 100, 160, 250, 400, 600, 1000, 1600, 2500, 5000, 10000];
+                        const targetMax = num * 1.25; // 25% vizuálna rezerva
+                        const targetScale = standardScales.find(s => s >= targetMax) || (Math.ceil(targetMax / 1000) * 1000);
+
+                        // Pamätáme si predchádzajúce maximum budíka, aby stupnica neskákala pri každom cykle
+                        const prevMax = gaugeInstances[key]?.data?.datasets?.[0]?.data?.[1] !== undefined 
+                            ? (gaugeInstances[key].data.datasets[0].data[0] + gaugeInstances[key].data.datasets[0].data[1]) 
+                            : 0;
+
+                        if (prevMax > 0 && num >= prevMax * 0.45) {
+                            max = Math.max(prevMax, targetScale);
+                        } else {
+                            max = targetScale;
+                        }
+                    }
+                }
+
+                // Farby meníme IBA vtedy, ak máme presný limit z databázy (inak nevieme, čo je kritické)
+                if (hasDbLimit) {
+                    if (val > realMax * 0.95) color = '#ef4444'; // Kritická (nad 95% štítkovej hodnoty)
+                    else if (val > realMax * 0.85) color = '#f59e0b'; // Varovanie (nad 85%)
+                }
+
+                // 🛡️ ISAS FIX: Ochrana pred zápornými a NaN hodnotami, ktoré by rozbili Doughnut graf
+                const numVal = Number(val) || 0;
+                let displayVal = Math.max(0, numVal);
+                
+                // 🧠 ISAS UX: Ak je stroj offline alebo v servise, budík zosivie a zmení text
+                const valElement = document.getElementById(`val-${key}`);
+                if (status === 'offline' || servisnyRezim) {
+                    color = '#f1f5f9'; // Veľmi jemná sivá, aby budík splynul s pozadím
+                    valElement.innerText = servisnyRezim ? 'SERVIS' : 'OFF';
+                    valElement.style.fontSize = '22px';
+                    valElement.style.color = '#94a3b8';
+                    displayVal = 0; // 🚀 ISAS FIX: Budík vizuálne padne na nulu (nezostane zaseknutý)
+                } else {
+                    valElement.style.fontSize = '34px';
+                    valElement.style.color = ''; // Návrat k pôvodnému CSS gradientu
+                    
+                    // 🧠 ISAS HEARTBEAT: Ak sa hodnota zmenila, prehráme animáciu
+                    if (lastKnownValues[key] !== undefined && lastKnownValues[key] !== val) {
+                        valElement.classList.remove('value-update-flash');
+                        void valElement.offsetWidth; // Trigger reflow (reštart animácie)
+                        valElement.classList.add('value-update-flash');
+                    }
+                    lastKnownValues[key] = val; // Uložíme novú hodnotu do pamäte
+                }
+
+                gaugeInstances[key].data.datasets[0].data = [displayVal, Math.max(0, max - displayVal)];
+                gaugeInstances[key].data.datasets[0].backgroundColor[0] = color;
+                gaugeInstances[key].update();
+            });
+        }
+
+        // ⚖️ VYKRESLENIE DIAGNOSTIKY A LEGISLATÍVY
+        function renderDiagnostics(legislativa, diagnostika) {
+            const panel = document.getElementById('diagnostic-panel');
+            const wrapper = document.getElementById('diagnostic-wrapper');
+            wrapper.innerHTML = '';
+            
+            const vsetkyZaznamy = [...legislativa, ...diagnostika];
+            
+            if (vsetkyZaznamy.length === 0) {
+                panel.style.display = 'none';
+                return;
+            }
+            
+            panel.style.display = 'block';
+            
+            vsetkyZaznamy.forEach(item => {
+                // 🛡️ ISAS ARCHITECT: Natívne hex štýly nezávislé od prítomnosti Tailwind kompilátora
+                let bgHex = '#f8fafc', borderHex = '#e2e8f0', textHex = '#475569';
+                
+                if (item.farba === 'red') { bgHex = '#fef2f2'; borderHex = '#fecaca'; textHex = '#dc2626'; }
+                else if (item.farba === 'orange') { bgHex = '#fffbeb'; borderHex = '#fde68a'; textHex = '#d97706'; }
+                else if (item.farba === 'emerald') { bgHex = '#f0fdf4'; borderHex = '#bbf7d0'; textHex = '#16a34a'; }
+                
+                const cleanTooltip = item.popis ? escapeHTML(item.popis.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim()) : escapeHTML(item.hodnota);
+
+                wrapper.innerHTML += `
+                    <div title="${cleanTooltip}" style="cursor: help; display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-radius: 10px; border: 1px solid ${borderHex}; background: ${bgHex}; flex-wrap: wrap; gap: 8px; transition: transform 0.2s;" onmouseover="this.style.transform='translateX(3px)';" onmouseout="this.style.transform='translateX(0)';">
+                        <div style="display: flex; align-items: center; gap: 8px; min-width: 140px;">
+                            <span style="font-size: 17px; line-height: 1;">${item.ikona}</span>
+                            <span style="font-size: 11.5px; font-weight: 800; color: #334155; text-transform: uppercase; letter-spacing: 0.3px;">${escapeHTML(item.nazov)}</span>
+                        </div>
+                        <div style="font-size: 12.5px; font-weight: 900; color: ${textHex}; text-align: right; margin-left: auto; word-break: break-word;">
+                            ${escapeHTML(item.hodnota)}
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        // 💡 VYKRESLENIE DIGITÁLNYCH STAVOV
+        function renderDigital(digitalData) {
+            const wrapper = document.getElementById('digital-wrapper');
+            wrapper.innerHTML = '';
+            
+            // 🎨 ISAS UX FIX: Ak nie sú žiadne dáta, zobrazíme pekný placeholder
+            if (Object.keys(digitalData).length === 0) {
+                wrapper.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 20px; color: #94a3b8; font-weight: 600; background: rgba(255,255,255,0.5); border-radius: 12px; border: 1px dashed #cbd5e1;">📭 Žiadne digitálne stavy.</div>';
+                return;
+            }
+
+            for (const [key, value] of Object.entries(digitalData)) {
+                const isOn = value === true || value === 'true' || value === 1;
+                const cls = isOn ? 'on' : 'off';
+                const txt = isOn ? 'ZAPNUTÉ' : 'VYPNUTÉ';
+                wrapper.innerHTML += `
+                    <div class="digital-badge ${cls}">
+                        <div style="margin-bottom: 4px; color: var(--text-main);">${escapeHTML(key.replace(/_/g, ' '))}</div>
+                        ${txt}
+                    </div>
+                `;
+            }
+        }
+
+        // 🛡️ ISAS SECURITY: Ochrana pred XSS v Dashboarde
+        function escapeHTML(str) {
+            if (str === null || str === undefined) return '';
+            return String(str).replace(/[&<>'"]/g, tag => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+            }[tag]));
+        }
+
+        // 🚨 VYKRESLENIE ALARMOV (Čistý minimalistický dizajn)
+        function renderAlarms(alarmy, wrapperId, showDeviceName) {
+            const wrapper = document.getElementById(wrapperId);
+            wrapper.innerHTML = '';
+            
+            // 🧠 ISAS UX: Vyfiltrujeme vyriešené alarmy, aby sa na ploche nekopili
+            const activeAlarms = alarmy ? alarmy.filter(a => !a.vyriesene) : [];
+            
+            if (activeAlarms.length === 0) {
+                wrapper.innerHTML = '<div style="text-align:center; padding: 20px; color: #10b981; font-weight: 700; background: #f0fdf4; border-radius: 12px; border: 1px dashed #6ee7b7;">✅ Všetky systémy bežia bez chýb. Žiadne aktívne alarmy.</div>';
+                return;
+            }
+            
+            activeAlarms.forEach(a => {
+                let cardClass = a.zavaznost === 'CRITICAL' ? 'critical' : 'warning';
+                let icon = a.zavaznost === 'CRITICAL' ? '🔴' : '🟠';
+                let zavaznostText = a.zavaznost === 'CRITICAL' ? 'KRITICKÁ PORUCHA' : 'VAROVANIE';
+                
+                const deviceHtml = showDeviceName && a.zariadenie ? `<div class="alarm-device">⚙️ ${escapeHTML(a.zariadenie)}</div>` : '';
+                
+                const safeAlarmId = parseInt(a.id, 10) || 0;
+                // 🚀 ISAS BIZNIS: Decentné tlačidlo na vyriešenie alarmu (iba pre zamestnancov)
+                const resolveBtn = (!isClientPortal && safeAlarmId > 0) ? `<button class="btn-resolve-alarm" onclick="resolveAlarm(${safeAlarmId}, this)">✓ Označiť ako vyriešené</button>` : '';
+                
+                // 🪄 Pridané ID pre animáciu zmiznutia
+                wrapper.innerHTML += `
+                    <div class="alarm-card ${cardClass}" id="alarm-card-${safeAlarmId}">
+                        <div class="alarm-icon" title="${zavaznostText}">${icon}</div>
+                        <div class="alarm-content">
+                            <div class="alarm-header">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span class="alarm-code">${escapeHTML(a.kod)}</span>
+                                    <span style="font-size: 10px; font-weight: 800; color: #94a3b8;">|</span>
+                                    <span style="font-size: 10px; font-weight: 800; color: ${a.zavaznost === 'CRITICAL' && !a.vyriesene ? '#ef4444' : '#94a3b8'};">${zavaznostText}</span>
+                                </div>
+                                <span class="alarm-time">⏱️ ${escapeHTML(a.cas)}</span>
+                            </div>
+                            <p class="alarm-desc">${escapeHTML(a.popis)}</p>
+                            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                                ${deviceHtml}
+                                ${resolveBtn}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        // 🛠️ VYKRESLENIE HISTÓRIE SERVISOV
+        function renderServisy(servisy) {
+            const tbody = document.getElementById('servis-table-body');
+            tbody.innerHTML = '';
+            if (!servisy || servisy.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color: var(--text-muted);">Zatiaľ žiadne servisné záznamy</td></tr>';
+                return;
+            }
+            servisy.forEach(s => {
+                const safePdfUrl = escapeHTML(s.pdf_url);
+                const pdfLink = s.pdf_url 
+                    ? `<a href="${safePdfUrl}" target="_blank" rel="noopener noreferrer" style="background: #eff6ff; color: #3b82f6; padding: 6px 12px; border-radius: 6px; text-decoration: none; font-size: 12px; font-weight: 900; border: 1px solid #bfdbfe; display: inline-flex; align-items: center; gap: 5px; transition: all 0.2s; box-shadow: 0 2px 4px rgba(59,130,246,0.1);" onmouseover="this.style.background='#dbeafe'; this.style.transform='translateY(-1px)';" onmouseout="this.style.background='#eff6ff'; this.style.transform='translateY(0)';">📄 Stiahnuť PDF</a>` 
+                    : `<span style="color: #94a3b8; font-size: 11px; font-weight: 600; background: #f1f5f9; padding: 4px 8px; border-radius: 6px;">✍️ Čaká na podpis</span>`;
+                
+                tbody.innerHTML += `
+                    <tr>
+                        <td style="white-space: nowrap;">${escapeHTML(s.datum)}</td>
+                        <td><strong style="color: var(--text-main); font-size: 12px;">${escapeHTML(s.typ)}</strong><br><small style="color: var(--text-muted);">${escapeHTML(s.popis)}</small></td>
+                        <td style="text-align: center; vertical-align: middle;">${pdfLink}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        // 📊 VYKRESLENIE TRENDOVÝCH GRAFOV (DELTA ENGINE - ROZDELENÉ)
+        function renderChart(grafData, limity) {
+            // 🚀 ISAS DELTA STREAM: Prírastková aktualizácia bez preťahovania a prepisovania 1000 bodov
+            if (grafData.is_delta) {
+                if (!grafData.hodnoty || grafData.hodnoty.length === 0) return;
+                grafData.casy.forEach((cas, idx) => {
+                    const row = grafData.hodnoty[idx] || {};
+                    Object.keys(chartInstances).forEach(key => {
+                        const chart = chartInstances[key];
+                        const val = row[key] !== undefined ? row[key] : null;
+                        chart.data.labels.push(cas);
+                        chart.data.datasets[0].data.push(val);
+                        if (chart.data.datasets[1]) {
+                            chart.data.datasets[1].data.push(chart.data.datasets[1].data[0]);
+                        }
+                        if (chart.data.labels.length > 1000) {
+                            chart.data.labels.shift();
+                            chart.data.datasets[0].data.shift();
+                            if (chart.data.datasets[1]) chart.data.datasets[1].data.shift();
+                        }
+                    });
+                });
+                Object.values(chartInstances).forEach(chart => chart.update('none'));
+                if (maximizedChartKey && maximizedChartInstance) {
+                    maximizedChartInstance.update('none');
+                }
+                return;
+            }
+
+            const wrapper = document.getElementById('charts-wrapper');
+            const colors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'];
+            let colorIndex = 0;
+
+            const allKeys = new Set();
+            grafData.hodnoty.forEach(obj => Object.keys(obj).forEach(k => allKeys.add(k)));
+
+            // Kontrola, či sa zmenili parametre (napr. iné zariadenie)
+            const existingKeys = Object.keys(chartInstances);
+            const keysChanged = allKeys.size !== existingKeys.length || !Array.from(allKeys).every(k => existingKeys.includes(k));
+
+            if (keysChanged) {
+                Object.values(chartInstances).forEach(chart => chart.destroy());
+                chartInstances = {};
+                wrapper.innerHTML = '';
+
+                allKeys.forEach(key => {
+                    const safeKeyAttr = escapeHTML(key);
+                    const safeKeyJs = String(key).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                    const div = document.createElement('div');
+                    div.style.position = 'relative';
+                    div.style.height = '220px'; // Menšia výška, keďže ich je viac pod sebou
+                    div.style.width = '100%';
+                    div.style.background = 'rgba(255,255,255,0.5)';
+                    div.style.borderRadius = '12px';
+                    div.style.padding = '10px';
+                    div.style.border = '1px solid #e2e8f0';
+                    div.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <div style="font-size: 12px; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.5px;">
+                                📈 ${escapeHTML(key.replace(/_/g, ' '))}
+                            </div>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <div style="font-size: 10px; color: #94a3b8; font-weight: 600; background: rgba(255,255,255,0.7); padding: 2px 8px; border-radius: 10px;">
+                                    🖱️ Scroll / ⬆️⬇️ = Zoom | ✋ Drag / ⬅️➡️ = Posun | 🖱️🖱️ Dvojklik = Reset
+                                </div>
+                                <button onclick="openMaximizedChart('${safeKeyJs}')" style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 2px 8px; cursor: pointer; color: #475569; font-weight: bold; transition: 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.05);" onmouseover="this.style.borderColor='#3b82f6'; this.style.color='#3b82f6';" onmouseout="this.style.borderColor='#cbd5e1'; this.style.color='#475569';" title="Maximalizovať graf">🗖</button>
+                            </div>
+                        </div>
+                        <canvas id="chart-${safeKeyAttr}" tabindex="0" style="outline: none; transition: box-shadow 0.2s;"></canvas>
+                    `;
+                    wrapper.appendChild(div);
+                });
+            }
+
+            allKeys.forEach(key => {
+                    const dataPoints = grafData.hodnoty.map(obj => obj[key] !== undefined ? obj[key] : null);
+                    const baseColor = colors[colorIndex % colors.length];
+                colorIndex++;
+                
+                // 📏 ISAS CORE: Bezpečné dvojúrovňové párovanie limitu pre graf
+                let limitValue = null;
+                const keyLower = key.toLowerCase().trim();
+
+                for (const [limitKey, limitVal] of Object.entries(limity)) {
+                    const lKeyClean = limitKey.toLowerCase().trim();
+                    if (limitVal && (lKeyClean === keyLower || (lKeyClean.length >= 3 && keyLower.includes(lKeyClean)))) {
+                        limitValue = Number(limitVal);
+                        break;
+                    }
+                }
+
+                if (chartInstances[key]) {
+                    if (typeof chartInstances[key].resetZoom === 'function') { chartInstances[key].resetZoom('none'); }
+                    chartInstances[key].data.labels = grafData.casy;
+                    chartInstances[key].data.datasets[0].data = dataPoints;
+                    
+                    // Aktualizácia čiary limitu, ak existuje
+                    if (limitValue !== null && chartInstances[key].data.datasets[1]) {
+                        chartInstances[key].data.datasets[1].data = Array(grafData.casy.length).fill(limitValue);
+                    }
+                    
+                    chartInstances[key].update('none');
+                    
+                    // 🧠 ISAS CORE: Ak je tento graf práve maximalizovaný v modale, aktualizujeme aj ten!
+                    if (maximizedChartKey === key && maximizedChartInstance) {
+                        if (typeof maximizedChartInstance.resetZoom === 'function') { maximizedChartInstance.resetZoom('none'); }
+                        maximizedChartInstance.update('none');
+                    }
+                } else {
+                    const ctx = document.getElementById(`chart-${key}`).getContext('2d');
+                    let gradient = ctx.createLinearGradient(0, 0, 0, 220);
+                    gradient.addColorStop(0, baseColor + '40');
+                    gradient.addColorStop(1, baseColor + '00');
+
+                    // 📏 ISAS CORE: Príprava datasetov (Hlavné dáta + voliteľná kritická čiara)
+                    const chartDatasets = [{
+                        label: key.replace(/_/g, ' '),
+                        data: dataPoints,
+                        borderColor: baseColor,
+                        backgroundColor: gradient,
+                        borderWidth: 3,
+                        pointRadius: 0,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: '#ffffff',
+                        pointBorderColor: baseColor,
+                        pointBorderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        spanGaps: true
+                    }];
+                    
+                    if (limitValue !== null) {
+                        chartDatasets.push({
+                            label: 'Kritický limit',
+                            data: Array(grafData.casy.length).fill(limitValue),
+                            borderColor: '#ef4444', // Červená farba
+                            borderWidth: 2,
+                            borderDash: [5, 5], // Prerušovaná čiara
+                            pointRadius: 0,
+                            pointHoverRadius: 0,
+                            fill: false,
+                            tension: 0
+                        });
+                    }
+
+                    chartInstances[key] = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: grafData.casy,
+                            datasets: chartDatasets
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            interaction: { mode: 'index', intersect: false },
+                            plugins: { 
+                                legend: { display: false }, // Skryjeme legendu, lebo názov je nad grafom
+                                tooltip: {
+                                    backgroundColor: 'rgba(2, 6, 23, 0.95)',
+                                    titleFont: { size: 13, family: "'Segoe UI', sans-serif", weight: 'bold' },
+                                    bodyFont: { size: 13, family: "'Segoe UI', sans-serif", weight: '500' },
+                                    padding: 12, cornerRadius: 10, displayColors: true,
+                                    borderColor: '#334155', borderWidth: 1, boxPadding: 6
+                                },
+                                // 🚀 ISAS CORE: Prémiový Zoom a Pan
+                                zoom: {
+                                    pan: {
+                                        enabled: true,
+                                        mode: 'x', // Posúvanie len v čase (doprava/doľava)
+                                    },
+                                    zoom: {
+                                        wheel: { 
+                                            enabled: true,
+                                            speed: 0.02 // 🛡️ ISAS FIX: Extrémne znížená citlivosť pre plynulý zoom na touchpadoch
+                                        }, 
+                                        pinch: { enabled: true }, // Zoom dvoma prstami na mobile
+                                        mode: 'x', // Zoomujeme len časovú os, hodnoty Y sa prispôsobia
+                                    }
+                                }
+                            },
+                            scales: {
+                                y: { 
+                                    beginAtZero: false, // 🚀 ISAS FIX: Graf sa prispôsobí reálnym hodnotám daného parametra
+                                    grace: '20%', // 🎨 Pridá 20% vizuálnu rezervu hore aj dole pre prémiový vzhľad
+                                    border: { display: false }, 
+                                    grid: { color: 'rgba(0,0,0,0.04)', borderDash: [5, 5] } 
+                                },
+                                x: { border: { display: false }, grid: { display: false }, ticks: { maxTicksLimit: 8, color: '#94a3b8', font: { weight: '600' } } }
+                            },
+                            animation: { duration: 0 }
+                        }
+                    });
+                    
+                    // 🧠 ISAS UX: Dvojklik na graf resetuje priblíženie do pôvodného stavu
+                    const canvasEl = document.getElementById(`chart-${key}`);
+                    canvasEl.addEventListener('dblclick', function() {
+                        if (chartInstances[key]) chartInstances[key].resetZoom();
+                    });
+                    
+                    // ⌨️ ISAS CORE: Ovládanie grafu šípkami (Auto-focus pri hoveri)
+                    canvasEl.addEventListener('mouseenter', function() { this.focus(); });
+                    canvasEl.addEventListener('focus', function() { this.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.2)'; this.style.borderRadius = '8px'; });
+                    canvasEl.addEventListener('blur', function() { this.style.boxShadow = 'none'; });
+                    canvasEl.addEventListener('keydown', function(e) {
+                        const chart = chartInstances[key];
+                        if (!chart) return;
+                        if (e.key === 'ArrowLeft') { chart.pan({x: 50}); e.preventDefault(); }
+                        else if (e.key === 'ArrowRight') { chart.pan({x: -50}); e.preventDefault(); }
+                        else if (e.key === 'ArrowUp') { chart.zoom(1.1); e.preventDefault(); }
+                        else if (e.key === 'ArrowDown') { chart.zoom(0.9); e.preventDefault(); }
+                    });
+                }
+            });
+        }
+
+        // 📈 ISAS CORE: Funkcia pre maximalizáciu grafu do prémiového modalu
+        function openMaximizedChart(key) {
+            const originalChart = chartInstances[key];
+            if (!originalChart) return;
+
+            maximizedChartKey = key;
+
+            window.ISASModalEngine({
+                maxWidth: '90vw',
+                title: `📈 Detailný pohľad: ${escapeHTML(key.replace(/_/g, ' '))}`,
+                text: '🖱️ Scroll / ⬆️⬇️ = Zoom | ✋ Drag / ⬅️➡️ = Posun | 🖱️🖱️ Dvojklik = Reset',
+                showClose: true,
+                closeText: 'Zavrieť graf',
+                fields: [{
+                    type: 'html',
+                    html: '<div style="height: 65vh; width: 100%; position: relative;"><canvas id="maximized-chart" tabindex="0" style="outline: none;"></canvas></div>'
+                }],
+                onRender: (m) => {
+                    const canvasEl = m.card.querySelector('#maximized-chart');
+                    const ctx = canvasEl.getContext('2d');
+                    
+                    const config = {
+                        type: originalChart.config.type,
+                        data: originalChart.config.data, 
+                        options: Object.assign({}, originalChart.config.options, {
+                            maintainAspectRatio: false,
+                            animation: { duration: 0 }
+                        })
+                    };
+                    maximizedChartInstance = new Chart(ctx, config);
+                    
+                    canvasEl.addEventListener('dblclick', function() {
+                        if (maximizedChartInstance) maximizedChartInstance.resetZoom();
+                    });
+                    
+                    canvasEl.focus();
+                    canvasEl.addEventListener('keydown', function(e) {
+                        if (!maximizedChartInstance) return;
+                        if (e.key === 'ArrowLeft') { maximizedChartInstance.pan({x: 100}); e.preventDefault(); }
+                        else if (e.key === 'ArrowRight') { maximizedChartInstance.pan({x: -100}); e.preventDefault(); }
+                        else if (e.key === 'ArrowUp') { maximizedChartInstance.zoom(1.1); e.preventDefault(); }
+                        else if (e.key === 'ArrowDown') { maximizedChartInstance.zoom(0.9); e.preventDefault(); }
+                    });
+                },
+                onClose: () => {
+                    if (maximizedChartInstance) {
+                        maximizedChartInstance.destroy();
+                        maximizedChartInstance = null;
+                    }
+                    maximizedChartKey = null;
+                }
+            });
+        }
+
+        function renderControls(ovladanie, analogData, digitalData, jednotky) {
+            const wrapper = document.getElementById('controls-wrapper');
+            const panel = document.getElementById('controls-panel');
+            let hasControls = false;
+            
+            // 🛡️ ISAS FIX: Dvojitá ochrana. Ak by sem predsa len prišiel null, zmeníme ho na prázdny objekt.
+            analogData = analogData || {};
+            digitalData = digitalData || {};
+            jednotky = jednotky || {};
+
+            // 🧠 ISAS CORE: Zistíme, či sa zmenila štruktúra registrov. Ak áno, prečistíme HTML. Ak nie, len updatneme hodnoty.
+            const currentAddresses = Object.values(ovladanie).filter(c => c.prava === 'RW').map(c => c.adresa.toString());
+            const existingAddresses = Array.from(wrapper.children).map(child => child.id.replace('ctrl-wrapper-', ''));
+            const keysChanged = currentAddresses.length !== existingAddresses.length || !currentAddresses.every(a => existingAddresses.includes(a));
+
+            if (keysChanged) {
+                wrapper.innerHTML = '';
+            }
+
+            for (const [nazov, config] of Object.entries(ovladanie)) {
+                if (config.prava === 'RW') {
+                    hasControls = true;
+                    const adresa = config.adresa;
+                    const jednotka = jednotky[nazov] || '';
+                    
+                    let aktualnaHodnota = 0;
+                    if (config.typ === 'ANALOG') {
+                        aktualnaHodnota = analogData[nazov] !== undefined ? analogData[nazov] : 0;
+                    } else {
+                        aktualnaHodnota = digitalData[nazov] ? 1 : 0;
+                    }
+
+                    const bezpecnyNazov = escapeHTML(nazov).replace(/'/g, "\\'");
+                    const existingControl = document.getElementById(`ctrl-wrapper-${adresa}`);
+
+                    if (existingControl) {
+                        // 🚀 ISAS FIX: Ak element už existuje, NEPREMAZÁVAME input, iba aktualizujeme "Live" hodnotu!
+                        const liveSpan = document.getElementById(`live-val-${adresa}`);
+                        const liveDot = document.getElementById(`live-dot-${adresa}`);
+                        
+                        if (liveSpan) {
+                            if (config.typ === 'ANALOG') {
+                                liveSpan.innerText = (Number(aktualnaHodnota) || 0).toFixed(2);
+                            } else {
+                                liveSpan.innerHTML = aktualnaHodnota === 1 ? '<span style="color: #10b981;">ZAPNUTÉ</span>' : '<span style="color: #64748b;">VYPNUTÉ</span>';
+                                if (liveDot) {
+                                    const dotColor = aktualnaHodnota === 1 ? '#10b981' : '#94a3b8';
+                                    liveDot.style.background = dotColor;
+                                    liveDot.style.boxShadow = `0 0 6px ${dotColor}`;
+                                }
+                            }
+                        }
+                    } else {
+                        // Vytvárame element prvýkrát
+                        let inputHtml = '';
+                        
+                        const safeNazov = escapeHTML(nazov);
+                        const safeJednotka = escapeHTML(jednotka);
+
+                        if (config.typ === 'ANALOG') {
+                            const zobrazenahodnota = (Number(aktualnaHodnota) || 0).toFixed(2);
+                            inputHtml = `
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                    <div style="font-size: 13px; color: #1e293b; font-weight: 800;">${safeNazov} <span style="color: #94a3b8; font-weight: 600;">[${safeJednotka}]</span></div>
+                                    <div style="display: flex; align-items: center; gap: 6px; background: #f1f5f9; padding: 4px 10px; border-radius: 20px; border: 1px solid #e2e8f0;" title="Aktuálna hodnota v zariadení">
+                                        <div id="live-dot-${adresa}" style="width: 6px; height: 6px; border-radius: 50%; background: #10b981; box-shadow: 0 0 6px #10b981;"></div>
+                                        <span style="font-size: 10px; color: #64748b; font-weight: 800; text-transform: uppercase;">Live:</span>
+                                        <span id="live-val-${adresa}" style="color: #0f172a; font-weight: 900; font-size: 13px; font-family: monospace;">${zobrazenahodnota}</span>
+                                    </div>
+                                </div>
+                                <div style="display: flex; gap: 10px;">
+                                    <input type="number" id="ctrl-input-${adresa}" value="" placeholder="Nová hodnota..." step="0.1" style="flex-grow: 1; padding: 10px 15px; border: 1px solid #cbd5e1; border-radius: 10px; font-weight: 700; font-size: 14px; color: #0f172a; background: #f8fafc; transition: all 0.2s; outline: none;" onfocus="this.style.borderColor='#3b82f6'; this.style.background='#ffffff'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)';" onblur="this.style.borderColor='#cbd5e1'; this.style.background='#f8fafc'; this.style.boxShadow='none';">
+                                    <button onclick="sendWriteCommand('${adresa}', '${bezpecnyNazov}', 'ANALOG')" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; padding: 0 20px; border-radius: 10px; font-weight: 800; font-size: 13px; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); display: flex; align-items: center; gap: 6px;" onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 15px rgba(59, 130, 246, 0.4)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(59, 130, 246, 0.3)';">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                                        ZÁPIS
+                                    </button>
+                                </div>
+                            `;
+                        } else {
+                            const stavText = aktualnaHodnota === 1 ? '<span style="color: #10b981;">ZAPNUTÉ</span>' : '<span style="color: #64748b;">VYPNUTÉ</span>';
+                            const dotColor = aktualnaHodnota === 1 ? '#10b981' : '#94a3b8';
+                            inputHtml = `
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                    <div style="font-size: 13px; color: #1e293b; font-weight: 800;">${safeNazov}</div>
+                                    <div style="display: flex; align-items: center; gap: 6px; background: #f1f5f9; padding: 4px 10px; border-radius: 20px; border: 1px solid #e2e8f0;" title="Aktuálny stav v zariadení">
+                                        <div id="live-dot-${adresa}" style="width: 6px; height: 6px; border-radius: 50%; background: ${dotColor}; box-shadow: 0 0 6px ${dotColor};"></div>
+                                        <span style="font-size: 10px; color: #64748b; font-weight: 800; text-transform: uppercase;">Live:</span>
+                                        <span id="live-val-${adresa}" style="font-weight: 900; font-size: 12px;">${stavText}</span>
+                                    </div>
+                                </div>
+                                <div style="display: flex; gap: 10px;">
+                                    <select id="ctrl-input-${adresa}" style="flex-grow: 1; height: auto; min-height: 44px; line-height: 1.4; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 10px; font-weight: 700; font-size: 14px; color: #0f172a; background: #f8fafc; transition: all 0.2s; outline: none; cursor: pointer;" onfocus="this.style.borderColor='#3b82f6'; this.style.background='#ffffff'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)';" onblur="this.style.borderColor='#cbd5e1'; this.style.background='#f8fafc'; this.style.boxShadow='none';">
+                                        <option value="" disabled selected>Zvoľte nový stav...</option>
+                                        <option value="1">ZAPNÚŤ (1)</option>
+                                        <option value="0">VYPNÚŤ (0)</option>
+                                    </select>
+                                    <button onclick="sendWriteCommand('${adresa}', '${bezpecnyNazov}', 'DIGITAL')" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; padding: 0 20px; border-radius: 10px; font-weight: 800; font-size: 13px; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); display: flex; align-items: center; gap: 6px;" onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 15px rgba(59, 130, 246, 0.4)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(59, 130, 246, 0.3)';">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                                        ZÁPIS
+                                    </button>
+                                </div>
+                            `;
+                        }
+
+                        wrapper.innerHTML += `
+                            <div id="ctrl-wrapper-${adresa}" style="background: #ffffff; padding: 18px; border-radius: 14px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); transition: all 0.3s ease;" onmouseover="this.style.borderColor='#bfdbfe'; this.style.boxShadow='0 10px 25px -5px rgba(59, 130, 246, 0.1)';" onmouseout="this.style.borderColor='#e2e8f0'; this.style.boxShadow='0 4px 6px -1px rgba(0,0,0,0.02)';">
+                                ${inputHtml}
+                            </div>
+                        `;
+                    }
+                }
+            }
+
+            panel.style.display = hasControls ? 'block' : 'none';
+        }
+
+        function sendWriteCommand(adresa, nazov, typ) {
+            const deviceId = document.getElementById('filter-zariadenie').value;
+            const inputEl = document.getElementById(`ctrl-input-${adresa}`);
+            const hodnota = inputEl ? inputEl.value : '';
+
+            if (hodnota === '' || hodnota === null || hodnota === undefined) {
+                showISASToast("Zadajte platnú hodnotu pre zápis.", "⚠️", "warning");
+                return;
+            }
+
+            window.ISASModalEngine({
+                maxWidth: '480px',
+                icon: '🎛️',
+                title: 'Zápis do zariadenia',
+                text: 'Vzdialené riadenie hardvéru',
+                fields: [
+                    {
+                        type: 'alert',
+                        icon: '⚠️',
+                        text: 'Táto akcia okamžite prepíše register v zariadení a zmení jeho správanie.'
+                    },
+                    {
+                        type: 'html',
+                        html: `
+                            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; margin-bottom: 10px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px dashed #cbd5e1; padding-bottom: 12px;">
+                                    <span style="color: #64748b; font-size: 12px; font-weight: 800; text-transform: uppercase;">Parameter</span>
+                                    <span style="color: #0f172a; font-size: 14px; font-weight: 800;">${escapeHTML(nazov)}</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="color: #64748b; font-size: 12px; font-weight: 800; text-transform: uppercase;">Nová hodnota</span>
+                                    <span style="color: #2563eb; font-size: 20px; font-weight: 900; font-family: monospace; background: #eff6ff; padding: 4px 12px; border-radius: 8px; border: 1px solid #bfdbfe;">${escapeHTML(hodnota)}</span>
+                                </div>
+                            </div>
+                        `
+                    }
+                ],
+                buttons: [{
+                    id: 'btn-confirm-plc-write',
+                    text: '🚀 Potvrdiť zápis',
+                    style: 'background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; padding: 14px 20px; border-radius: 10px; font-weight: 800; font-size: 13px; cursor: pointer; text-transform: uppercase; flex: 1;',
+                    onClick: (e, m, btn) => {
+                        const writeUrl = "{% url 'evidencia:api_iot_write_parameter' 0 %}".replace('0', deviceId);
+                        window.ISASAction({ register_adresa: adresa, hodnota: hodnota }, btn, {
+                            url: writeUrl,
+                            loadingText: '⏳ ZAPISUJEM...',
+                            successText: '✅ ZAPÍSANÉ',
+                            reload: false,
+                            onComplete: (data) => {
+                                m.close();
+                                showISASToast(data.message || "Hodnota bola úspešne zapísaná.", "✅", "success");
+                                fetchLiveData();
+                            },
+                            onError: () => {
+                                showISASToast("Chyba spojenia so serverom. Skontrolujte pripojenie.", "🔌", "error");
+                            }
+                        });
+                    }
+                }]
+            });
+        }
+
+        // 🚀 ISAS BIZNIS: Funkcia na prepnutie servisného režimu
+        function toggleServiceMode() {
+            const deviceId = document.getElementById('filter-zariadenie').value;
+            if (!deviceId) return;
+
+            const btn = document.getElementById('btn-toggle-service');
+            const toggleUrl = "{% url 'evidencia:api_iot_toggle_service_mode' 0 %}".replace('0', deviceId);
+
+            window.ISASAction({}, btn, {
+                url: toggleUrl,
+                loadingText: '⏳ Prepínam...',
+                reload: false,
+                onComplete: (data) => {
+                    showISASToast("Servisný režim bol zmenený.", "🛠️", "success");
+                    fetchLiveData();
+                },
+                onError: () => {
+                    showISASToast("Chyba spojenia so serverom. Skontrolujte pripojenie.", "🔌", "error");
+                }
+            });
+        }
+
+        // 🚀 ISAS BIZNIS: Funkcia na vyriešenie alarmu (S plynulou animáciou)
+        async function resolveAlarm(alarmId, btnEl) {
+            const safeId = parseInt(alarmId, 10);
+            if (!safeId) return;
+
+            const card = document.getElementById(`alarm-card-${safeId}`);
+            if (!card || card.classList.contains('removing')) return;
+            
+            if (btnEl) btnEl.style.pointerEvents = 'none';
+            card.classList.add('removing');
+
+            try {
+                const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || getCookie('csrftoken') || '';
+                const response = await fetch(`{% url 'evidencia:api_iot_resolve_alarm' 0 %}`.replace('0', alarmId), {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    }
+                });
+                
+                if (response.ok) {
+                    // Počkáme 400ms kým dobehne CSS animácia a potom kartu fyzicky zmažeme z DOMu
+                    setTimeout(() => {
+                        if (card) card.remove();
+                        
+                        // Ak bol toto posledný alarm, zobrazíme zelenú hlášku, že je všetko OK
+                        ['global-alarms-wrapper', 'local-alarms-wrapper'].forEach(wrapperId => {
+                            const wrapper = document.getElementById(wrapperId);
+                            if (wrapper && wrapper.children.length === 0) {
+                                wrapper.innerHTML = '<div style="text-align:center; padding: 20px; color: #10b981; font-weight: 700; background: #f0fdf4; border-radius: 12px; border: 1px dashed #6ee7b7;">✅ Všetky systémy bežia bez chýb. Žiadne aktívne alarmy.</div>';
+                            }
+                        });
+                    }, 400);
+                } else {
+                    // Ak server vrátil chybu, vrátime kartu späť a odomkneme tlačidlo
+                    if (card) card.classList.remove('removing');
+                    if (btnEl) btnEl.style.pointerEvents = 'auto';
+                    showISASToast("Nepodarilo sa označiť alarm ako vyriešený.", "❌", "error");
+                }
+            } catch (e) {
+                if (card) card.classList.remove('removing');
+                if (btnEl) btnEl.style.pointerEvents = 'auto';
+                showISASToast("Chyba spojenia so serverom. Skontrolujte pripojenie.", "🔌", "error");
+            }
+        }
+
+        // 🛡️ ISAS CORE: Bezpečná funkcia pre spracovanie načítania Iframe (Skrytie preloaderu a widgetov)
+        window.handleIsasIframeLoad = function(iframe) {
+            // 1. Okamžité skrytie preloaderu
+            const preloader = document.getElementById('isas-iframe-preloader');
+            if (preloader) preloader.style.display = 'none';
+            
+            // 2. Vstreknutie CSS pre skrytie AI a poznámok vo vnútri modalu
+            try {
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                if (iframeDoc) {
+                    const style = iframeDoc.createElement('style');
+                style.innerHTML = `
+                    #isas-ai-widget, .ai-assistant, #notes-widget, .notes-btn, 
+                    #isas-quick-note, .isas-quick-note,
+                    div[style*="position: fixed"][style*="bottom"] { 
+                        display: none !important; 
+                    }
+                `;
+                iframeDoc.head.appendChild(style);
+                }
+            } catch(e) {
+                console.warn('ISAS CORE: Nepodarilo sa skryť widgety v iframe (CORS)', e);
+            }
+        };
+
+        // =========================================================
+        // 📱 ISAS CORE: MODAL PRE QR KÓD (ISASModalEngine)
+        // =========================================================
+        function openQrModal(qrUrl) {
+            window.ISASModalEngine({
+                maxWidth: '520px',
+                title: '📱 QR Kód Zariadenia',
+                text: 'Naskenujte pre okamžitý prístup k servisnej histórii',
+                showClose: true,
+                closeText: 'Zavrieť',
+                fields: [{
+                    type: 'html',
+                    html: `
+                        <div style="width: 100%; height: 320px; display: flex; align-items: center; justify-content: center; background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0;">
+                            <img src="${escapeHTML(qrUrl)}" alt="QR Kód" style="max-width: 260px; max-height: 260px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
+                        </div>
+                    `
+                }]
+            });
+        }
+
+        // =========================================================
+        // ⚙️ ISAS CORE: IFRAME MODAL PRE NASTAVENIA ZARIADENIA
+        // =========================================================
+        function openDeviceSettingsModal() {
+            const zariadenieId = $('#filter-zariadenie').val();
+            if (!zariadenieId) return;
+
+            const baseAdminChangePattern = "{% url 'admin:Evidencia_servisovanezariadenie_change' 0 %}";
+            const url = baseAdminChangePattern.replace('0', encodeURIComponent(zariadenieId)) + "?_popup=1";
+
+            window.ISASModalEngine({
+                maxWidth: '1100px',
+                title: '⚙️ Náhľad karty zariadenia',
+                text: 'Úprava technických parametrov a servisných limitov',
+                showClose: true,
+                closeText: 'Zavrieť (Bez obnovenia)',
+                fields: [{
+                    type: 'html',
+                    html: `
+                        <div id="isas-iframe-container" style="position: relative; width: 100%; height: 65vh;">
+                            <div id="isas-iframe-preloader" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(248, 250, 252, 0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10; border-radius: 8px;">
+                                <div class="isas-spinner" style="width: 45px; height: 45px; margin-bottom: 15px;"></div>
+                                <span style="font-weight: 800; color: #0f172a; font-size: 15px;">Načítavam formulár...</span>
+                            </div>
+                            <iframe src="${url}" onload="window.handleIsasIframeLoad(this)" style="width: 100%; height: 100%; border: none; border-radius: 8px; background: #ffffff; box-shadow: inset 0 2px 10px rgba(0,0,0,0.05);"></iframe>
+                        </div>
+                    `
+                }],
+                buttons: [{
+                    id: 'btn-reload-after-change',
+                    text: '🔄 Uložiť a obnoviť telemetriu',
+                    style: 'background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; padding: 14px 20px; border-radius: 10px; font-weight: 800; font-size: 13px; cursor: pointer; text-transform: uppercase;',
+                    onClick: (e, m) => {
+                        m.close();
+                        fetchLiveData();
+                        showISASToast("Telemetrické dáta boli obnovené.", "🔄", "success");
+                    }
+                }]
+            });
+        }
+
+        // ŠTART
+        document.addEventListener('DOMContentLoaded', loadDevices);
+
+    </script>
+{% endblock %}

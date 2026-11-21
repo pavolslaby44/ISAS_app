@@ -1,0 +1,621 @@
+{% extends 'web/base.html' %}
+
+{% block title %}{{ sluzba.nazov }} | {{ nastavenia.titulok_webu|default:identita.nazov_spolocnosti }}{% endblock %}
+{% block description %}{{ sluzba.popis_na_webe|striptags|truncatechars:150 }}{% endblock %}
+
+{% block og_title %}{{ sluzba.nazov }} | {{ identita.nazov_spolocnosti }}{% endblock %}
+{% block og_description %}{{ sluzba.popis_na_webe|striptags|truncatechars:150 }}{% endblock %}
+{% block og_url %}{{ request.scheme }}://{{ request.get_host }}{% url 'webbuilder:sluzba_detail' sluzba.slug %}{% endblock %}
+
+{% block og_image_tag %}
+    {% if referencie.0.foto_po and referencie.0.foto_po.name %}
+    <meta property="og:image" content="{% if '://' in referencie.0.foto_po.url %}{{ referencie.0.foto_po.url }}{% else %}{{ request.scheme }}://{{ request.get_host }}{{ referencie.0.foto_po.url }}{% endif %}">
+    {% elif referencie.0.foto_pred and referencie.0.foto_pred.name %}
+    <meta property="og:image" content="{% if '://' in referencie.0.foto_pred.url %}{{ referencie.0.foto_pred.url }}{% else %}{{ request.scheme }}://{{ request.get_host }}{{ referencie.0.foto_pred.url }}{% endif %}">
+    {% else %}
+    {{ block.super }}
+    {% endif %}
+{% endblock %}
+
+{% block extra_head %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Service",
+      "name": "{{ sluzba.nazov|escapejs }}",
+      "description": "{{ sluzba.popis_na_webe|default:sluzba.nazov|striptags|escapejs }}",
+      {% if sluzba.normohodiny and sluzba.normohodiny > 0 %}"duration": "PT{{ sluzba.normohodiny }}H",{% endif %}
+      "provider": {
+        "@type": "Organization",
+        "name": "{{ identita.nazov_spolocnosti|default:nastavenia.titulok_webu|escapejs }}"{% if identita.web %},
+        "url": "{{ identita.web|escapejs }}"{% else %},
+        "url": "{{ request.scheme }}://{{ request.get_host }}"{% endif %}{% if identita.ic_dph %},
+        "vatID": "{{ identita.ic_dph|escapejs }}"{% elif identita.ico %},
+        "taxID": "{{ identita.ico|escapejs }}"{% endif %}{% if identita.telefon %},
+        "telephone": "{{ identita.telefon|escapejs }}"{% endif %}{% if identita.email_vseobecny %},
+        "email": "{{ identita.email_vseobecny|escapejs }}"{% endif %}{% if identita.sidlo_ulica %},
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "{{ identita.sidlo_ulica|escapejs }}{% if identita.sidlo_cislo %} {{ identita.sidlo_cislo|escapejs }}{% endif %}",
+          "addressLocality": "{{ identita.sidlo_mesto|escapejs }}",
+          "postalCode": "{{ identita.sidlo_psc|escapejs }}"{% if identita.sidlo_stat %},
+          "addressCountry": "{{ identita.sidlo_stat|escapejs }}"{% endif %}
+        }{% endif %}
+      }{% if servisne_strediska %},
+      "areaServed": [
+        {% for stredisko in servisne_strediska %}
+        {
+          "@type": "Place",
+          "name": "{{ stredisko.nazov|escapejs }}"{% if stredisko.adresa %},
+          "address": "{{ stredisko.adresa|escapejs }}"{% endif %}{% if stredisko.telefon %},
+          "telephone": "{{ stredisko.telefon|escapejs }}"{% endif %}
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+      ]{% elif identita.sidlo_mesto %},
+      "areaServed": {
+        "@type": "AdministrativeArea",
+        "name": "{{ identita.sidlo_mesto|escapejs }}"
+      }{% endif %}{% if sluzba.je_fakturovatelna and cena_predaj and cena_predaj > 0 and mena %},
+      "offers": {
+        "@type": "Offer",
+        "priceCurrency": "{{ mena|escapejs }}",
+        "price": "{{ cena_predaj|stringformat:".2f" }}",
+        {% if sluzba.sposob_uctovania == 'HODINA' %}
+        "priceSpecification": {
+          "@type": "UnitPriceSpecification",
+          "price": "{{ cena_predaj|stringformat:".2f" }}",
+          "priceCurrency": "{{ mena|escapejs }}",
+          "unitCode": "HUR",
+          "unitText": "HUR"
+        },
+        {% endif %}
+        "valueAddedTaxIncluded": {% if identita.je_platca_dph %}false{% else %}true{% endif %},
+        "availability": "https://schema.org/InStock"{% if sluzba.zaruka_mesiace %},
+        "warranty": {
+          "@type": "WarrantyPromise",
+          "durationOfWarranty": {
+            "@type": "QuantitativeValue",
+            "value": {{ sluzba.zaruka_mesiace }},
+            "unitCode": "MON"
+          }
+        }{% endif %}
+      }{% elif not sluzba.je_fakturovatelna and mena %},
+      "offers": {
+        "@type": "Offer",
+        "priceCurrency": "{{ mena|escapejs }}",
+        "price": "0.00",
+        "valueAddedTaxIncluded": "true",
+        "availability": "https://schema.org/InStock"{% if sluzba.zaruka_mesiace %},
+        "warranty": {
+          "@type": "WarrantyPromise",
+          "durationOfWarranty": {
+            "@type": "QuantitativeValue",
+            "value": {{ sluzba.zaruka_mesiace }},
+            "unitCode": "MON"
+          }
+        }{% endif %}
+      }{% endif %}{% if hodnotenie_priemer and hodnotenie_pocet %},
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "{{ hodnotenie_priemer|stringformat:".1f" }}",
+        "reviewCount": "{{ hodnotenie_pocet }}",
+        "bestRating": "5",
+        "worstRating": "1"
+      }{% if overene_recenzie %},
+      "review": [
+        {% for rec in overene_recenzie %}
+                {
+                  "@type": "Review",
+                  "reviewRating": {
+                    "@type": "Rating",
+                    "ratingValue": "{{ rec.hodnotenie_zakaznika }}",
+                    "bestRating": "5",
+                    "worstRating": "1"
+                  },
+                  "author": {
+                    "@type": "Organization",
+                    "name": "{% if rec.zakaznik and rec.zakaznik.zobrazit_ako_referenciu %}{{ rec.zakaznik.Nazov_spolocnosti|escapejs }}{% else %}Overený B2B partner{% endif %}"
+                  }{% if rec.vytvorene %},
+          "datePublished": "{{ rec.vytvorene|date:"Y-m-d" }}"{% endif %}{% if rec.formalne_zhodnotenie_ai or rec.verejny_popis_referencie %},
+          "reviewBody": "{{ rec.formalne_zhodnotenie_ai|default:rec.verejny_popis_referencie|striptags|escapejs }}"{% endif %}
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+      ]{% endif %}{% endif %}
+    }{% if postup_kroky %},
+    {
+      "@type": "HowTo",
+      "name": "{{ sluzba.nazov|escapejs }} – Technologický postup",
+      "description": "{{ sluzba.popis_na_webe|default:sluzba.nazov|striptags|escapejs }}",
+      "step": [
+        {% for krok in postup_kroky %}
+        {
+          "@type": "HowToStep",
+          "position": {{ forloop.counter }},
+          "name": "Krok {{ forloop.counter }}",
+          "text": "{{ krok|escapejs }}"
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+      ]
+    }{% endif %}{% if faqs %},
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {% for faq in faqs %}
+        {
+          "@type": "Question",
+          "name": "{{ faq.otazka|escapejs }}",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "{{ faq.odpoved|striptags|escapejs }}"
+          }
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+      ]
+    }{% endif %}
+  ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="bg-gray-100 py-4 border-b border-gray-200">
+    <div class="max-w-7xl mx-auto px-6 text-sm text-gray-500 font-medium">
+        <a href="{% url 'webbuilder:home' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="hover:text-brand transition">Domov</a>
+        <span class="mx-2">/</span>
+        <a href="{% url 'webbuilder:sluzby_list' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="hover:text-brand transition">Služby</a>
+        <span class="mx-2">/</span>
+        <span class="text-gray-900">{{ sluzba.nazov }}</span>
+    </div>
+</div>
+
+<section class="py-16 bg-white px-6">
+    <div class="max-w-4xl mx-auto">
+        <div class="mb-10">
+            <div class="flex items-center gap-3 flex-wrap">
+                <span class="bg-brand/10 text-brand text-sm font-extrabold px-4 py-1.5 rounded-full uppercase tracking-wider">Detail služby</span>
+                {% if hodnotenie_priemer and hodnotenie_pocet %}
+                <span class="inline-flex items-center gap-1.5 bg-amber-50 border border-amber-200 text-amber-800 text-sm font-extrabold px-3 py-1 rounded-full">
+                    ⭐ {{ hodnotenie_priemer }}/5 <span class="text-amber-600 font-semibold text-xs">({{ hodnotenie_pocet }} hodnotení)</span>
+                </span>
+                {% endif %}
+                {% if pocet_realizacii %}
+                <span class="inline-flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-extrabold px-3 py-1 rounded-full">
+                    🛡️ {{ pocet_realizacii }} overených realizácií
+                </span>
+                {% endif %}
+            </div>
+            <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 mt-6 mb-6">{{ sluzba.nazov }}</h1>
+            <div class="prose prose-lg text-gray-600 max-w-none">
+                {{ sluzba.popis_na_webe|linebreaks }}
+            </div>
+        </div>
+
+        {% if sluzba.zverejnit_postup_na_webe and sluzba.pracovny_postup %}
+        <div class="bg-gray-50 rounded-3xl p-8 border border-gray-200 shadow-sm mb-8">
+            <h3 class="text-xl font-bold text-gray-900 mb-4 border-b border-gray-200 pb-3 flex items-center gap-2">
+                <span>📋</span> Technologický postup a metodika realizácie
+            </h3>
+            <div class="prose prose-sm text-gray-700 max-w-none leading-relaxed whitespace-pre-line">
+                {{ sluzba.pracovny_postup }}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if servisne_intervaly %}
+        <!-- 📏 INFORMATÍVNA TOVÁRENSKÁ MATICA ÚDRŽBY (Návrh 1) -->
+        <div class="bg-gray-50 rounded-3xl p-8 border border-gray-200 shadow-sm mb-8">
+            <h3 class="text-xl font-bold text-gray-900 mb-2 flex items-center gap-2">
+                <span>📏</span> Štandardné servisné cykly predpísané výrobcami
+            </h3>
+            <p class="text-xs text-gray-500 mb-6">Tento servisný úkon realizujeme v súlade s technickými normami a výrobnými predpismi v nasledovných odporúčaných intervaloch:</p>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {% for pravidlo in servisne_intervaly %}
+                <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-2xs">
+                    <span class="text-[10px] font-black uppercase tracking-wider text-brand bg-brand/10 px-2 py-0.5 rounded block w-fit mb-2">
+                        {{ pravidlo.get_kategoria_zariadenia_display }}
+                    </span>
+                    <div class="space-y-1.5 text-xs text-gray-700">
+                        {% if pravidlo.interval_motohodin %}
+                        <p class="font-semibold flex items-center justify-between">
+                            <span class="text-gray-500">Interval počítadla:</span>
+                            <strong class="text-gray-900 font-extrabold">{{ pravidlo.interval_meter_display }}</strong>
+                        </p>
+                        {% endif %}
+                        {% if pravidlo.interval_motohodin_zataz %}
+                        <p class="font-semibold flex items-center justify-between text-slate-700">
+                            <span class="text-gray-500">Stav v záťaži:</span>
+                            <strong class="text-slate-900 font-extrabold">{{ pravidlo.interval_meter_load_display }}</strong>
+                        </p>
+                        {% endif %}
+                        {% if pravidlo.interval_dni %}
+                        <p class="font-semibold flex items-center justify-between">
+                            <span class="text-gray-500">Časový cyklus:</span>
+                            <strong class="text-gray-900 font-extrabold">každých {{ pravidlo.interval_dni }} dní</strong>
+                        </p>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <p class="text-[11px] text-gray-400 mt-4 italic">* Presný termín nasledujúcej údržby závisí od predchádzajúceho servisného záznamu a prevádzkovej záťaže zariadenia.</p>
+        </div>
+        {% endif %}
+
+        <div class="bg-gray-50 rounded-3xl p-8 border border-gray-200 shadow-sm mb-12">
+            <h3 class="text-xl font-bold text-gray-900 mb-6 border-b border-gray-200 pb-4">Realizačné a cenové podmienky</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div>
+                    <p class="text-sm text-gray-500 font-bold uppercase tracking-wider mb-1">Spôsob účtovania</p>
+                    <p class="text-lg font-semibold text-gray-900">{{ sluzba.get_sposob_uctovania_display }}</p>
+                    {% if sluzba.sposob_uctovania == 'HODINA' and globalne_nastavenia.min_uctovacia_jednotka and globalne_nastavenia.min_uctovacia_jednotka > 1 %}
+                    <span class="text-xs text-gray-600 block mt-1" title="Účtuje sa len skutočne odpracovaný čas rozpočítaný na najskorší takt.">⏱️ Férový takt: po {{ globalne_nastavenia.min_uctovacia_jednotka }} min. (neplatíte celú nezačatú hodinu)</span>
+                    {% endif %}
+                </div>
+                {% if sluzba.normohodiny %}
+                <div>
+                    <p class="text-sm text-gray-500 font-bold uppercase tracking-wider mb-1">Odhadovaný čas</p>
+                    <p class="text-lg font-semibold text-gray-900">{{ sluzba.normohodiny }} h</p>
+                </div>
+                {% endif %}
+                <div>
+                    <p class="text-sm text-gray-500 font-bold uppercase tracking-wider mb-1">Úroveň priority</p>
+                    <p class="text-lg font-semibold text-gray-900">{{ sluzba.get_priorita_display }}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500 font-bold uppercase tracking-wider mb-1">{% if identita.je_platca_dph %}Cena bez DPH{% else %}Konečná cena{% endif %}</p>
+                    {% if is_b2b and povodna_cena %}
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="text-xs text-gray-400 line-through">{{ povodna_cena }} {{ mena }}</span>
+                        <span class="text-[10px] font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded">B2B -{{ b2b_zlava }}%</span>
+                    </div>
+                    {% endif %}
+                    <p class="text-3xl font-extrabold text-brand">
+                        {% if not sluzba.je_fakturovatelna %}
+                            V cene
+                        {% elif sluzba.sposob_uctovania == 'HODINA' %}
+                            {% if cena_predaj and cena_predaj > 0 %}{{ cena_predaj }} {{ mena }} <span class="text-lg text-gray-500 font-medium">/ hod</span>{% else %}Na vyžiadanie{% endif %}
+                        {% else %}
+                            {% if cena_predaj and cena_predaj > 0 %}{{ cena_predaj }} {{ mena }} <span class="text-lg text-gray-500 font-medium">/ úkon</span>{% else %}Na vyžiadanie{% endif %}
+                        {% endif %}
+                    </p>
+                    {% if pouzita_standardna_sadzba %}
+                    <p class="text-[11px] text-gray-400 font-medium mt-0.5">Základná hodinová sadzba servisu</p>
+                    {% endif %}
+                    {% if identita.je_platca_dph and cena_s_dph %}
+                    <p class="text-xs text-gray-400 font-medium mt-0.5">s DPH {{ sadzba_dph }}%: {{ cena_s_dph }} {{ mena }}</p>
+                    {% endif %}
+                    {% if orientacna_cena_celkom %}
+                    <p class="text-xs font-bold text-gray-800 mt-1.5">Orientačne za úkon (~{{ sluzba.normohodiny }} h): {{ orientacna_cena_celkom }} {{ mena }}{% if identita.je_platca_dph and orientacna_cena_celkom_s_dph %} <span class="text-gray-500 font-normal">(s DPH {{ orientacna_cena_celkom_s_dph }} {{ mena }})</span>{% endif %}</p>
+                    {% endif %}
+                    {% if expresna_cena_celkom %}
+                    <p class="text-xs font-extrabold text-amber-900 mt-1 bg-amber-50 p-1.5 rounded-lg border border-amber-200">
+                        🚨 Havarijný rozpočet (+{{ globalne_nastavenia.pohotovostny_priplatok }}%): {{ expresna_cena_celkom }} {{ mena }}{% if identita.je_platca_dph and expresna_cena_celkom_s_dph %} <span class="text-amber-800/80 font-normal text-[10px]">(s DPH {{ expresna_cena_celkom_s_dph }} {{ mena }})</span>{% endif %}
+                    </p>
+                    {% endif %}
+                    </div>
+                {% if identita.predvolena_platnost_ponuk or identita.splatnost_faktur or globalne_nastavenia.min_uctovacia_jednotka or globalne_nastavenia.servisy_sledovat_legislativu %}
+                <div class="col-span-full bg-white p-4 rounded-2xl border border-gray-200/80 shadow-sm flex flex-wrap items-center justify-between gap-4 text-xs">
+                    <span class="font-extrabold uppercase tracking-wider text-gray-800 text-[11px]">🛡️ Firemné garancie a B2B podmienky:</span>
+                    <div class="flex items-center gap-5 flex-wrap text-gray-600">
+                        {% if identita.predvolena_platnost_ponuk %}
+                        <span>⏱️ Garancia rozpočtu: <strong>{{ identita.predvolena_platnost_ponuk }} dní</strong></span>
+                        {% endif %}
+                        {% if identita.splatnost_faktur %}
+                        <span>💳 B2B splatnosť: <strong>{{ identita.splatnost_faktur }} dní</strong></span>
+                        {% endif %}
+                        {% if sluzba.sposob_uctovania == 'HODINA' and globalne_nastavenia.min_uctovacia_jednotka %}
+                        <span>⏱️ Férová tarifikácia: <strong>po {{ globalne_nastavenia.min_uctovacia_jednotka }} min. blokoch (neúčtujeme celé nezačaté hodiny)</strong></span>
+                        {% endif %}
+                        {% if globalne_nastavenia.servisy_sledovat_legislativu %}
+                        <span class="text-indigo-900 bg-indigo-50 border border-indigo-100 px-2.5 py-0.5 rounded" title="Plná legislatívna a auditná konformita – protokoly slúžia ako právny doklad pre poistné plnenia a ISO kontroly.">⚖️ Zákonné revízie a audit: <strong>strážené systémom{% if globalne_nastavenia.servisy_predstih_upozornenia_dni or globalne_nastavenia.servisy_predstih_motohodiny %} (notifikácia{% if globalne_nastavenia.servisy_predstih_upozornenia_dni %} {{ globalne_nastavenia.servisy_predstih_upozornenia_dni }} dní{% endif %}{% if globalne_nastavenia.servisy_predstih_upozornenia_dni and globalne_nastavenia.servisy_predstih_motohodiny %} /{% endif %}{% if globalne_nastavenia.servisy_predstih_motohodiny %} {{ globalne_nastavenia.servisy_predstih_motohodiny }} {{ meter_unit|default:industry_terms.meter_unit|default:'hod.' }}{% endif %} vopred){% endif %}</strong></span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+                {% if servisne_strediska or identita.adresa_prevadzky or globalne_nastavenia.sadzba_za_km_zakaznik > 0 or globalne_nastavenia.sadzba_za_cas_na_ceste > 0 or sluzba.priorita == 'VYSOKA' and globalne_nastavenia.pohotovostny_priplatok > 0 %}
+                <div class="col-span-full mt-2 bg-gray-100 p-4 rounded-xl border border-gray-200 text-xs text-gray-700 flex flex-col gap-2.5">
+                    {% if servisne_strediska %}
+                    <div class="flex flex-col gap-2 text-emerald-900 bg-emerald-50/70 p-3 rounded-lg border border-emerald-200/60">
+                        <span class="font-bold flex items-center gap-1.5">🏭 Dielenský servis (bez poplatku za výjazd – doručenie na stredisko):</span>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
+                            {% for stredisko in servisne_strediska %}
+                            <div class="bg-white/80 p-2.5 rounded-md border border-emerald-100 text-[11px] leading-relaxed">
+                                <p class="font-extrabold text-emerald-950">{{ stredisko.nazov }}{% if stredisko.kod_pobocky %} <span class="text-[10px] font-mono font-semibold text-emerald-700 bg-emerald-100/80 px-1.5 py-0.5 rounded">[{{ stredisko.kod_pobocky }}]</span>{% endif %}</p>
+                                {% if stredisko.adresa %}<p class="text-gray-600 mt-0.5">📍 {{ stredisko.adresa }}</p>{% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% elif identita.adresa_prevadzky %}
+                    <div class="flex items-center justify-between flex-wrap gap-2 text-emerald-900 bg-emerald-50/70 p-2.5 rounded-lg border border-emerald-200/60">
+                        <span class="font-bold flex items-center gap-1.5">🏭 Dielenský servis (0 {{ mena }} za dopravu):</span>
+                        <span class="text-right">
+                            Doručenie na centrálu: <strong>{{ identita.adresa_prevadzky }}</strong>
+                        </span>
+                    </div>
+                    {% endif %}
+                    {% if globalne_nastavenia.sadzba_za_km_zakaznik and globalne_nastavenia.sadzba_za_km_zakaznik > 0 %}
+                    <div class="flex items-center justify-between flex-wrap gap-2">
+                        <span class="font-semibold flex items-center gap-1.5">🚙 Výjazd k zákazníkovi / doprava ({% if identita.je_platca_dph %}bez DPH{% else %}konečná cena{% endif %}):</span>
+                        <span class="font-bold text-gray-900">{{ globalne_nastavenia.sadzba_za_km_zakaznik }} {{ mena }} / km{% if identita.je_platca_dph and sadzba_za_km_s_dph %} <span class="text-gray-500 font-normal">(s DPH {{ sadzba_za_km_s_dph }} {{ mena }})</span>{% endif %}</span>
+                    </div>
+                    {% endif %}
+                    {% if globalne_nastavenia.sadzba_za_cas_na_ceste and globalne_nastavenia.sadzba_za_cas_na_ceste > 0 %}
+                    <div class="flex items-center justify-between flex-wrap gap-2 border-t border-gray-200/60 pt-2">
+                        <span class="font-semibold flex items-center gap-1.5">⏱️ Čas technika na ceste ({% if identita.je_platca_dph %}bez DPH{% else %}konečná cena{% endif %}):</span>
+                        <span class="font-bold text-gray-900">{{ globalne_nastavenia.sadzba_za_cas_na_ceste }} {{ mena }} / h{% if identita.je_platca_dph and sadzba_za_cas_na_ceste_s_dph %} <span class="text-gray-500 font-normal">(s DPH {{ sadzba_za_cas_na_ceste_s_dph }} {{ mena }})</span>{% endif %}</span>
+                    </div>
+                    {% endif %}
+                    {% if sluzba.priorita == 'VYSOKA' and globalne_nastavenia.pohotovostny_priplatok and globalne_nastavenia.pohotovostny_priplatok > 0 %}
+                    <div class="flex flex-col gap-1 border-t border-gray-200/60 pt-1.5 text-amber-800">
+                        <div class="flex items-center justify-between flex-wrap gap-2">
+                            <span class="font-semibold flex items-center gap-1.5">🚨 Pohotovostný / prioritný príplatok:</span>
+                            <span class="font-bold">+{{ globalne_nastavenia.pohotovostny_priplatok }} %</span>
+                        </div>
+                        <p class="text-[11px] text-amber-700/80">
+                            {% if globalne_nastavenia.pohotovostny_priplatok_popis %}
+                                {{ globalne_nastavenia.pohotovostny_priplatok_popis }}
+                            {% elif globalne_nastavenia.pracovny_cas_od and globalne_nastavenia.pracovny_cas_do %}
+                                Uplatňuje sa pri požiadavke na prednostný zásah alebo realizáciu mimo štandardného dispečingu ({{ globalne_nastavenia.pracovny_cas_od|time:"H:i" }} – {{ globalne_nastavenia.pracovny_cas_do|time:"H:i" }}).
+                            {% else %}
+                                Uplatňuje sa pri požiadavke na prednostné vybavenie v skrátenom reakčnom čase.
+                            {% endif %}
+                        </p>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+                {% if sluzba.zaruka_mesiace and sluzba.zaruka_mesiace > 0 %}
+                <div class="col-span-full mt-2 bg-gradient-to-r from-emerald-50 via-emerald-50/80 to-teal-50 p-4 rounded-2xl border border-emerald-200 shadow-sm flex items-center justify-between flex-wrap gap-4">
+                    <div class="flex items-center gap-3.5">
+                        <div class="w-11 h-11 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-2xl font-black shadow-sm flex-shrink-0">
+                            🛡️
+                        </div>
+                        <div>
+                            <p class="text-sm font-extrabold text-emerald-950">Garančná pečať: Záruka {{ sluzba.zaruka_mesiace }} mesiacov na prácu</p>
+                            <p class="text-xs text-emerald-800 mt-0.5">Na realizovaný úkon a použité komponenty poskytujeme plnú zmluvnú záruku overenú v servisnom protokole.</p>
+                        </div>
+                    </div>
+                    <span class="text-xs font-black uppercase tracking-wider text-emerald-800 bg-white border border-emerald-200 px-3.5 py-1.5 rounded-xl shadow-xs">
+                        Overená firemná garancia
+                    </span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if referencie %}
+        <div class="mb-14">
+            <div class="flex items-center justify-between flex-wrap gap-4 mb-6 border-b border-gray-100 pb-4">
+                <div>
+                    <h3 class="text-2xl font-black text-gray-900 flex items-center gap-2">
+                        <span>🛡️</span> Overené realizácie a fotodokumentácia
+                    </h3>
+                    <p class="text-xs text-gray-500 mt-1">Reálne technické výsledky, výstupy z auditov a elektronicky zapečatené protokoly.</p>
+                </div>
+                {% if hodnotenie_priemer and hodnotenie_pocet %}
+                <span class="inline-flex items-center gap-1.5 bg-amber-50 border border-amber-200 text-amber-900 font-black text-sm px-3.5 py-1.5 rounded-xl shadow-xs">
+                    ⭐ {{ hodnotenie_priemer }}/5 <span class="text-xs font-semibold text-amber-700">({{ hodnotenie_pocet }} overených zásahov)</span>
+                </span>
+                {% endif %}
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {% for ref in referencie %}
+                <div class="bg-gray-50 rounded-2xl p-4 border border-gray-100 flex flex-col">
+                    {% if ref.video and ref.video.name %}
+                    <video controls class="w-full h-44 object-cover rounded-xl mb-3 bg-black" preload="metadata">
+                        <source src="{{ ref.video.url }}">
+                        Váš prehliadač nepodporuje video tag.
+                    </video>
+                    {% elif ref.foto_pred and ref.foto_pred.name and ref.foto_po and ref.foto_po.name %}
+                    <div class="grid grid-cols-2 gap-2 mb-3">
+                        <div class="relative">
+                            <img src="{{ ref.foto_pred.url }}" alt="Pred: {{ ref.verejny_popis_referencie|default:sluzba.nazov }}" class="w-full h-44 object-cover rounded-xl">
+                            <span class="absolute bottom-2 left-2 bg-gray-900/80 text-white text-[10px] font-bold px-2 py-0.5 rounded">Pred</span>
+                        </div>
+                        <div class="relative">
+                            <img src="{{ ref.foto_po.url }}" alt="Po: {{ ref.verejny_popis_referencie|default:sluzba.nazov }}" class="w-full h-44 object-cover rounded-xl">
+                            <span class="absolute bottom-2 left-2 bg-emerald-700/90 text-white text-[10px] font-bold px-2 py-0.5 rounded">Po</span>
+                        </div>
+                    </div>
+                    {% elif ref.foto_po and ref.foto_po.name %}
+                    <img src="{{ ref.foto_po.url }}" alt="{{ ref.verejny_popis_referencie|default:sluzba.nazov }}" class="w-full h-44 object-cover rounded-xl mb-3">
+                    {% elif ref.foto_pred and ref.foto_pred.name %}
+                    <img src="{{ ref.foto_pred.url }}" alt="{{ ref.verejny_popis_referencie|default:sluzba.nazov }}" class="w-full h-44 object-cover rounded-xl mb-3">
+                    {% endif %}
+                    <div class="flex items-center justify-between text-[11px] text-gray-400 mb-1.5 flex-wrap gap-1">
+                        <span>{% if ref.vytvorene %}{{ ref.vytvorene|date:"d.m.Y" }}{% endif %}</span>
+                        <div class="flex items-center gap-1">
+                            {% if ref.meter_display != '—' %}
+                            <span class="font-semibold text-gray-700 bg-gray-200/70 px-2 py-0.5 rounded text-[10px]" title="{{ ref.meter_label }}">{{ ref.meter_display }}</span>
+                            {% endif %}
+                            {% if ref.meter_load_display != '—' %}
+                            <span class="font-semibold text-amber-800 bg-amber-50 border border-amber-200/60 px-2 py-0.5 rounded text-[10px]" title="{{ ref.meter_load_label }}">{{ ref.meter_load_label }}: {{ ref.meter_load_display }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if ref.zariadenie %}
+                    <p class="text-[11px] font-bold text-brand uppercase tracking-wider mb-1 truncate" title="{{ ref.zariadenie.verejny_nazov }}">{{ ref.zariadenie.verejny_nazov }}</p>
+                    {% endif %}
+                    {% if ref.zakaznik and ref.zakaznik.zobrazit_ako_referenciu %}
+                    <p class="text-[10px] font-extrabold text-emerald-800 mb-1 truncate">🏢 {{ ref.zakaznik.Nazov_spolocnosti }}{% if ref.zakaznik.mesto %} ({{ ref.zakaznik.mesto }}){% endif %}</p>
+                    {% elif ref.zakaznik and ref.zakaznik.mesto %}
+                    <p class="text-[10px] font-bold text-gray-500 mb-1 truncate">📍 Lokalita: {{ ref.zakaznik.mesto }}</p>
+                    {% endif %}
+                    {% if ref.zmena_hardveru %}
+                    <div class="mb-1.5">
+                        <span class="inline-flex items-center gap-1 text-[10px] font-extrabold text-indigo-900 bg-indigo-50 border border-indigo-200/80 px-2 py-0.5 rounded">
+                            🚀 Technologický retrofit / Modernizácia
+                        </span>
+                    </div>
+                    {% endif %}
+                    {% if ref.slug %}
+                    <a href="{% url 'webbuilder:referencia_detail' ref.slug %}{% if is_preview %}?preview=ai_draft{% endif %}" class="text-xs font-semibold text-gray-900 hover:text-brand transition flex-grow line-clamp-2" title="{{ ref.verejny_popis_referencie|default:sluzba.nazov }}">
+                        {{ ref.verejny_popis_referencie|default:sluzba.nazov }} &rarr;
+                    </a>
+                    {% else %}
+                    <p class="text-xs font-semibold text-gray-700 flex-grow">{{ ref.verejny_popis_referencie|default:sluzba.nazov }}</p>
+                    {% endif %}
+                    {% if ref.formalne_zhodnotenie_ai %}
+                    <p class="text-[11px] text-gray-500 mt-1 italic line-clamp-2 border-l-2 border-brand/30 pl-2">
+                        {{ ref.formalne_zhodnotenie_ai }}
+                    </p>
+                    {% endif %}
+                    {% if ref.namerane_hodnoty %}
+                    <div class="mt-1.5 p-2 bg-emerald-50/70 rounded-lg border border-emerald-200/60 text-[10px] text-emerald-950">
+                        <span class="font-bold flex items-center gap-1 text-emerald-900">📊 Výstupné namerané parametre po servise:</span>
+                        <p class="mt-0.5 leading-snug font-mono text-emerald-800 line-clamp-2" title="{{ ref.namerane_hodnoty }}">{{ ref.namerane_hodnoty }}</p>
+                    </div>
+                    {% endif %}
+                    {% if ref.protokol_uzavrety or ref.hodnotenie_zakaznika %}
+                    <div class="mt-2.5 pt-2 border-t border-gray-100 flex items-center justify-between text-xs flex-wrap gap-1.5">
+                        {% if ref.protokol_uzavrety %}
+                        <div class="flex flex-col gap-0.5" title="Kryptograficky zapečatený protokol nemenný od momentu podpisu – oficiálne uznávaný pri poistných udalostiach a ISO/BOZP inšpekciách.">
+                            <span class="text-[10px] font-extrabold text-emerald-900 bg-emerald-50 border border-emerald-300 px-2 py-0.5 rounded flex items-center gap-1">
+                                🔒 Zapečatený auditný protokol pre poistenie a audity
+                            </span>
+                            {% if ref.cas_podpisu %}
+                            <span class="text-[9px] text-gray-500 font-medium">Elektronicky overené: {{ ref.cas_podpisu|date:"d.m.Y H:i" }}</span>
+                            {% endif %}
+                        </div>
+                        {% else %}
+                        <span class="text-gray-400 text-[10px] font-medium">Realizácia</span>
+                        {% endif %}
+                        {% if ref.hodnotenie_zakaznika %}
+                        <span class="font-bold text-amber-500 text-xs bg-amber-50 border border-amber-200/60 px-2 py-0.5 rounded-full">⭐ {{ ref.hodnotenie_zakaznika }}/5</span>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if vyrobcovia %}
+        <!-- 🏷️ BIZNIS TRUST: Podporované technológie danej služby -->
+        <div class="mb-14 p-6 bg-gray-50 rounded-2xl border border-gray-200 shadow-2xs">
+            <h3 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-4 text-center">Tento typ servisu realizujeme pre technológie značiek</h3>
+            <div class="flex items-center justify-center gap-6 flex-wrap">
+                {% for vyr in vyrobcovia %}
+                <div class="p-2 bg-white rounded-lg border border-gray-200 shadow-2xs flex items-center gap-2">
+                    {% if vyr.logo_na_webe and vyr.logo_na_webe.name %}
+                    <img src="{{ vyr.logo_na_webe.url }}" alt="{{ vyr.nazov_vyrobcu }}" class="h-6 max-w-[90px] object-contain">
+                    {% else %}
+                    <span class="text-xs font-bold text-gray-800">🏭 {{ vyr.nazov_vyrobcu }}</span>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if faqs %}
+        <div class="mb-14">
+            <h3 class="text-2xl font-bold text-gray-900 mb-6">Často kladené otázky k službe</h3>
+            <div class="space-y-4">
+                {% for faq in faqs %}
+                <div class="bg-gray-50 rounded-2xl p-6 border border-gray-100" {% if faq.slug %}id="{{ faq.slug }}"{% endif %}>
+                    <span class="text-[10px] font-extrabold uppercase tracking-wider text-brand bg-brand/10 px-2 py-0.5 rounded-md mb-2 inline-block">{{ faq.get_kategoria_display }}</span>
+                    <h4 class="text-base font-bold text-gray-900 mb-2">{{ faq.otazka }}</h4>
+                    <div class="text-sm text-gray-600">{{ faq.odpoved|safe }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if sla_telemetria %}
+            {% if sluzba.priorita == 'VYSOKA' and identita.telefon %}
+            <div class="mb-6 p-4 bg-amber-50 border border-amber-300 rounded-2xl text-amber-950 text-sm shadow-sm">
+                <div class="flex items-center justify-between flex-wrap gap-2 mb-1">
+                    <p class="font-black text-base flex items-center gap-2">
+                        <span>🚨</span> Havarijný servisný režim pre minimalizáciu prestojov
+                    </p>
+                    {% if globalne_nastavenia.pohotovostny_priplatok and globalne_nastavenia.pohotovostny_priplatok > 0 %}
+                    <span class="bg-amber-200/80 text-amber-900 font-extrabold text-xs px-2.5 py-1 rounded-md border border-amber-300">
+                        Pohotovosť +{{ globalne_nastavenia.pohotovostny_priplatok }}%
+                    </span>
+                    {% endif %}
+                </div>
+                <p class="text-xs text-amber-900/90 mb-2">
+                    {% if globalne_nastavenia.pohotovostny_priplatok_popis %}
+                        {{ globalne_nastavenia.pohotovostny_priplatok_popis }}
+                    {% else %}
+                        Urgentné zásahy a havárie riešime v zrýchlenom reakčnom čase{% if globalne_nastavenia.pracovat_vikendy %}, vrátane sobôt a nedieľ{% endif %}{% if globalne_nastavenia.pracovat_sviatky %} a štátnych sviatkov{% endif %}.
+                    {% endif %}
+                </p>
+                <p class="font-bold text-xs">Pre okamžitú dispečerskú eskaláciu volajte priamo: <a href="tel:{{ identita.telefon|cut:' '|cut:'/' }}" class="font-black underline text-amber-950 text-sm">{{ identita.telefon }}</a></p>
+            </div>
+            {% elif sla_telemetria.status == 'OPTIMALNA' %}
+            <div class="mb-6 p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-900 text-xs text-center font-semibold shadow-sm flex items-center justify-center gap-2">
+                <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>{{ sla_telemetria.sprava }} – rýchla dostupnosť servisných kapacít</span>
+            </div>
+            {% elif sla_telemetria.status == 'ZVYSENA' %}
+            <div class="mb-6 p-3.5 bg-blue-50 border border-blue-200 rounded-2xl text-blue-900 text-xs text-center font-semibold shadow-sm flex items-center justify-center gap-2">
+                <span class="inline-block w-2 h-2 rounded-full bg-blue-500"></span>
+                <span>{{ sla_telemetria.sprava }} – bežná lehota plánovania servisných zásahov</span>
+            </div>
+            {% elif sla_telemetria.status == 'MIMO_PREVADZKY' %}
+            <div class="mb-6 p-3.5 bg-slate-100 border border-slate-300 rounded-2xl text-slate-800 text-xs text-center font-semibold shadow-sm flex items-center justify-center gap-2">
+                <span class="inline-block w-2 h-2 rounded-full bg-slate-400"></span>
+                <span>{{ sla_telemetria.sprava }} – požiadavky spracujeme v najskoršom termíne</span>
+            </div>
+            {% endif %}
+        {% endif %}
+        <div class="text-center flex flex-col sm:flex-row items-center justify-center gap-4">
+            <button type="button" data-add-to-cart data-typ="SLUZBA" data-nazov="{{ sluzba.nazov }}" data-mena="{{ mena }}" data-detail="{% if not sluzba.je_fakturovatelna %}V cene{% elif sluzba.sposob_uctovania == 'HODINA' %}{% if cena_predaj and cena_predaj > 0 %}{{ cena_predaj }} {{ mena }} / hod{% else %}Na vyžiadanie{% endif %}{% else %}{% if cena_predaj and cena_predaj > 0 %}{{ cena_predaj }} {{ mena }} / úkon{% else %}Na vyžiadanie{% endif %}{% endif %} ({{ sluzba.get_sposob_uctovania_display }}){% if sluzba.normohodiny %} | {{ sluzba.normohodiny }} h{% endif %}{% if sluzba.zaruka_mesiace %} | Záruka {{ sluzba.zaruka_mesiace }}m{% endif %}{% if sluzba.priorita == 'VYSOKA' and globalne_nastavenia.pohotovostny_priplatok and globalne_nastavenia.pohotovostny_priplatok > 0 %} | Pohotovosť +{{ globalne_nastavenia.pohotovostny_priplatok }}%{% endif %}" data-db-id="{{ sluzba.pk }}" data-normohodiny="{{ sluzba.normohodiny|default:'' }}" data-sposob-uctovania="{{ sluzba.sposob_uctovania }}" data-orientacna-cena="{% if sluzba.sposob_uctovania == 'FIX' and cena_predaj and cena_predaj > 0 %}{{ cena_predaj }}{% else %}{{ orientacna_cena_celkom|default:'' }}{% endif %}" data-zaruka="{{ sluzba.zaruka_mesiace|default:'' }}" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-brand hover-bg-brand text-white font-bold text-lg py-4 px-10 rounded-xl transition duration-300 shadow-lg cursor-pointer">
+                <span>📋</span> Pridať do dopytu
+            </button>
+            <a href="{% url 'webbuilder:home' %}{% if is_preview %}?preview=ai_draft{% endif %}#kontakt" class="w-full sm:w-auto inline-block bg-gray-900 hover:bg-gray-800 text-white font-bold text-lg py-4 px-8 rounded-xl transition duration-300 shadow-md">Priamy kontakt</a>
+            {% if identita.telefon %}
+            <a href="tel:{{ identita.telefon }}" class="inline-flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-lg py-4 px-8 rounded-xl transition duration-300 border border-gray-200">
+                <span>📞</span> {{ identita.telefon }}
+            </a>
+            {% endif %}
+            {% if identita.email_vseobecny %}
+            <a href="mailto:{{ identita.email_vseobecny }}?subject=Dopyt:%20{{ sluzba.nazov|urlencode }}" class="inline-flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-lg py-4 px-8 rounded-xl transition duration-300 border border-gray-200">
+                <span>✉️</span> Napísať e-mail
+            </a>
+            {% endif %}
+        </div>
+        <div class="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-2xl text-xs text-gray-600 flex flex-wrap items-center justify-center gap-y-2 gap-x-6 text-center">
+            {% if identita.vystavuje_ponuky or identita.vystavuje_servis_vykazy %}
+            <span class="inline-flex items-center gap-1.5 font-medium text-gray-700">
+                <span>👤</span> Odborný garant: <strong class="text-gray-900">{{ identita.vystavuje_ponuky|default:identita.vystavuje_servis_vykazy }}</strong>
+            </span>
+            {% endif %}
+            {% if identita.je_platca_dph %}
+            <span class="inline-flex items-center gap-1 text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 font-semibold">
+                ✓ Overený platca DPH{% if identita.ic_dph %} ({{ identita.ic_dph }}){% endif %}
+            </span>
+            {% endif %}
+            {% if identita.predvolena_platnost_ponuk %}
+            <span class="inline-flex items-center gap-1">
+                ⏱️ Garancia rozpočtu: <strong class="text-gray-900">{{ identita.predvolena_platnost_ponuk }} dní</strong>
+            </span>
+            {% endif %}
+            {% if identita.splatnost_faktur %}
+            <span class="inline-flex items-center gap-1">
+                💳 B2B splatnosť: <strong class="text-gray-900">{{ identita.splatnost_faktur }} dní</strong>
+            </span>
+            {% endif %}
+            {% if identita.zapis_v_registri %}
+            <span class="w-full text-[11px] text-gray-400 mt-1 block">
+                {{ identita.zapis_v_registri }}
+            </span>
+            {% endif %}
+        </div>
+        {% if globalne_nastavenia.pracovny_cas_od and globalne_nastavenia.pracovny_cas_do %}
+        <p class="text-center text-xs text-gray-500 mt-2">
+            ⏱️ Štandardný dispečing: <strong>{{ globalne_nastavenia.pracovny_cas_od|time:"H:i" }} – {{ globalne_nastavenia.pracovny_cas_do|time:"H:i" }}</strong>{% if globalne_nastavenia.pracovat_vikendy %} (Po–Ne){% else %} (Po–Pi){% endif %}{% if globalne_nastavenia.pracovat_sviatky %}, vrátane sviatkov{% endif %}
+        </p>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

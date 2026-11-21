@@ -1,0 +1,3955 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block title %}{{ title }} | ISAS Command Center{% endblock %}
+
+{% block branding %}
+<h1 id="site-name">
+    <a href="{% url 'admin:index' %}">ISAS CORE</a>
+</h1>
+
+<div class="header-marquee">
+    <div class="marquee-track">
+        <span class="m-icon t1">⚙️</span> <span class="m-icon t2">📊</span> <span class="m-icon t3">📦</span> <span class="m-icon t1">🛡️</span> 
+        <span class="m-icon t2">⚡</span> <span class="m-icon t3">🌐</span> <span class="m-icon t1">💼</span> <span class="m-icon t2">🔐</span> 
+        <span class="m-icon t3">🏢</span> <span class="m-icon t1">📈</span> <span class="m-icon t2">📋</span> <span class="m-icon t3">🤝</span> 
+        <span class="m-icon t1">💡</span> <span class="m-icon t2">🚀</span> <span class="m-icon t3">📁</span> <span class="m-icon t1">🕒</span>
+        <span class="m-icon t2">📱</span> <span class="m-icon t3">✨</span>
+
+        <span class="m-icon t1">⚙️</span> <span class="m-icon t2">📊</span> <span class="m-icon t3">📦</span> <span class="m-icon t1">🛡️</span> 
+        <span class="m-icon t2">⚡</span> <span class="m-icon t3">🌐</span> <span class="m-icon t1">💼</span> <span class="m-icon t2">🔐</span> 
+        <span class="m-icon t3">🏢</span> <span class="m-icon t1">📈</span> <span class="m-icon t2">📋</span> <span class="m-icon t3">🤝</span> 
+        <span class="m-icon t1">💡</span> <span class="m-icon t2">🚀</span> <span class="m-icon t3">📁</span> <span class="m-icon t1">🕒</span>
+        <span class="m-icon t2">📱</span> <span class="m-icon t3">✨</span>
+    </div>
+</div>
+{% endblock %}
+
+{% block usertools %}
+<div id="user-tools">
+    <!-- 🤖 PREMIUM BADGE: Zobrazenie reálnych nákladov na AI z Google API -->
+    {% if ai_naklady_mesiac is not None %}
+        <strong class="isas-user-badge" style="background: rgba(245, 158, 11, 0.1) !important; color: #f59e0b !important; border: 1px solid rgba(245, 158, 11, 0.3) !important;" title="Náklady na Gemini API za tento mesiac">🤖 AI Asistent: {{ ai_naklady_mesiac|floatformat:2 }}{% if ai_naklady_mena %} {{ ai_naklady_mena }}{% elif firemna_mena %} {{ firemna_mena }}{% endif %}</strong>
+    {% endif %}
+
+    <strong class="isas-user-badge" data-icon="👤">👤 {% firstof user.get_short_name user.get_username %}</strong>
+    
+    <a href="{{ dynamicky_web_firmy|default:'/' }}" target="_blank" rel="noopener noreferrer" class="isas-tool-btn" data-icon="🌍" title="Otvoriť verejnú webovú stránku">🌍 Pozrieť stránku</a>
+
+    {% if user.is_staff %}
+    <button type="button" id="isas-2048-nav-btn" class="isas-tool-btn" title="ISAS 2048 (Strategická výzva)" style="padding: 0 10px; font-size: 13px; opacity: 1; line-height: 1; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; background: transparent; border: none;"><span style="display: inline-block; filter: brightness(1.9) drop-shadow(0 0 4px rgba(56, 189, 248, 0.85));">🎮</span></button>
+    {% endif %}
+    
+    {% if user.has_usable_password %}
+        <a href="{% url 'admin:password_change' %}" class="isas-tool-btn" data-icon="🔑">🔑 Zmeniť heslo</a>
+    {% endif %}
+
+    <form id="logout-form" method="post" action="{% url 'admin:logout' %}" style="margin: 0; display: inline-flex;">
+        {% csrf_token %}
+        <button type="submit" class="isas-tool-btn isas-logout-btn" data-icon="🚪">🚪 Odhlásiť</button>
+    </form>
+</div>
+{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+    /* ==========================================================================
+       🚨 KRITICKÁ OPRAVA STICKY HLAVIČKY A NAVIGÁCIE (Zabráni miznutiu)
+       ========================================================================== */
+    html, body {
+        height: auto !important;
+        min-height: 100vh !important;
+        overflow: visible !important; /* Akýkoľvek hidden/clip tu ZABÍJA sticky! */
+    }
+    #container {
+        height: auto !important;
+        min-height: 100vh !important;
+        overflow: visible !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+
+    /* Skrytie nadpisov a čierne checkboxy aj v zozname! */
+    input[type="checkbox"], input[type="radio"] { accent-color: #000000 !important; }
+
+    /* ODSTRÁNENIE RÁMIKA PO KLIKNUTÍ */
+    *:focus { outline: none !important; box-shadow: none !important; }
+    a:focus, a:active { outline: none !important; text-decoration: none !important; }
+
+    /* ==========================================================================
+       🖱️ PRÉMIOVÉ MINIMALISTICKÉ SCROLLOVNÍKY (macOS štýl)
+       ========================================================================== */
+    /* Firefox */
+    * {
+        scrollbar-width: thin !important;
+        scrollbar-color: rgba(148, 163, 184, 0.4) transparent !important;
+    }
+    /* Chrome, Edge, Safari */
+    ::-webkit-scrollbar {
+        width: 6px !important;
+        height: 6px !important;
+    }
+    ::-webkit-scrollbar-track {
+        background: transparent !important; /* Úplne priehľadné pozadie */
+    }
+    ::-webkit-scrollbar-thumb {
+        background: rgba(148, 163, 184, 0.3) !important; /* Veľmi jemná sivá */
+        border-radius: 10px !important;
+        transition: background 0.3s ease !important;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+        background: rgba(148, 163, 184, 0.8) !important; /* Zvýraznenie pri hoveri */
+    }
+
+    /* ODSTRÁNENIE RÁMIKA PO KLIKNUTÍ */
+    *:focus { outline: none !important; box-shadow: none !important; }
+
+    /* LIKVIDÁCIA PREBLIKNUTIA DJANGO SPRÁV */
+    ul.messagelist { display: none !important; opacity: 0 !important; pointer-events: none !important; }
+
+    /* ==========================================================================
+       🔘 UNIFIKOVANÝ ISAS TOGGLE & SWITCH KOMPONENT (Pre modály, formuláre aj košík)
+       ========================================================================== */
+    .isas-toggle, .switch { position: relative !important; display: inline-block !important; width: 44px !important; height: 24px !important; }
+    .isas-toggle input, .switch input { opacity: 0 !important; width: 0 !important; height: 0 !important; }
+    .isas-slider, .slider { position: absolute !important; cursor: pointer !important; inset: 0 !important; background-color: #cbd5e1 !important; transition: .3s !important; border-radius: 24px !important; }
+    .isas-slider:before, .slider:before { position: absolute !important; content: "" !important; height: 18px !important; width: 18px !important; left: 3px !important; bottom: 3px !important; background-color: white !important; transition: .3s !important; border-radius: 50% !important; box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important; }
+    input:checked + .isas-slider, input:checked + .slider { background-color: #10b981 !important; }
+    input:checked + .isas-slider:before, input:checked + .slider:before { transform: translateX(20px) !important; }
+    
+    input[type="checkbox"].isas-modern-toggle { appearance: none !important; -webkit-appearance: none !important; width: 46px !important; height: 24px !important; background: #cbd5e1 !important; border-radius: 24px !important; position: relative !important; cursor: pointer !important; outline: none !important; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1) !important; margin: 0 10px 0 0 !important; vertical-align: middle !important; }
+    input[type="checkbox"].isas-modern-toggle::after { content: '' !important; position: absolute !important; top: 3px !important; left: 3px !important; width: 18px !important; height: 18px !important; background: white !important; border-radius: 50% !important; box-shadow: 0 2px 5px rgba(0,0,0,0.3) !important; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important; }
+    input[type="checkbox"].isas-modern-toggle:checked { background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important; }
+    input[type="checkbox"].isas-modern-toggle:checked::after { transform: translateX(22px) !important; }
+
+    /* ==========================================
+       🗑️ UNIVERZÁLNY MODERNÝ KRÍŽIK PRE VŠETKY SELECT2
+       ========================================== */
+    .select2-container .select2-selection__clear { 
+        right: 8px !important; 
+        position: absolute !important;
+        top: 50% !important;
+        transform: translateY(-50%) !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 22px !important;
+        height: 22px !important;
+        background-color: #f1f5f9 !important;
+        border-radius: 50% !important;
+        font-size: 0 !important; 
+        color: transparent !important; 
+        cursor: pointer !important;
+        transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+        z-index: 10 !important;
+        display: block !important;
+    }
+
+    .select2-container .select2-selection__clear::after {
+        content: "" !important;
+        position: absolute !important;
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        width: 10px !important;
+        height: 10px !important;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='18' y1='6' x2='6' y2='18'%3E%3C/line%3E%3Cline x1='6' y1='6' x2='18' y2='18'%3E%3C/line%3E%3C/svg%3E") !important;
+        background-size: contain !important;
+        background-repeat: no-repeat !important;
+        background-position: center !important;
+        transition: all 0.2s ease !important;
+    }
+
+    .select2-container .select2-selection__clear:hover {
+        background-color: #fee2e2 !important;
+        transform: translateY(-50%) scale(1.1) !important;
+    }
+
+    .select2-container .select2-selection__clear:hover::after {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ef4444' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='18' y1='6' x2='6' y2='18'%3E%3C/line%3E%3Cline x1='6' y1='6' x2='18' y2='18'%3E%3C/line%3E%3C/svg%3E") !important;
+    }
+
+    /* ==========================================
+       🔘 TABULAR INLINE SELECT2 AUTOCOMPLETE STYLING
+       ========================================== */
+    .tabular table td .select2-container {
+        width: 100% !important;
+        min-width: 150px !important;
+        text-align: left !important;
+    }
+    .tabular table td .select2-selection--single {
+        height: 36px !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 8px !important;
+        display: flex !important;
+        align-items: center !important;
+        background-color: #f8fafc !important;
+        transition: all 0.2s ease !important;
+    }
+    .tabular table td .select2-selection--single:focus,
+    .tabular table td .select2-container--open .select2-selection--single {
+        border-color: #3b82f6 !important;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
+        background-color: #ffffff !important;
+    }
+    .tabular table td .select2-selection__rendered {
+        line-height: normal !important;
+        padding-left: 10px !important;
+        padding-right: 28px !important;
+        font-size: 13px !important;
+        font-weight: 600 !important;
+        color: #0f172a !important;
+    }
+    .tabular table td .select2-selection__arrow {
+        height: 34px !important;
+        right: 6px !important;
+    }
+
+    /* ==========================================
+       0. 🌌 GLOBÁLNE ŽIVÉ POZADIE ISAS CORE + IKONY
+       ========================================== */
+    body {
+        background-color: #f8fafc !important;
+        background-image: 
+            radial-gradient(at 0% 0%, rgba(219, 234, 254, 0.8) 0px, transparent 50%),
+            radial-gradient(at 100% 0%, rgba(209, 250, 229, 0.6) 0px, transparent 50%),
+            radial-gradient(at 50% 100%, rgba(238, 242, 255, 1) 0px, transparent 50%) !important;
+        background-attachment: fixed !important;
+        background-size: cover !important;
+    }
+    
+    #container, #content, #main, .main.shifted {
+        background: transparent !important;
+    }
+
+    /* Animácie pre ikony na pozadí */
+    .bg-animation {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        z-index: -1; /* Pod všetkým ostatným obsahom */
+        pointer-events: none; overflow: hidden;
+    }
+    .ambient-icon {
+        position: absolute; opacity: 0.15; /* Jemné, aby nerušili prácu */
+        filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1));
+        animation: floatAround infinite ease-in-out;
+        will-change: transform; font-family: sans-serif;
+    }
+    @keyframes floatAround {
+        0%, 100% { transform: translate(0, 0) rotate(0deg) scale(1); }
+        33% { transform: translate(30px, 40px) rotate(10deg) scale(1.05); }
+        66% { transform: translate(-20px, 20px) rotate(-5deg) scale(0.95); }
+    }
+
+    /* ==========================================
+       0.1 TOP HLAVIČKA A TANCUJÚCI PÁS (PEVNE UKOTVENÁ)
+       ========================================== */
+    #header {
+        position: sticky !important;
+        top: 0 !important;
+        background: rgba(15, 23, 42, 0.95) !important;
+        backdrop-filter: blur(10px) !important;
+        color: #ffffff !important;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.15) !important;
+        border-bottom: 2px solid #1e293b !important;
+        
+        /* 🔴 OCHRANA PROTI ZMIZNUTIU NA DLHÝCH STRÁNKACH (SQUASH FIX) */
+        height: clamp(55px, 7vh, 64px) !important;
+        min-height: clamp(55px, 7vh, 64px) !important;
+        max-height: clamp(55px, 7vh, 64px) !important;
+        flex: 0 0 clamp(55px, 7vh, 64px) !important;
+        
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        padding: 0 clamp(10px, 2vw, 20px) !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+        overflow: hidden !important;
+        z-index: 9000 !important;
+    }
+
+    /* Zabitie škodlivých Django pseudo-elementov, ktoré trhajú flexbox */
+    #header::before, #header::after {
+        display: none !important;
+        content: none !important;
+    }
+
+    #branding {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        /* 🚀 Odomknutie priestoru pre pás v celej stredovej šírke */
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+        width: auto !important; 
+        height: 100% !important;
+        overflow: hidden !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    #branding h1#site-name {
+        margin: 0 !important;
+        padding-right: 15px !important;
+        flex: 0 0 auto !important;
+        max-width: none !important;
+        display: flex !important;
+        align-items: center !important;
+        height: 100% !important;
+        border: none !important;
+        overflow: visible !important;
+    }
+
+    #branding h1 a:link, #branding h1 a:visited { 
+        color: #34d399 !important;
+        font-weight: 900 !important; 
+        letter-spacing: 0.5px !important;
+        white-space: nowrap !important;
+        text-decoration: none !important;
+        display: block !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        position: relative;
+        z-index: 2;
+    }
+
+    /* --- ✨ ANIMÁCIA TANCUJÚCEHO PÁSU V HLAVIČKE ✨ --- */
+    .header-marquee {
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+        overflow: hidden !important;
+        margin: 0 10px !important;
+        /* 🎯 Jemný prechod na okrajoch (3%) namiesto agresívneho 15% orezania */
+        mask-image: linear-gradient(to right, transparent, black 3%, black 97%, transparent) !important;
+        -webkit-mask-image: linear-gradient(to right, transparent, black 3%, black 97%, transparent) !important;
+        position: relative !important;
+        display: flex !important;
+        align-items: center !important;
+        height: 100% !important;
+    }
+    
+    .marquee-track {
+        display: inline-flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+        white-space: nowrap !important;
+        animation: scrollMarquee 120s linear infinite !important; /* Spomalené na 120s */
+        padding-left: 100% !important;
+    }
+
+    @keyframes scrollMarquee {
+        0% { transform: translateX(0); }
+        100% { transform: translateX(-50%); } 
+    }
+
+    /* Tanec (jemné vznášanie a nakláňanie) */
+    @keyframes danceBob {
+        0%, 100% { transform: translateY(0) rotate(0deg); }
+        25% { transform: translateY(-5px) rotate(3deg); } 
+        50% { transform: translateY(0) rotate(0deg); }
+        75% { transform: translateY(5px) rotate(-3deg); } 
+    }
+
+    /* Garancia zobrazenia farebného EMOJI na všetkých stránkach Djanga */
+    .m-icon {
+        font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Segoe UI Symbol", sans-serif !important;
+        font-size: clamp(16px, 2vw, 22px) !important;
+        margin: 0 clamp(12px, 2vw, 25px) !important;
+        opacity: 0.85 !important;
+        -webkit-text-fill-color: initial !important; 
+        color: initial !important; 
+        filter: drop-shadow(0 3px 6px rgba(0,0,0,0.3)) !important;
+        animation: danceBob 6s ease-in-out infinite !important;
+        transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s, filter 0.3s !important;
+        display: inline-block !important; 
+        cursor: default !important;
+        line-height: 1 !important;
+    }
+
+    /* Rozhádzanie tanca */
+    .m-icon.t1 { animation-delay: 0s !important; }
+    .m-icon.t2 { animation-delay: -2s !important; } 
+    .m-icon.t3 { animation-delay: -4s !important; } 
+
+    .m-icon:hover {
+        animation-play-state: paused !important;
+        transform: scale(1.5) rotate(0deg) !important;
+        opacity: 1 !important;
+        filter: drop-shadow(0 0 10px rgba(52, 211, 153, 0.8)) !important;
+        z-index: 10 !important;
+    }
+
+    /* ==========================================
+       0.2 LUXUSNÉ UŽÍVATEĽSKÉ MENU (Pills)
+       ========================================== */
+    #user-tools { 
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+        justify-content: flex-end !important;
+        
+        /* 🛡️ Pevná šírka pre pravé menu, aby nevytláčalo stredový pás */
+        flex: 0 0 auto !important; 
+        min-width: 0 !important;
+        max-width: auto !important;
+        
+        gap: clamp(6px, 1vw, 10px) !important;
+        margin: 0 !important;
+        padding: 0 4px !important;
+        position: relative !important;
+        z-index: 10 !important; 
+        white-space: nowrap !important;
+        height: 100% !important;
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        -webkit-overflow-scrolling: touch !important;
+        scrollbar-width: none !important;
+    }
+    #user-tools::-webkit-scrollbar { display: none !important; }
+    
+    .isas-user-badge {
+        background: rgba(52, 211, 153, 0.1) !important;
+        color: #34d399 !important;
+        padding: clamp(4px, 0.5vh, 6px) clamp(8px, 1vw, 14px) !important;
+        border-radius: 20px !important;
+        font-weight: 900 !important;
+        font-size: clamp(10px, 1vw, 12px) !important;
+        border: 1px solid rgba(52, 211, 153, 0.3) !important;
+        letter-spacing: 0.5px !important;
+        white-space: nowrap !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        text-transform: uppercase !important;
+        height: clamp(28px, 4vh, 32px) !important;
+        box-sizing: border-box !important;
+        flex-shrink: 0 !important;
+    }
+
+    .isas-tool-btn {
+        background: rgba(255, 255, 255, 0.08) !important;
+        padding: clamp(4px, 0.5vh, 6px) clamp(8px, 1vw, 14px) !important;
+        border-radius: 10px !important;
+        color: #ffffff !important;
+        font-weight: 700 !important;
+        font-size: clamp(9px, 0.9vw, 11px) !important;
+        text-transform: uppercase !important;
+        text-decoration: none !important;
+        transition: all 0.2s ease !important;
+        white-space: nowrap !important;
+        border: 1px solid transparent !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        cursor: pointer !important;
+        height: clamp(28px, 4vh, 32px) !important;
+        box-sizing: border-box !important;
+        flex-shrink: 0 !important;
+    }
+    
+    .isas-tool-btn:hover {
+        background: rgba(255, 255, 255, 0.15) !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1) !important;
+    }
+
+    .isas-logout-btn {
+        background: rgba(239, 68, 68, 0.1) !important;
+        color: #fca5a5 !important;
+        border: 1px solid rgba(239, 68, 68, 0.3) !important;
+    }
+    .isas-logout-btn:hover {
+        background: rgba(239, 68, 68, 0.25) !important;
+        color: #ffffff !important;
+        box-shadow: 0 4px 10px rgba(239, 68, 68, 0.2) !important;
+    }
+
+    /* Čistenie bordelu pri Theme toggleri */
+    #user-tools form { margin: 0 !important; display: inline-flex !important; }
+    #user-tools button.theme-toggle {
+        background: rgba(255, 255, 255, 0.08) !important;
+        border: none !important;
+        border-radius: 50% !important;
+        width: clamp(28px, 4vh, 32px) !important;
+        height: clamp(28px, 4vh, 32px) !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        cursor: pointer !important;
+        transition: all 0.2s !important;
+        padding: 0 !important;
+    }
+    #user-tools button.theme-toggle:hover { 
+        background: rgba(255, 255, 255, 0.2) !important; 
+        transform: scale(1.1) !important; 
+    }
+    .theme-toggle span { display: none !important; }
+
+    /* ==========================================
+       0.3 BREADCRUMBS (Drobčeková navigácia)
+       ========================================== */
+    .breadcrumbs {
+        background: rgba(255, 255, 255, 0.85) !important; 
+        backdrop-filter: blur(24px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+        border-bottom: 1px solid rgba(99, 102, 241, 0.15) !important;
+        padding: clamp(6px, 1vh, 8px) clamp(10px, 1.5vw, 15px) !important;
+        padding-right: clamp(180px, 22vw, 280px) !important; /* 🛡️ Bezpečnostná rezerva, aby text nenarážal do tlačidla */
+        margin: 0 !important;
+        width: 100% !important;
+        min-height: 42px !important;
+        box-sizing: border-box !important;
+        display: flex !important;
+        align-items: center !important;
+        flex-wrap: wrap !important;
+        gap: clamp(4px, 0.5vw, 6px) !important; 
+        color: #1e293b !important; 
+        font-size: clamp(9px, 0.8vw, 11px) !important;
+        font-weight: 800 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 1px !important;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04) !important;
+        position: sticky !important;
+        top: clamp(55px, 7vh, 64px) !important; /* Presná výška #header, aby sa prilepila hneď pod neho */
+        z-index: 8900 !important; /* Musí byť nad obsahom, ale pod hlavnou hlavičkou (tá má 9000) */
+    }
+
+    nav[aria-label="Mininavigácia"] {
+        position: sticky !important;
+        top: clamp(55px, 7vh, 64px) !important;
+        z-index: 8900 !important;
+    }
+
+    .breadcrumbs ol, .breadcrumbs li {
+        display: inline-flex !important;
+        align-items: center !important;
+        list-style: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        gap: inherit !important;
+    }
+
+    .breadcrumbs a {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        color: #4f46e5 !important; 
+        text-decoration: none !important;
+        transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+        font-weight: 900 !important;
+        padding: clamp(4px, 0.5vh, 6px) clamp(8px, 1vw, 12px) !important; 
+        border-radius: clamp(6px, 1vw, 8px) !important;
+        margin: 0 !important; 
+        background: rgba(99, 102, 241, 0.08) !important; 
+        border: 1px solid transparent !important;
+    }
+    
+    .breadcrumbs a:hover {
+        color: #ffffff !important;
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important; 
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3) !important;
+        transform: translateY(-1px) !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    }
+
+    /* ==========================================
+       1. GLOBÁLNE VYMAZANIE NADPISOV A ODOMKNUTIE ŠÍRKY
+       ========================================== */
+    body:not(.dashboard) #content h1,
+    body:not(.dashboard) #content h2:not(.module h2):not(#changelist-filter h2),
+    .titles-and-tools .titles,
+    body.dashboard .titles-and-tools {
+        display: none !important;
+    }
+    .titles-and-tools {
+        margin: 0 !important;
+        padding: 0 !important;
+        min-height: 0 !important;
+        background: transparent !important;
+        border: none !important;
+    }
+
+    /* 🛡️ OCHRANA PRE STICKY HLAVIČKU (Zabráni miznutiu pri scrollovaní) */
+    html, body {
+        overflow-x: clip !important;
+    }
+    #container {
+        display: flex !important;
+        flex-direction: column !important;
+        min-height: 100vh !important;
+    }
+    #main, .main {
+        flex: 1 1 auto !important;
+    }
+
+    /* ODOMKNUTIE KONTAJNERA A OCHRANA PROTI BOČNÉMU SCROLLOVANIU */
+    #content {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding-top: clamp(10px, 1.5vh, 15px) !important;
+        padding-left: clamp(10px, 2vw, 20px) !important;
+        padding-right: clamp(10px, 2vw, 20px) !important;
+        /* 🚨 ZÁMERNE VYNECHANÝ padding-bottom, aby sme nezničili priestor pre plávajúcu lištu! */
+        box-sizing: border-box !important;
+        overflow-x: clip !important; /* 🛡️ Clip namiesto hidden zachráni sticky efekt */
+    }
+
+    /* 🚀 NUKLEÁRNA OCHRANA PRE PLÁVAJÚCU LIŠTU VO FORMULÁROCH */
+    html body.change-form #content-main form {
+        padding-bottom: 180px !important;
+    }
+    
+    /* 🎯 UNIVERZÁLNE ODOMKNUTIE 100% ŠÍRKY PRE VŠETKY STRÁNKY, FORMULÁRE, ZOZNAMY A ŠABLÓNY */
+    #content-main {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        display: block !important;
+        box-sizing: border-box !important;
+    }
+
+    /* ==========================================
+       2. TLAČIDLO "PRIDAŤ +" INTEGRÁCIA DO BREADCRUMBS LIŠTY
+       ========================================== */
+    .object-tools { 
+        position: fixed !important;
+        top: calc(clamp(55px, 7vh, 64px) + 6px) !important;
+        right: clamp(10px, 1.5vw, 20px) !important;
+        z-index: 8950 !important; /* Nad breadcrumbs (8900), pod hlavičkou (9000) */
+        margin: 0 !important;
+        padding: 0 !important;
+        height: auto !important;
+        list-style: none !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 8px !important;
+        pointer-events: auto !important;
+    }
+
+    .object-tools li {
+        list-style: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .object-tools a,
+    .object-tools a.addlink,
+    .object-tools a.historylink,
+    .object-tools a.viewsitelink {
+        background: #34D399 !important;
+        color: #000000 !important;
+        border: 1px solid rgba(0, 0, 0, 0.1) !important;
+        border-radius: 8px !important;
+        padding: 0 clamp(10px, 1.2vw, 16px) !important;
+        font-weight: 900 !important;
+        font-size: clamp(10px, 0.85vw, 11px) !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.5px !important;
+        box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3) !important; 
+        transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        height: 28px !important;
+        box-sizing: border-box !important;
+        line-height: 1 !important;
+        text-decoration: none !important;
+        white-space: nowrap !important;
+    }
+
+    .object-tools a:hover,
+    .object-tools a.addlink:hover {
+        background: #10B981 !important; 
+        transform: translateY(-1px) scale(1.03) !important;
+        box-shadow: 0 4px 14px rgba(52, 211, 153, 0.5) !important;
+        color: #000000 !important;
+    }
+
+    /* Sekundárne tlačidlá v detailoch formulárov (napr. História) */
+    .object-tools a.historylink,
+    .object-tools a.viewsitelink {
+        background: rgba(15, 23, 42, 0.8) !important;
+        border-color: rgba(255, 255, 255, 0.1) !important;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15) !important;
+    }
+    .object-tools a.historylink:hover,
+    .object-tools a.viewsitelink:hover {
+        background: #1e293b !important;
+        color: #34d399 !important;
+    }
+
+    /* 3. VYHĽADÁVANIE */
+    #toolbar {
+        background: transparent !important;
+        border: none !important;
+        padding: 0 !important;
+        margin-bottom: clamp(10px, 2vh, 15px) !important;
+        display: flex !important;
+        align-items: center !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        box-sizing: border-box !important;
+    }
+    #toolbar form { 
+        display: flex !important; 
+        width: 100% !important; 
+        min-width: 0 !important;
+        align-items: center !important; 
+        flex-wrap: wrap !important;
+        gap: 6px !important;
+        box-sizing: border-box !important;
+    }
+    #toolbar label { display: none !important; }
+    
+    #searchbar {
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 8px !important;
+        padding: clamp(6px, 1vh, 8px) clamp(10px, 1.5vw, 15px) !important;
+        font-size: clamp(11px, 1vw, 13px) !important;
+        font-weight: 500 !important;
+        outline: none !important;
+        transition: all 0.2s ease !important;
+        min-width: 180px !important;
+        flex: 1 1 180px !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        color: #1e293b !important;
+        background: rgba(255,255,255,0.9) !important; 
+        box-shadow: inset 0 1px 2px rgba(0,0,0,0.02) !important;
+    }
+    #searchbar:focus {
+        border-color: #3b82f6 !important;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+        background: #ffffff !important;
+    }
+    #toolbar input[type="submit"] {
+        background: rgba(226, 232, 240, 0.9) !important; 
+        color: #475569 !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 8px !important;
+        padding: clamp(6px, 1vh, 8px) clamp(10px, 1.5vw, 15px) !important;
+        font-weight: 800 !important;
+        font-size: clamp(10px, 0.9vw, 12px) !important;
+        cursor: pointer !important;
+        transition: all 0.2s ease !important;
+        margin-left: 0 !important;
+        text-transform: uppercase;
+        flex-shrink: 0 !important;
+        white-space: nowrap !important;
+    }
+
+    /* 🖥️ PRECHODNÝ PC / TABLET BREAKPOINT (Zarovnanie vyhľadávania pod seba pri zmenšení okna) */
+    @media (max-width: 1150px) {
+        #toolbar form,
+        form#changelist-search > div:not(.isas-autocomplete-results) {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 6px !important;
+            width: 100% !important;
+        }
+        #searchbar,
+        #toolbar input[type="text"],
+        form#changelist-search input[type="text"] {
+            width: 100% !important;
+            flex: 1 1 auto !important;
+        }
+        #toolbar input[type="submit"],
+        form#changelist-search input[type="submit"] {
+            width: 100% !important;
+            margin-left: 0 !important;
+            height: 36px !important;
+        }
+    }
+    #toolbar input[type="submit"]:hover { 
+        background: #3b82f6 !important; 
+        color: #ffffff !important;
+        border-color: #3b82f6 !important;
+    }
+
+    /* 4. PANEL AKCIÍ */
+    .actions {
+        background: rgba(248, 250, 252, 0.85) !important;
+        backdrop-filter: blur(10px) !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 8px !important;
+        padding: clamp(6px, 1vh, 10px) clamp(10px, 1.5vw, 15px) !important;
+        display: flex !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
+        gap: clamp(6px, 0.8vw, 12px) !important;
+        margin-bottom: clamp(10px, 2vh, 20px) !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+    .actions label {
+        font-weight: 800 !important;
+        color: #64748b !important;
+        font-size: clamp(9px, 0.8vw, 11px) !important;
+        text-transform: uppercase;
+        letter-spacing: 0.5px !important;
+        margin: 0 !important;
+    }
+    .actions select {
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 6px !important;
+        padding: clamp(4px, 0.5vh, 6px) clamp(8px, 1vw, 12px) !important;
+        font-size: clamp(10px, 0.9vw, 12px) !important;
+        font-weight: 600 !important;
+        color: #0f172a !important;
+        outline: none !important;
+        background: rgba(255,255,255,0.9) !important;
+        min-width: clamp(150px, 20vw, 250px) !important;
+    }
+    .actions button.button {
+        background: #10b981 !important; 
+        color: white !important;
+        border: none !important;
+        border-radius: 6px !important;
+        padding: clamp(4px, 0.5vh, 6px) clamp(10px, 1.5vw, 16px) !important;
+        font-weight: 800 !important;
+        font-size: clamp(10px, 0.9vw, 12px) !important;
+        cursor: pointer !important;
+        transition: all 0.2s ease !important;
+        text-transform: uppercase;
+    }
+    .actions button.button:hover { background: #059669 !important; }
+    .actions span.action-counter { color: #94a3b8 !important; font-size: clamp(9px, 0.8vw, 11px) !important; font-weight: 700 !important; margin-left: auto !important; }
+
+    /* ==========================================================================
+       5. HLAVIČKY STĹPCOV V TABUĽKE
+       ========================================================================== */
+    #changelist table thead th {
+        background: rgba(241, 245, 249, 0.9) !important;
+        border-bottom: 2px solid #e2e8f0 !important;
+        border-top: none !important;
+        padding: 0 !important; 
+        height: 34px !important; 
+        min-height: 34px !important;
+        vertical-align: middle !important;
+        white-space: nowrap !important;
+        text-align: left !important;
+    }
+
+    #changelist table thead th .text {
+        display: inline-flex !important;
+        align-items: center !important;
+        height: 34px !important; 
+        padding: 0 8px !important; 
+        margin: 0 !important;
+        vertical-align: middle !important;
+        float: none !important;
+    }
+
+    #changelist table thead th .text a,
+    #changelist table thead th .text span {
+        font-size: clamp(10px, 0.9vw, 12px) !important;
+        font-weight: 800 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.5px !important;
+        color: #475569 !important;
+        text-decoration: none !important;
+        line-height: 1 !important;
+    }
+
+    #changelist table thead th .text a:hover {
+        color: #0f172a !important;
+    }
+
+    #changelist table thead th.sorted {
+        background: rgba(226, 232, 240, 1) !important; 
+        border-bottom: 2px solid #3b82f6 !important; 
+    }
+
+    /* --- GLOBÁLNE SKRYTIE MOŽNOSTÍ ZORADENIA (ŠÍPKY A KRÍŽIKY V HLAVIČKE) --- */
+    #changelist table thead th .sortoptions,
+    #changelist table thead th.sorted .sortoptions {
+        display: none !important;
+        width: 0 !important;
+        height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        opacity: 0 !important;
+        visibility: hidden !important;
+        position: absolute !important;
+    }
+
+    #changelist table tbody td, #changelist table tbody th {
+        padding: clamp(6px, 1vh, 10px) clamp(10px, 1.5vw, 15px) !important;
+        border-bottom: 1px solid #f1f5f9 !important;
+        vertical-align: middle !important;
+        background: rgba(255,255,255,0.7) !important;
+    }
+
+    /* --- 6. PRAVÝ PANEL FILTROV --- */
+    /* 🧹 LIKVIDÁCIA ZNAKU â†” V DJANGO 5 FILTRI */
+    #changelist-filter summary::before,
+    #changelist-filter details summary::before {
+        content: "\25BE\00a0" !important; /* ▾ Čistá modrá šípka dole pre otvorený filter */
+        font-size: 13px !important;
+        display: inline-block !important;
+        color: #3b82f6 !important;
+        font-family: system-ui, -apple-system, sans-serif !important;
+        font-weight: 900 !important;
+    }
+    #changelist-filter details:not([open]) summary::before {
+        content: "\25B8\00a0" !important; /* ▸ Sivá šípka doprava pre zatvorený filter */
+        color: #64748b !important;
+    }
+
+    #changelist-filter {
+        background: rgba(255, 255, 255, 0.85) !important; 
+        backdrop-filter: blur(15px) !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 12px !important;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03) !important;
+        margin-left: clamp(10px, 1.5vw, 20px) !important;
+        margin-top: 0 !important;
+        padding: 0 0 40px 0 !important; 
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        overscroll-behavior: contain !important;
+        box-sizing: border-box !important;
+        max-height: calc(100vh - clamp(120px, 15vh, 160px)) !important;
+        position: sticky !important;
+        top: clamp(110px, 15vh, 130px) !important;
+    }
+
+    /* 🛡️ Spodná rezerva pre scrollovanie vo filtri (zabezpečí 100% zobrazenie posledných položiek) */
+    #changelist-filter::after {
+        content: "" !important;
+        display: block !important;
+        height: 160px !important;
+        width: 100% !important;
+    }
+    #changelist-filter h2 {
+        background: #1e293b !important; 
+        color: #ffffff !important;
+        font-size: clamp(10px, 0.9vw, 12px) !important;
+        font-weight: 800 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.5px !important;
+        padding: clamp(8px, 1vh, 12px) clamp(10px, 1.5vw, 15px) !important;
+        margin: 0 !important;
+        border-bottom: none !important;
+    }
+    #changelist-filter h3 {
+        font-size: clamp(9px, 0.8vw, 11px) !important;
+        font-weight: 800 !important;
+        color: #64748b !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.5px !important;
+        padding: clamp(10px, 1.5vh, 15px) clamp(10px, 1.5vw, 15px) clamp(5px, 1vh, 8px) clamp(10px, 1.5vw, 15px) !important;
+        margin: 0 !important;
+        background: transparent !important;
+        border-bottom: 1px solid rgba(241, 245, 249, 0.5) !important;
+    }
+    #changelist-filter ul {
+        margin: 0 !important;
+        padding: 10px 10px 15px 10px !important;
+        border-bottom: 1px solid rgba(226, 232, 240, 0.5) !important;
+    }
+    #changelist-filter li {
+        list-style-type: none !important;
+        margin-bottom: 2px !important;
+    }
+    #changelist-filter a,
+    #changelist-filter li a,
+    #changelist-filter h3 a {
+        color: #475569 !important;
+        font-size: clamp(10px, 0.9vw, 12px) !important;
+        font-weight: 600 !important;
+        padding: clamp(4px, 0.5vh, 6px) clamp(6px, 1vw, 10px) !important;
+        border-radius: 6px !important;
+        display: block !important;
+        text-decoration: none !important;
+        transition: all 0.2s ease !important;
+    }
+
+    #changelist-filter #changelist-filter-extra-actions a,
+    #changelist-filter a.viewlink {
+        padding-left: 28px !important;
+        background-position: 8px center !important;
+        background-repeat: no-repeat !important;
+        display: inline-block !important;
+    }
+
+    #changelist-filter a:hover,
+    #changelist-filter li a:hover,
+    #changelist-filter h3 a:hover {
+        text-decoration: none !important;
+    }
+    #changelist-filter li a:hover {
+        background: rgba(241, 245, 249, 0.8) !important;
+        color: #3b82f6 !important;
+        transform: translateX(4px) !important;
+    }
+    #changelist-filter li.selected a {
+        background: rgba(239, 246, 255, 0.8) !important;
+        color: #2563eb !important;
+        font-weight: 800 !important;
+        border-left: 3px solid #3b82f6 !important;
+    }
+    #changelist-filter #changelist-filter-clear a {
+        background: rgba(254, 226, 226, 0.8) !important;
+        color: #b91c1c !important;
+        text-align: center !important;
+        font-weight: 800 !important;
+        border-radius: 6px !important;
+        margin: 10px !important;
+        padding: 8px !important;
+        border-left: none !important;
+    }
+    #changelist-filter #changelist-filter-clear a:hover {
+        background: #fecaca !important;
+        transform: none !important;
+    }
+
+    /* ==========================================
+       7. GLOBÁLNY ĽAVÝ SIDEBAR (NEHYBNÝ POD PEVNOU NAVIGÁCIOU)
+       ========================================== */
+    #nav-sidebar {
+        position: sticky !important;
+        top: calc(clamp(55px, 7vh, 64px) + 42px) !important; /* Presne pod hlavičkou + breadcrumbs bez medzery */
+        align-self: stretch !important;
+        height: calc(100vh - clamp(55px, 7vh, 64px) - 42px) !important;
+        max-height: calc(100vh - clamp(55px, 7vh, 64px) - 42px) !important;
+        background: rgba(255, 255, 255, 0.7) !important; 
+        backdrop-filter: blur(15px) !important;
+        border-right: 1px solid rgba(226, 232, 240, 0.8) !important;
+        box-shadow: 2px 0 10px rgba(0,0,0,0.02) !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important; /* 🛑 Absolútny zákaz horizontálneho scrollovania */
+        overscroll-behavior: contain !important;
+        box-sizing: border-box !important;
+        z-index: 100 !important;
+    }
+    /* 🗑️ Úplné odstránenie zbytočného vyhľadávacieho poľa v navigácii */
+    #nav-filter,
+    #nav-sidebar #nav-filter,
+    #nav-sidebar .nav-filter {
+        display: none !important;
+        visibility: hidden !important;
+        height: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        border: none !important;
+        outline: none !important;
+    }
+    #nav-sidebar .module caption, #nav-sidebar .module h2 {
+        background: #1e293b !important;
+        color: #ffffff !important;
+        font-size: clamp(10px, 0.9vw, 12px) !important;
+        font-weight: 800 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.5px !important;
+        padding: clamp(8px, 1vh, 12px) clamp(10px, 1.5vw, 15px) !important;
+        text-align: left !important;
+        border-bottom: none !important;
+    }
+    #nav-sidebar .module caption a, #nav-sidebar .module h2 a { color: #ffffff !important; }
+    #nav-sidebar .module table { width: 100% !important; border-collapse: collapse !important; background: transparent !important; }
+    #nav-sidebar .module th, #nav-sidebar .module td {
+        padding: 0 !important;
+        border-bottom: 1px solid rgba(248, 250, 252, 0.5) !important;
+        vertical-align: middle !important;
+    }
+    #nav-sidebar .module th a {
+        display: block !important;
+        padding: clamp(6px, 1vh, 10px) clamp(10px, 1.5vw, 15px) !important;
+        color: #475569 !important;
+        font-size: clamp(11px, 1vw, 13px) !important;
+        font-weight: 600 !important;
+        transition: all 0.2s ease !important;
+    }
+    #nav-sidebar .module th a:hover {
+        background: rgba(241, 245, 249, 0.8) !important;
+        color: #3b82f6 !important;
+        padding-left: 20px !important; 
+    }
+    #nav-sidebar .current-app .section:before, #nav-sidebar .current-model { background: rgba(239, 246, 255, 0.8) !important; }
+    #nav-sidebar .current-model th a {
+        color: #2563eb !important;
+        font-weight: 800 !important;
+        border-left: 3px solid #3b82f6 !important;
+        background: rgba(239, 246, 255, 0.8) !important;
+    }
+    /* 👁️ Úplné skrytie buniek s tlačidlami v ľavom paneli (Poistka) */
+    #nav-sidebar .module tr[class*="model-"] td {
+        display: none !important;
+    }
+
+    /* ==========================================
+       8. KARTY V ADMINOVI (Dashboards)
+       ========================================== */
+    #content-main .module {
+        background: rgba(255, 255, 255, 0.8) !important; 
+        backdrop-filter: blur(10px) !important;
+        border: 1px solid rgba(226, 232, 240, 0.8) !important;
+        border-radius: 12px !important;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.02) !important;
+        overflow: hidden !important;
+        margin-bottom: 20px !important;
+    }
+    #content-main .module caption {
+        background: #1e293b !important;
+        color: #ffffff !important;
+        font-size: clamp(11px, 1vw, 13px) !important;
+        font-weight: 800 !important;
+        text-transform: uppercase !important;
+        padding: clamp(10px, 1.5vh, 15px) !important;
+        text-align: left !important;
+        border-bottom: none !important;
+        margin: 0 !important;
+    }
+    #content-main .module caption a { color: #ffffff !important; }
+    #content-main .module table { width: 100% !important; border-collapse: collapse !important; background: transparent !important;}
+    #content-main .module th, #content-main .module td {
+        padding: 0 !important;
+        border-bottom: 1px solid rgba(248, 250, 252, 0.5) !important;
+        vertical-align: middle !important;
+    }
+    #content-main .module th a {
+        display: block !important;
+        padding: clamp(8px, 1vh, 12px) clamp(10px, 1.5vw, 15px) !important;
+        color: #475569 !important;
+        font-size: clamp(12px, 1vw, 14px) !important;
+        font-weight: 600 !important;
+        transition: all 0.2s ease !important;
+    }
+    #content-main .module th a:hover {
+        background: rgba(241, 245, 249, 0.8) !important;
+        color: #3b82f6 !important;
+        padding-left: 20px !important;
+    }
+    /* 👁️ Úplné skrytie buniek s tlačidlami na hlavnom dashboarde (Poistka proti zmiznutiu tabuliek) */
+    #content-main .module tr[class*="model-"] td {
+        display: none !important;
+    }
+
+    /* ==========================================
+       9. PAGINÁCIA A SPODNÁ LIŠTA (Uložiť / Čísla stránok)
+       ========================================== */
+    .paginator, .submit-row {
+        background: rgba(255, 255, 255, 0.85) !important;
+        backdrop-filter: blur(20px) saturate(150%) !important;
+        -webkit-backdrop-filter: blur(20px) saturate(150%) !important;
+        border: 1px solid rgba(226, 232, 240, 0.8) !important;
+        border-radius: 16px !important;
+        padding: clamp(10px, 1.5vh, 15px) clamp(15px, 2vw, 25px) !important;
+        color: #64748b !important;
+        font-size: clamp(11px, 1vw, 13px) !important;
+        font-weight: 700 !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 8px !important;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05) !important;
+        flex-wrap: wrap;
+    }
+
+    .paginator { margin: 0 !important; }
+    .submit-row { margin-top: clamp(10px, 2vh, 20px) !important; }
+
+    .paginator a {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        background: rgba(241, 245, 249, 0.8) !important;
+        color: #475569 !important;
+        min-width: clamp(28px, 3vh, 34px) !important;
+        height: clamp(28px, 3vh, 34px) !important;
+        padding: 0 clamp(6px, 1vw, 10px) !important;
+        border-radius: 10px !important;
+        text-decoration: none !important;
+        font-weight: 800 !important;
+        transition: all 0.2s ease !important;
+        border: 1px solid transparent !important;
+    }
+
+    .paginator a:hover {
+        background: #e0e7ff !important;
+        color: #4f46e5 !important;
+        border-color: #c7d2fe !important;
+        transform: translateY(-2px);
+    }
+
+    .paginator span.this-page {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
+        color: #ffffff !important;
+        min-width: clamp(28px, 3vh, 34px) !important;
+        height: clamp(28px, 3vh, 34px) !important;
+        padding: 0 clamp(6px, 1vw, 10px) !important;
+        border-radius: 10px !important;
+        font-weight: 900 !important;
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35) !important;
+    }
+
+    .paginator input[type="submit"], 
+    .paginator input[type="button"], 
+    .submit-row input {
+        margin-left: auto !important; 
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 12px !important;
+        padding: clamp(8px, 1vh, 12px) clamp(15px, 2vw, 28px) !important;
+        font-size: clamp(12px, 1vw, 14px) !important;
+        font-weight: 900 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 1px !important;
+        cursor: pointer !important;
+        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+        box-shadow: 0 8px 20px -3px rgba(16, 185, 129, 0.4) !important;
+    }
+
+    .paginator input[type="submit"]:hover, 
+    .paginator input[type="button"]:hover, 
+    .submit-row input:hover {
+        transform: translateY(-3px) !important;
+        box-shadow: 0 12px 25px -3px rgba(16, 185, 129, 0.5) !important;
+        filter: brightness(1.05);
+    }
+
+    /* ==========================================
+       🤖 10. GLOBÁLNY ISAS AI CHAT (Štýly a Fixácia)
+       ========================================== */
+       
+    /* PRIBITÝ AI ASISTENT (PROTI SCROLLOVANIU - GLOBÁLNE) */
+    html body #ai-chat-container {
+        position: fixed !important;
+        top: auto !important;
+        left: auto !important;
+        bottom: 20px !important;
+        right: 20px !important;
+        z-index: 2147483647 !important;
+        transform: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        width: auto !important;
+        height: auto !important;
+    }
+
+
+    /* GLOBÁLNE SKROTENIE DETEKTÍVA NA PC */
+    #floating-sn-search-container {
+        position: fixed !important;
+        bottom: clamp(14px, 3.2vh, 27px) !important; 
+        right: clamp(110px, 11vw, 130px) !important; 
+        z-index: 999998 !important;
+        transform: translateZ(0) !important;
+        display: flex !important; 
+        align-items: center !important;
+    }
+
+    /* 1. Resetujeme wrapper, aby v zavretom stave vôbec neexistoval pre oko */
+    #sn-search-input-wrapper {
+        border: none !important;
+        box-shadow: none !important;
+        background: transparent !important;
+        width: 0;
+        overflow: hidden;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+    }
+
+/* 2. Keď sa aktivuje, vrátime mu všetky vizuálne vlastnosti */
+    #sn-search-input-wrapper.active {
+        width: 350px;
+        padding: 10px 18px;
+        background: white !important;
+        border: 2px solid #ff9800 !important;
+        box-shadow: 0 15px 40px rgba(0,0,0,0.2) !important;
+    }
+
+    /* 🔒 ZAMKNUTIE SCROLLOVANIA POZADIA PRI MAXIMALIZOVANOM CHATE */
+    body.isas-chat-locked,
+    html:has(body.isas-chat-locked) {
+        overflow: hidden !important;
+        height: 100vh !important;
+        touch-action: none !important;
+    }
+
+    #isas-chat-overlay { 
+        display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+        background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); z-index: 9998; 
+    }
+    #isas-chat-overlay.active { display: block; }
+
+    #ai-chat-window { 
+        display: none; width: clamp(320px, 92vw, 400px); height: clamp(420px, 72vh, 560px); 
+        background: rgba(255, 255, 255, 0.96); backdrop-filter: blur(16px); border-radius: 18px; 
+        border: 1px solid rgba(203, 213, 225, 0.8); position: fixed; 
+        bottom: clamp(90px, 12vh, 120px); right: clamp(15px, 3vw, 25px); 
+        flex-direction: column; box-shadow: 0 20px 40px rgba(0,0,0,0.18); overflow: hidden; 
+        z-index: 9999; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+        overscroll-behavior: contain !important; /* 🛡️ Zamedzí pretečeniu scrollovania na pozadie */
+    }
+    #ai-chat-window.maximized { width: 80vw; height: 85vh; bottom: 7.5vh; right: 10vw; border-radius: 22px; }
+
+    #ai-messages {
+        overscroll-behavior: contain !important; /* 🛡️ Izoluje scrollovanie zoznamu správ */
+    }
+
+    /* 🌟 PROMPT KAPSULA: Zapuzdrený box s 100% šírkou a vnútorným panelom nástrojov */
+    .ai-input-container {
+        padding: 10px 14px 12px 14px !important;
+        background: rgba(255, 255, 255, 0.98) !important;
+        border-top: 1px solid rgba(226, 232, 240, 0.8) !important;
+        box-sizing: border-box !important;
+        width: 100% !important;
+        flex-shrink: 0 !important;
+    }
+    .ai-input-capsule {
+        display: flex !important;
+        flex-direction: column !important;
+        width: 100% !important;
+        background: #f8fafc !important;
+        border: 1.5px solid #cbd5e1 !important;
+        border-radius: 14px !important;
+        box-sizing: border-box !important;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease !important;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03) !important;
+    }
+    .ai-input-capsule:focus-within {
+        border-color: #10b981 !important;
+        background: #ffffff !important;
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15) !important;
+    }
+    #ai-input {
+        width: 100% !important;
+        min-height: 38px !important;
+        max-height: 110px !important;
+        padding: 8px 12px 4px 12px !important;
+        border: none !important;
+        outline: none !important;
+        background: transparent !important;
+        resize: none !important;
+        font-family: inherit !important;
+        font-size: 13.5px !important;
+        line-height: 1.45 !important;
+        color: #0f172a !important;
+        box-sizing: border-box !important;
+        overflow-y: auto !important;
+    }
+    #ai-chat-window.maximized #ai-input {
+        max-height: 220px !important;
+        font-size: 14.5px !important;
+    }
+    .ai-input-toolbar {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        padding: 2px 8px 6px 12px !important;
+        box-sizing: border-box !important;
+        width: 100% !important;
+    }
+    .ai-input-hint {
+        font-size: 10.5px !important;
+        font-weight: 700 !important;
+        color: #94a3b8 !important;
+        user-select: none !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        max-width: 140px !important;
+    }
+    @media (max-width: 380px) {
+        .ai-input-hint { display: none !important; }
+    }
+    .ai-input-actions {
+        display: flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+        margin-left: auto !important;
+    }
+    /* 📎 & 🎙️ Akčné tlačidlá príloh a diktovania */
+    #ai-attach-btn, #ai-dictate-btn {
+        background: #e2e8f0 !important;
+        color: #475569 !important;
+        border: none !important;
+        width: 32px !important;
+        height: 32px !important;
+        border-radius: 8px !important;
+        cursor: pointer !important;
+        font-size: 14px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        transition: all 0.2s ease !important;
+        padding: 0 !important;
+        flex-shrink: 0 !important;
+    }
+    #ai-attach-btn:hover, #ai-dictate-btn:hover {
+        background: #cbd5e1 !important;
+        color: #0f172a !important;
+        transform: scale(1.05) !important;
+    }
+    #ai-attach-btn.has-files {
+        background: #dbeafe !important;
+        color: #2563eb !important;
+        border: 1px solid #93c5fd !important;
+    }
+
+    /* 🖼️ Kontajner pre vizuálne náhľady pripojených súborov (Zobrazený LEN keď obsahuje súbory) */
+    .ai-file-preview-container {
+        display: none !important;
+        flex-wrap: wrap !important;
+        gap: 6px !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        max-height: 90px !important;
+        overflow-y: auto !important;
+        box-sizing: border-box !important;
+    }
+    .ai-file-preview-container.has-content {
+        display: flex !important;
+        padding: 8px 12px 4px 12px !important;
+    }
+    .ai-file-chip {
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+        background: #ffffff !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 8px !important;
+        padding: 3px 8px 3px 6px !important;
+        font-size: 11px !important;
+        font-weight: 700 !important;
+        color: #1e293b !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
+    .ai-file-chip-thumb {
+        width: 22px !important;
+        height: 22px !important;
+        border-radius: 4px !important;
+        object-fit: cover !important;
+    }
+    .ai-file-chip-name {
+        max-width: 120px !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+    .ai-file-chip-remove {
+        background: none !important;
+        border: none !important;
+        color: #ef4444 !important;
+        cursor: pointer !important;
+        font-size: 13px !important;
+        font-weight: 900 !important;
+        padding: 0 0 0 2px !important;
+        display: flex !important;
+        align-items: center !important;
+        line-height: 1 !important;
+    }
+    .ai-file-chip-remove:hover {
+        transform: scale(1.2) !important;
+    }
+    #ai-send-btn {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+        color: white !important;
+        border: none !important;
+        height: 32px !important;
+        padding: 0 12px !important;
+        border-radius: 8px !important;
+        cursor: pointer !important;
+        font-weight: 900 !important;
+        font-size: 12px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 5px !important;
+        letter-spacing: 0.5px !important;
+        box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3) !important;
+        transition: all 0.2s ease !important;
+    }
+    #ai-send-btn:hover {
+        background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+        transform: translateY(-1px) !important;
+        box-shadow: 0 4px 10px rgba(16, 185, 129, 0.45) !important;
+    }
+
+    .ai-bubble { padding: clamp(8px, 1vh, 12px) clamp(12px, 1.5vw, 16px); border-radius: 16px; max-width: 85%; line-height: 1.5; font-size: clamp(12px, 1.2vw, 14px); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+    .ai-bubble a { color: #2563eb !important; text-decoration: underline !important; font-weight: bold !important; word-break: break-word !important; }
+    .ai-bubble a:hover { color: #1d4ed8 !important; }
+    
+    /* 👁️ Prémiový inline odznak pre AI Preview odkazy - prirodzene ukotvený v riadku */
+    .ai-bubble a.ai-preview-badge {
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 4px !important;
+        background: linear-gradient(135deg, #059669 0%, #10b981 100%) !important;
+        color: #ffffff !important;
+        font-size: 11px !important;
+        font-weight: 800 !important;
+        padding: 2px 8px !important;
+        border-radius: 8px !important;
+        text-decoration: none !important;
+        box-shadow: 0 2px 6px rgba(16, 185, 129, 0.25) !important;
+        margin: 0 3px !important;
+        transition: all 0.2s ease !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        vertical-align: middle !important;
+        line-height: 1.4 !important;
+        cursor: pointer !important;
+        white-space: nowrap !important;
+    }
+    .ai-bubble a.ai-preview-badge:hover {
+        background: linear-gradient(135deg, #047857 0%, #059669 100%) !important;
+        transform: translateY(-1px) scale(1.02) !important;
+        box-shadow: 0 4px 10px rgba(16, 185, 129, 0.4) !important;
+        color: #ffffff !important;
+    }
+    /* 📧 Prémiový inline odznak pre Koncepty e-mailov */
+    .ai-bubble a.ai-mail-badge {
+        background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%) !important;
+        box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25) !important;
+    }
+    .ai-bubble a.ai-mail-badge:hover {
+        background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%) !important;
+        box-shadow: 0 4px 10px rgba(37, 99, 235, 0.4) !important;
+        color: #ffffff !important;
+    }
+    .ai-bot { 
+        background: #f1f5f9; 
+        align-self: flex-start; 
+        border-bottom-left-radius: 4px; 
+        color: #1e293b; 
+        border: 1px solid #e2e8f0; 
+        min-width: 140px !important; /* 🛡️ Zabezpečí, že ani 1-slovná odpoveď nezdeformuje tlačidlo */
+        box-sizing: border-box !important;
+    }
+    .ai-user { background: linear-gradient(135deg, #10b981, #059669); color: white; align-self: flex-end; border-bottom-right-radius: 4px; font-weight: 600; margin-left: auto; }
+
+    /* 🔊 Štýlovanie lišty a tlačidla Text-to-Speech v bubline asistenta */
+    .ai-bubble-actions {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: flex-end !important;
+        gap: 6px !important;
+        margin-top: 8px !important;
+        padding-top: 6px !important;
+        border-top: 1px solid rgba(226, 232, 240, 0.8) !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+    .ai-tts-btn {
+        background: rgba(255, 255, 255, 0.9) !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 6px !important;
+        padding: 4px 9px !important;
+        font-size: 11px !important;
+        font-weight: 700 !important;
+        color: #475569 !important;
+        cursor: pointer !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 4px !important;
+        transition: all 0.2s ease !important;
+        line-height: 1.2 !important;
+        white-space: nowrap !important; /* 🛡️ Zákaz zalomenia textu na tlačidle */
+        flex-shrink: 0 !important;
+    }
+    .ai-tts-btn:hover {
+        background: #ffffff !important;
+        color: #0f172a !important;
+        border-color: #94a3b8 !important;
+        transform: translateY(-1px) !important;
+    }
+    .ai-tts-btn.is-playing {
+        background: #dcfce7 !important;
+        color: #15803d !important;
+        border-color: #86efac !important;
+        box-shadow: 0 0 10px rgba(16, 185, 129, 0.3) !important;
+    }
+    .chat-ctrl-btn { background: none; border: none; color: white; cursor: pointer; font-size: 18px; padding: 0 5px; opacity: 0.8; transition: opacity 0.2s; }
+    .chat-ctrl-btn:hover { opacity: 1; color: #34d399; }
+
+    /* ==========================================
+       11. 🚀 GLOBÁLNY FIX PRE VŠETKY VYSKAKOVACIE OKNÁ (Z-INDEX)
+       ========================================== */
+    .calendarbox, 
+    .clockbox, 
+    #calendarbox, 
+    #clockbox,
+    .select2-container,
+    .select2-container--open,
+    .select2-container--default .select2-dropdown,
+    .select2-dropdown,
+    .select2-results,
+    .ui-datepicker,
+    .ui-widget-content {
+        z-index: 11000 !important;
+    }
+
+    /* 🔒 DOKONALÉ UKOTVENIE A SYMETRIA: 10PX HORE, 10PX DOLE, 0PX ZBYTOČNÉHO VOĽNÉHO MIESTA */
+    @media (min-width: 769px) {
+        html:has(body.change-list), html:has(body.list), html:has(#changelist),
+        body.change-list, body.list, body:has(#changelist),
+        body.change-list #container, body.list #container, body:has(#changelist) #container {
+            height: 100vh !important;
+            max-height: 100vh !important;
+            overflow: hidden !important;
+        }
+
+        /* 🎯 Zameranie skutočného tagu <main id="content-start"> z tvojho DOMu */
+        body.change-list main, body.list main, body:has(#changelist) main,
+        body.change-list main#content-start, body.list main#content-start, body:has(#changelist) main#content-start,
+        body.change-list #main, body.list #main, body:has(#changelist) #main,
+        body.change-list .main, body.list .main, body:has(#changelist) .main {
+            flex: 1 1 0 !important;
+            height: 100% !important;
+            min-height: 0 !important;
+            overflow: hidden !important;
+            display: flex !important;
+            flex-direction: row !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        body.change-list #content, body.list #content, body:has(#changelist) #content {
+            flex: 1 1 0 !important;
+            height: 100% !important;
+            min-height: 0 !important;
+            padding: 10px 10px 10px 10px !important;
+            margin: 0 !important;
+            box-sizing: border-box !important;
+            overflow: hidden !important;
+            display: flex !important;
+            flex-direction: column !important;
+        }
+
+        /* 🚀 LIKVIDÁCIA NEVIDITEĽNÝCH MEDZIER Z PRELOADERU */
+        #content > #isas-preloader-wrapper {
+            display: flex !important;
+        }
+
+        body.change-list #content-main, body.list #content-main, body:has(#changelist) #content-main {
+            flex: 1 1 0 !important;
+            height: 100% !important;
+            min-height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: hidden !important;
+            display: flex !important;
+            flex-direction: column !important;
+        }
+
+        body.change-list #changelist, body.list #changelist, body:has(#changelist) #changelist {
+            flex: 1 1 0 !important;
+            height: 100% !important;
+            min-height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: hidden !important;
+            display: flex !important;
+            flex-direction: row !important;
+            flex-wrap: nowrap !important;
+            align-items: stretch !important;
+            gap: 12px !important;
+            width: 100% !important;
+        }
+
+        body.change-list .changelist-form-container, body.list .changelist-form-container, body:has(#changelist) .changelist-form-container,
+        body.change-list .changelist-form-container > div,
+        body.change-list #changelist-form, body.list #changelist-form, body:has(#changelist) #changelist-form {
+            flex: 1 1 0 !important;
+            height: 100% !important;
+            min-height: 0 !important;
+            max-height: 100% !important;
+            display: flex !important;
+            flex-direction: column !important;
+            overflow: hidden !important;
+            background: transparent !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            box-sizing: border-box !important;
+        }
+
+        body.change-list .results, body.list .results, body:has(#changelist) .results {
+            flex: 1 1 0 !important;
+            height: 0 !important; /* Vynúti presné vyplnenie voľného priestoru bez vytlačenia pätičky von z obrazovky */
+            min-height: 0 !important;
+            max-height: none !important;
+            overflow-y: auto !important;
+            overflow-x: auto !important;
+            background: rgba(255, 255, 255, 0.85) !important;
+            backdrop-filter: blur(15px) !important;
+            border: 1px solid #e2e8f0 !important;
+            border-radius: 14px !important;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03), inset 0 -10px 10px -10px rgba(0,0,0,0.05) !important;
+            margin: 0 0 8px 0 !important;
+        }
+
+        body.change-list .changelist-footer, body.list .changelist-footer, body:has(#changelist) .changelist-footer,
+        body.change-list .paginator, body.list .paginator, body:has(#changelist) .paginator {
+            flex: 0 0 auto !important;
+            flex-shrink: 0 !important;
+            margin-top: auto !important; /* Pevne ukotví lištu na úplnom spodku kontajnera */
+            margin-bottom: 0 !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+            z-index: 103 !important;
+            padding: 6px 16px !important;
+        }
+
+        body.change-list #changelist-filter, body.list #changelist-filter, body:has(#changelist) #changelist-filter {
+            position: static !important;
+            height: 100% !important;
+            max-height: 100% !important;
+            margin: 0 !important;
+            flex-shrink: 0 !important;
+        }
+    }
+
+    .changelist-form-container {
+        display: flex !important;
+        flex-direction: column !important;
+        height: 100% !important;
+        max-height: 100% !important;
+        flex: 1 1 0 !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+        background: transparent !important;
+    }
+
+    .isas-top-bar {
+        flex-shrink: 0 !important;
+        z-index: 105 !important;
+        background: transparent !important;
+        padding: 0 !important;
+        margin: 0 0 4px 0 !important;
+    }
+
+    #changelist-form {
+        display: flex !important;
+        flex-direction: column !important;
+        flex: 1 1 0 !important;
+        height: 100% !important;
+        overflow: hidden !important;
+        min-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .results {
+        flex: 1 1 0 !important;
+        height: auto !important;
+        overflow-y: auto !important;
+        overflow-x: auto !important;
+        min-height: 0 !important;
+        margin: 0 0 6px 0 !important;
+        padding: 0 !important;
+        background: rgba(255, 255, 255, 0.85) !important;
+        backdrop-filter: blur(15px) !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 14px !important;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03), inset 0 -10px 10px -10px rgba(0,0,0,0.05) !important;
+    }
+
+    .changelist-footer,
+    .paginator {
+        flex: 0 0 auto !important;
+        flex-shrink: 0 !important;
+        z-index: 103 !important;
+        margin: 0 !important;
+        padding: 6px 16px !important;
+    }
+
+    #result_list {
+        margin: 0 !important;
+    }
+
+    #changelist-form .actions {
+        flex-shrink: 0 !important;
+        z-index: 104 !important;
+    }
+
+    #result_list thead th {
+        position: sticky !important;
+        top: 0 !important;
+        z-index: 10 !important;
+        background: rgba(241, 245, 249, 0.95) !important;
+        backdrop-filter: blur(4px) !important;
+    }
+
+    .paginator {
+        flex-shrink: 0 !important;
+        z-index: 103 !important;
+    }
+
+    /* ==========================================
+       📱 11. MOBILNÝ PANCIER
+       ========================================== */
+    @media (max-width: 768px) {
+
+        /* --- 0. ABSOLÚTNA LIKVIDÁCIA HORIZONTÁLNEHO SCROLLU --- */
+        /* 🛡️ html, body a #container MUSIA mať overflow: visible, inak zmizne hlavička! */
+        html, body, #container {
+            width: 100% !important;
+            max-width: 100% !important;
+            overflow-x: visible !important;
+            box-sizing: border-box !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        
+        #content, #content-main, #changelist, .isas-top-bar, .changelist-form-container, .results { 
+            width: 100% !important; 
+            max-width: 100% !important; 
+            overflow-x: clip !important;
+            box-sizing: border-box !important; 
+            margin-left: 0 !important; 
+            margin-right: 0 !important; 
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+            scrollbar-width: none !important; /* 🚫 Skrytie scrollovníka (Firefox) */
+            -ms-overflow-style: none !important;
+        }
+
+        /* 🚫 Skrytie scrollovníka (Chrome / Safari) */
+        #content::-webkit-scrollbar,
+        #content-main::-webkit-scrollbar,
+        #changelist::-webkit-scrollbar,
+        .changelist-form-container::-webkit-scrollbar,
+        .results::-webkit-scrollbar {
+            display: none !important;
+            width: 0 !important;
+            height: 0 !important;
+        }
+        
+        /* Globálna poistka pre mobil: žiadny padding nesmie roztiahnuť prvok mimo obrazovku */
+        * { 
+            box-sizing: border-box !important; 
+        }        
+
+        /* --- 1. ZÁCHRANA HLAVIČKY, TANCUJÚCEHO PÁSU A POSUVNÝCH ODZNAKOV --- */
+        #branding {
+            flex: 0 1 auto !important;
+            min-width: 0 !important;
+        }
+        .header-marquee {
+            display: flex !important;
+            flex: 0 1 auto !important;
+            min-width: 30px !important;
+            margin: 0 4px !important;
+            mask-image: none !important;
+            -webkit-mask-image: none !important;
+        }
+        .m-icon {
+            font-size: 13px !important;
+            margin: 0 3px !important;
+        }
+        #user-tools { 
+            display: flex !important;
+            flex-direction: row !important;
+            flex-wrap: nowrap !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            flex: 1 1 auto !important;
+            min-width: 0 !important;
+            gap: 6px !important; 
+            padding-left: 4px !important;
+            overflow-x: auto !important;
+            overflow-y: hidden !important;
+            -webkit-overflow-scrolling: touch !important;
+            scrollbar-width: none !important;
+        }
+        #user-tools::-webkit-scrollbar { display: none !important; }
+        
+        .isas-user-badge, .isas-tool-btn { 
+            font-size: 10px !important; 
+            height: 30px !important; 
+            padding: 4px 10px !important; 
+            display: inline-flex !important; 
+            align-items: center !important; 
+            border-radius: 12px !important; 
+            flex-shrink: 0 !important;
+            white-space: nowrap !important;
+            width: auto !important;
+        }
+
+        /* --- 1.5 ODOMKNUTIE NAVIGÁCIE A TLAČIDLA PRIDAŤ NA MOBILE --- */
+        .breadcrumbs {
+            position: static !important;
+            top: auto !important;
+            padding: 8px 12px !important;
+            padding-right: 12px !important; /* 🛡️ Zrušenie PC 180px odsadenia */
+            width: 100% !important;
+            min-height: auto !important;
+            box-sizing: border-box !important;
+            display: flex !important;
+            flex-wrap: wrap !important;
+            gap: 4px !important;
+        }
+
+        .object-tools {
+            position: static !important;
+            top: auto !important;
+            right: auto !important;
+            width: 100% !important;
+            margin: 4px 0 8px 0 !important;
+            padding: 0 10px !important;
+            box-sizing: border-box !important;
+            display: flex !important;
+        }
+
+        .object-tools li,
+        .object-tools a,
+        .object-tools a.addlink {
+            width: 100% !important;
+            height: 38px !important;
+            justify-content: center !important;
+            font-size: 11px !important;
+            border-radius: 10px !important;
+            box-sizing: border-box !important;
+        }
+
+        #content {
+            padding-top: 4px !important;
+        }
+
+        /* --- 2. DASHBOARD A CHANGELIST (Správne poradie prvkov pre filter) --- */
+        body.dashboard #content-main > div,
+        body.app-Evidencia #content-main > div,
+        .dashboard-grid, .dashboard-grid > div {
+            width: 100% !important; max-width: 100vw !important; margin-left: 0 !important; margin-right: 0 !important;
+            box-sizing: border-box !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch !important;
+        }
+
+        /* Aktivujeme Flexbox pre #changelist, aby sme mohli prehadzovať prvky */
+        #changelist { 
+            display: flex !important; 
+            flex-direction: column !important; 
+            margin: 0 !important;
+            padding: 0 !important;
+            gap: 0 !important;
+        }
+
+        /* 1. FILTER POJDE AKO PRVÝ NAJVYŠŠIE (BEZ MEDZIER HORE A DOLE) */
+        #changelist-filter { 
+            display: block !important; 
+            order: 1 !important; 
+            width: 100% !important; 
+            margin: 0 0 10px 0 !important; 
+            padding: 0 !important;
+            box-sizing: border-box !important; 
+            position: static !important;
+            top: auto !important;
+            max-height: 45vh !important;
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
+            -webkit-overflow-scrolling: touch !important;
+        }
+        
+        /* 🛑 LIKVIDÁCIA 160PX SPODNÉHO PRÁZDNEHO PRIESTORU Z PC VERZIE */
+        #changelist-filter::after {
+            display: none !important;
+            content: none !important;
+            height: 0 !important;
+        }
+
+        /* Poistka, aby vnútorný zoznam nebol blokovaný */
+        #changelist-filter ul {
+            overflow-y: visible !important;
+            max-height: none !important;
+        }
+
+        /* 2. KONTAJNER S TABUĽKOU A AKCIAMI (POD FILTROM) */
+        .changelist-form-container,
+        .changelist-form-container > div,
+        #changelist-form {
+            order: 2 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            overflow: visible !important;
+            border-radius: 12px !important;
+            background: transparent !important;
+            margin-bottom: 15px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            height: auto !important;
+            min-height: min-content !important;
+            flex: none !important;
+        }
+
+        /* 🚨 ZÁCHRANA PRE RESULTS DO 960PX: Zrušenie nulovej výšky, zobrazenie kariet a dát */
+        .results,
+        body.change-list .results,
+        body.list .results,
+        body:has(#changelist) .results {
+            order: 2 !important;
+            width: 100% !important;
+            height: auto !important;
+            min-height: min-content !important;
+            max-height: none !important;
+            display: block !important;
+            overflow-x: auto !important;
+            overflow-y: visible !important;
+            flex: none !important;
+            margin: 0 0 15px 0 !important;
+            box-sizing: border-box !important;
+        }
+
+        /* 3. STRÁNKOVANIE (Paginator) ÚPLNE DOLE */
+        .paginator { 
+            order: 3 !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+        }
+
+        /* 4. 🎯 DEFINITÍVNA LIKVIDÁCIA FIALOVÝCH FLEX MEDZIER Z DEVTOOLS */
+        .isas-top-bar,
+        .isas-actions-row,
+        .isas-actions-row .actions,
+        .isas-search-anim-column,
+        #toolbar,
+        #toolbar form,
+        #toolbar form#changelist-search,
+        form#changelist-search > div:not(.isas-autocomplete-results) {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 0 !important; /* 🚫 Zabitie fialových Flex medzier z JS */
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            background: transparent !important;
+        }
+
+        /* 🔘 Tlačidlá akcií tesne spojené bez akejkoľvek medzery */
+        .isas-actions-row .actions > *,
+        .isas-actions-row .actions button,
+        .isas-actions-row .actions a,
+        .isas-actions-row .isas-action-btn,
+        #btn-delete-selected {
+            margin: 0 !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+            border-radius: 0 !important;
+            border-bottom: 1px solid #cbd5e1 !important;
+        }
+
+        /* 🔍 Vyhľadávacie pole a tlačidlo Vyhľadať (Spojené do jedného bloku) */
+        form#changelist-search input[type="text"],
+        form#changelist-search input[type="submit"],
+        .isas-top-bar .isas-reset-search-btn {
+            margin: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
+            border-radius: 0 !important;
+            border-bottom: 1px solid #cbd5e1 !important;
+            flex: none !important; /* Zrušenie flex-grow z JS */
+        }
+
+        /* ⚙️ PANEL ISAS CORE: Horizontálne vycentrovaná bez bielej presekávacej čiary */
+        .isas-core-workshop {
+            display: flex !important;
+            flex-direction: row !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            height: 38px !important;
+            min-height: 38px !important;
+            max-height: 38px !important;
+            padding: 0 14px !important;
+            margin: 0 !important;
+            box-sizing: border-box !important;
+            overflow: hidden !important;
+            background: #000000 !important;
+            border: none !important;
+            border-radius: 0 0 8px 8px !important;
+            width: 100% !important;
+            max-width: 100% !important;
+        }
+
+        /* Zaoblenie iba na úplnom vrchu a spodku celého bloku (Odstránenie vnútorných čiar) */
+        .isas-actions-row .actions > *:first-child,
+        form#changelist-search input[type="text"] {
+            border-top-left-radius: 8px !important;
+            border-top-right-radius: 8px !important;
+        }
+        
+        .isas-actions-row .actions > *:last-child,
+        form#changelist-search input[type="submit"],
+        .isas-top-bar .isas-reset-search-btn {
+            border-bottom: none !important; /* 🚫 Zrušenie čiary nad workshopom */
+        }
+
+        .isas-core-workshop .workshop-title {
+            font-size: 13px !important;
+            font-weight: 900 !important;
+            color: #34d399 !important;
+            white-space: nowrap !important;
+            line-height: 1 !important;
+            margin: 0 !important;
+        }
+
+        .isas-core-workshop .workshop-scene {
+            display: flex !important;
+            flex-direction: row !important;
+            align-items: center !important;
+            gap: 6px !important;
+            font-size: 15px !important;
+            line-height: 1 !important;
+            overflow: hidden !important;
+            margin: 0 !important;
+        }
+
+        /* Zaoblenie iba na úplnom vrchu a spodku celého bloku */
+        .isas-actions-row .actions > *:first-child,
+        #toolbar form#changelist-search input[type="text"] {
+            border-top-left-radius: 8px !important;
+            border-top-right-radius: 8px !important;
+        }
+        .isas-actions-row .actions > *:last-child,
+        .isas-core-workshop {
+            border-bottom-left-radius: 8px !important;
+            border-bottom-right-radius: 8px !important;
+        }
+        
+        #toolbar form > div > input, #changelist-search form > div > input {
+            width: 100% !important;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
+        }        
+
+        /* Roztiahnutie akčných prvkov a tlačidiel (Tesne spojené) */
+        #searchbar, 
+        #toolbar input[type="text"], 
+        #toolbar input[type="submit"], 
+        #changelist-search input[type="text"], 
+        #changelist-search input[type="submit"], 
+        .actions button, 
+        .isas-action-btn, 
+        #btn-delete-selected {
+            width: 100% !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
+            height: auto !important;
+            min-height: 42px !important;
+            box-sizing: border-box !important;
+            margin: 0 0 1px 0 !important; /* 🚫 Žiadne veľké medzery */
+            padding: 10px 14px !important;
+            white-space: normal !important;
+            position: static !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            text-align: center !important;
+            border-radius: 8px !important;
+        }
+        
+        .actions span.all, .actions span.action-counter, .actions span.clear { display: none !important; }
+
+        /* OPRAVA PRE CUSTOM TOP BAR */
+        .isas-top-bar {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 0 !important;
+            margin-bottom: 10px !important;
+            width: 100% !important;
+        }
+
+        .isas-top-bar #changelist-search input[type="text"] {
+            width: 100% !important;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
+        }
+        
+        .isas-top-bar {
+        flex-shrink: 0 !important;
+        z-index: 105 !important;
+        background: transparent !important;
+        padding: 0 !important;
+        margin: 0 0 6px 0 !important;
+        display: flex !important;
+        flex-wrap: wrap !important;
+        align-items: flex-start !important;
+        gap: 10px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .isas-actions-row {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        flex: 0 0 auto !important;
+        height: auto !important;
+        min-height: 0 !important;
+        min-width: 0 !important;
+        gap: 0 !important;
+        box-sizing: border-box !important;
+    }
+
+    .isas-search-anim-column {
+        display: flex !important;
+        flex-direction: column !important;
+        flex: 0 0 auto !important;
+        height: auto !important;
+        min-height: 0 !important;
+        min-width: 0 !important;
+        gap: 0 !important;
+        box-sizing: border-box !important;
+    }
+
+        /* --- 5. AI ASISTENT A DETEKTÍV --- */
+        #ai-chat-container { bottom: 20px !important; right: 20px !important; position: fixed !important; }
+        #ai-toggle-btn { width: 65px !important; height: 65px !important; font-size: 11px !important; }
+        #floating-sn-search-container { bottom: 20px !important; right: 90px !important; left: auto !important; z-index: 2147483647 !important; }
+        #floating-search-trigger { width: 65px !important; height: 65px !important; font-size: 26px !important; }
+
+        /* --- 6. BEŽNÉ ZOZNAMY (RESPONZÍVNE KARTY BEZ PREKRÝVANIA TEXTU) --- */
+        #result_list, #result_list tbody, #result_list tr {
+            display: flex !important;
+            flex-direction: column !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+            height: auto !important;
+            min-height: min-content !important;
+        }
+        
+        #result_list thead { display: none !important; }
+        
+        /* Samotná karta riadku */
+        #result_list tr { 
+            margin-bottom: 16px !important; 
+            border: 1px solid rgba(203, 213, 225, 0.9) !important; 
+            border-radius: 14px !important; 
+            background: rgba(255, 255, 255, 0.98) !important;
+            padding: 12px 14px !important;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06) !important;
+            position: relative !important;
+            overflow: visible !important;
+            gap: 8px !important;
+        }
+        
+        /* Každá bunka ako samostatný blok s prirodzenou výškou */
+        #result_list td, #result_list th { 
+            border: none !important; 
+            border-bottom: none !important; /* 🚫 Odstránenie čiar */
+            padding: 6px 0 !important; 
+            text-align: center !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            width: 100% !important;
+            height: auto !important;
+            min-height: min-content !important;
+            position: static !important;
+            box-sizing: border-box !important;
+        }
+
+        /* 🚨 ZÁCHRANA PRED PREKRÝVANÍM: Zrušenie PC absolútnych pozícií a fixných výšok */
+        #result_list td *, 
+        #result_list th * {
+            position: static !important;
+            max-width: 100% !important;
+            height: auto !important;
+            min-height: min-content !important;
+            box-sizing: border-box !important;
+            transform: none !important;
+            text-align: center !important;
+            white-space: normal !important;
+        }
+
+        #result_list td a, 
+        #result_list th a,
+        #result_list td button, 
+        #result_list th button,
+        #result_list td input, 
+        #result_list th input {
+            position: relative !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+
+        #result_list td > div, 
+        #result_list th > div {
+            width: 100% !important;
+            height: auto !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 4px !important;
+            margin: 0 auto !important;
+        }
+
+        /* Štítok kategórie (data-label) */
+        #result_list td:not(.action-checkbox)::before, 
+        #result_list th::before {
+            content: attr(data-label);
+            font-size: 11px !important;
+            font-weight: 900 !important;
+            color: #64748b !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.5px !important;
+            margin: 0 auto 4px auto !important;
+            text-align: center !important;
+            display: block !important;
+            width: 100% !important;
+        }
+        
+        /* Checkbox na označenie položky */
+        #result_list td.action-checkbox {
+            flex-direction: row !important;
+            justify-content: center !important;
+            align-items: center !important;
+            gap: 10px !important;
+            padding: 4px 0 !important;
+            border: none !important;
+            border-bottom: none !important; /* 🚫 Likvidácia krátkej čiarky pod checkboxom */
+        }
+
+        /* 🚫 Likvidácia prázdnych buniek */
+        #result_list td:empty, 
+        #result_list th:empty,
+        #result_list td:not([data-label])::before,
+        #result_list td[data-label=""]::before {
+            display: none !important;
+            border: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            height: 0 !important;
+        }
+        
+        #result_list td.action-checkbox input[type="checkbox"] {
+            width: 22px !important;
+            height: 22px !important;
+            min-width: 22px !important;
+            min-height: 22px !important;
+            accent-color: #10b981 !important;
+            margin: 0 !important;
+            cursor: pointer !important;
+            display: inline-block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+
+        #result_list td.action-checkbox::before {
+            display: none !important;
+        }
+        
+        #result_list td:last-child { 
+            border-bottom: none !important; 
+        }
+
+        /* Úprava inputov pre mobil, aby sa na ne ľahko ťukalo */
+        #result_list td input[type="text"], 
+        #result_list td input[type="number"] {
+            width: 100% !important;
+            padding: 10px 12px !important;
+            border-radius: 8px !important;
+            border: 1px solid #cbd5e1 !important;
+            background: #f8fafc !important;
+            font-weight: 600 !important;
+            font-size: 14px !important;
+        }
+
+        /* --- 5. PREMIOVÁ KARTA SKLADU --- */
+        .premium-sklad-card {
+            flex-direction: column !important; text-align: center !important; padding: 30px 20px !important;
+            border-radius: 20px !important; gap: 15px !important; margin: 10px 0 20px 0 !important; width: 100% !important;
+        }
+        .premium-sklad-card::before { width: 100% !important; height: 8px !important; left: 0 !important; top: 0 !important; border-radius: 20px 20px 0 0 !important; background: linear-gradient(90deg, #3b82f6, #4f46e5, #8b5cf6) !important; }
+        .sklad-icon-wrap { margin-right: 0 !important; margin-bottom: 5px !important; font-size: 60px !important; }
+        .sklad-info { align-items: center !important; gap: 12px !important; }
+        .sklad-title { font-size: 32px !important; }
+        .sklad-subtitle { border-left: none !important; border-bottom: 3px solid #3b82f6 !important; padding-left: 0 !important; padding-bottom: 8px !important; text-align: center !important; font-size: 11px !important; }
+        .sklad-status-badge { margin: 0 auto 10px auto !important; padding: 10px 20px !important; font-size: 12px !important; width: max-content !important; }
+        .sklad-action-btn { width: 100% !important; padding: 16px 20px !important; font-size: 14px !important; box-sizing: border-box !important; }
+
+        /* --- 6. PRIDÁVACIE FORMULÁRE (Add / Change Forms) --- */
+        fieldset.module .form-row {
+            display: flex !important; flex-direction: column !important; align-items: flex-start !important;
+            padding: 12px 15px !important; border-bottom: 1px solid #f1f5f9 !important;
+        }
+        fieldset.module .form-row > div { width: 100% !important; display: flex !important; flex-direction: column !important; }
+        fieldset.module .form-row label {
+            width: 100% !important; text-align: left !important; padding-left: 0 !important;
+            margin-bottom: 6px !important; color: #64748b !important; font-size: 13px !important; font-weight: 800 !important;
+        }
+        
+        .form-row input[type="text"], .form-row input[type="number"], .form-row input[type="password"],
+        .form-row input[type="email"], .form-row input[type="url"], .form-row textarea, .form-row select {
+            width: 100% !important; max-width: 100% !important; box-sizing: border-box !important;
+            padding: 10px 12px !important; border-radius: 8px !important; border: 1px solid #cbd5e1 !important;
+        }
+        
+        .form-row .checkbox-row { display: flex !important; flex-direction: row !important; align-items: center !important; gap: 10px !important; }
+        .form-row .checkbox-row label { width: auto !important; margin-bottom: 0 !important; }
+
+        /* ==========================================================================
+           🚨 7. OPRAVA TABUĽKOVÝCH INLINES NA MOBILE (Záchrana pred vertikálnym stlačením)
+           ========================================================================== */
+        
+        /* 1. OBAL TABUĽKY - Tu sa deje scroll. Nesmie mať žiadny padding, inak robí bublinu */
+        body .djn-items, 
+        body .inline-related .tabular {
+            display: block !important;
+            width: 100% !important;
+            max-width: 100vw !important;
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch !important;
+            padding: 0 !important; 
+            margin: 0 !important;
+            border: none !important;
+        }
+
+        /* 2. SAMOTNÁ TABUĽKA - Končí presne s posledným stĺpcom */
+        body .djn-table, 
+        body .tabular table {
+            display: table !important;
+            width: max-content !important;
+            min-width: 100% !important;
+            table-layout: auto !important;
+            border-collapse: collapse !important;
+            margin: 0 !important;
+            background: transparent !important;
+        }
+
+        /* 3. RIADKY A BUNKY - Zarovnanie presne doľava */
+        body .djn-table tr, 
+        body .tabular table tr {
+            display: table-row !important;
+        }
+
+        body .djn-table th, 
+        body .tabular table th {
+            display: table-cell !important;
+            text-align: left !important;
+            white-space: nowrap !important;
+            padding: 12px 8px !important;
+            vertical-align: middle !important;
+            border-bottom: 2px solid #e2e8f0 !important;
+        }
+
+        body .djn-table td, 
+        body .tabular table td {
+            display: table-cell !important;
+            text-align: left !important;
+            padding: 8px !important;
+            vertical-align: middle !important;
+            border-bottom: 1px solid #f1f5f9 !important;
+        }
+
+        /* 4. INPUTY A SELECTY - Roztiahnuté na šírku bunky, zarovnané doľava */
+        body .djn-table td input[type="text"], 
+        body .djn-table td input[type="number"], 
+        body .djn-table td select,
+        body .tabular table td input[type="text"], 
+        body .tabular table td input[type="number"], 
+        body .tabular table td select {
+            display: block !important;
+            width: 100% !important;
+            min-width: 120px !important;
+            margin: 0 !important;
+            text-align: left !important;
+            box-sizing: border-box !important;
+        }
+
+        /* 5. TLAČIDLÁ NA KONCI - Pevná šírka, aby nepretekali do prázdna */
+        body .djn-table td.delete, 
+        body .tabular table td.delete {
+            width: 110px !important;
+            min-width: 110px !important;
+            max-width: 110px !important;
+            padding-right: 10px !important;
+        }
+        
+        body .djn-table td.td-more-info {
+            width: 90px !important;
+            min-width: 90px !important;
+        }
+
+        /* 6. ABSOLÚTNA LIKVIDÁCIA SKRYTÝCH POLÍ (Aby nerobili biele miesto) */
+        body .djn-table th.isas-hidden-header,
+        body .djn-table td.isas-placeholder,
+        body .djn-table td.original,
+        body .tabular table td.original,
+        body .djn-table th.original,
+        body .tabular table th.original {
+            display: none !important;
+            width: 0 !important;
+            min-width: 0 !important;
+            max-width: 0 !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            border: none !important;
+        }
+
+        /* 7. TLAČIDLO PRIDAŤ ĎALŠÍ - Fix pre rozbíjanie šírky */
+        body .djn-table tr.add-row td, 
+        body .tabular table tr.add-row td {
+            display: table-cell !important;
+            padding: 15px 0 !important;
+            text-align: left !important;
+            border: none !important;
+        }
+
+        /* 8. OCHRANA PRED DLHÝMI CHYBOVÝMI HLÁŠKAMI A NÁPOVEDAMI */
+        body .djn-table td .help, 
+        body .djn-table td .errorlist, 
+        body .tabular table td .help, 
+        body .tabular table td .errorlist,
+        .errornote {
+            display: block !important; 
+            width: 100% !important; 
+            white-space: normal !important;
+            word-wrap: break-word !important; 
+            box-sizing: border-box !important;
+            font-size: 10px !important;
+            margin-top: 4px !important;
+            line-height: 1.2 !important;
+            text-align: left !important;
+        }
+
+        /* Farebné odlíšenie chýb a nápovedy */
+        body .djn-table td .errorlist, 
+        body .tabular table td .errorlist {
+            color: #dc2626 !important;
+            font-weight: bold !important;
+        }
+
+        body .djn-table td .help, 
+        body .tabular table td .help {
+            color: #64748b !important;
+        }
+    }
+
+    /* ==========================================
+       🔐 12. STRÁNKA ZMENY HESLA (KOMPAKTNÝ PREMIOVÝ DIZAJN)
+       ========================================== */
+    body.isas-password-page, body.password-change {
+        overflow: hidden !important;
+    }
+
+    body.isas-password-page #content, body.password-change #content {
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        min-height: calc(100vh - 120px) !important;
+        padding: 15px !important;
+        box-sizing: border-box !important;
+    }
+
+    /* 🌟 Prémiová Kompaktná Karta (Bez nutnosti scrollovať) */
+    body.isas-password-page #content-main, body.password-change #content-main {
+        width: 100% !important;
+        max-width: 480px !important;
+        height: auto !important;
+        overflow: hidden !important; /* 🚫 Úplný zákaz scrollovania v karte */
+        background: rgba(255, 255, 255, 0.96) !important;
+        backdrop-filter: blur(20px) !important;
+        border: 1px solid rgba(226, 232, 240, 0.9) !important;
+        border-radius: 18px !important;
+        padding: 18px 24px !important;
+        box-shadow: 0 20px 40px -10px rgba(0,0,0,0.12) !important;
+        margin: 0 auto !important;
+        position: relative !important;
+        box-sizing: border-box !important;
+    }
+
+    /* 🚫 Horný prúžok odstránený - čistá prémiová karta */
+    body.isas-password-page #content-main::before, 
+    body.password-change #content-main::before {
+        display: none !important;
+        content: none !important;
+    }
+
+    /* 🛡️ Kompaktný Informačný panel */
+    body.isas-password-page #content-main form > div > p, body.password-change #content-main form > div > p {
+        color: #1e293b !important;
+        font-size: 11.5px !important;
+        line-height: 1.4 !important;
+        margin-bottom: 10px !important;
+        font-weight: 600 !important;
+        text-align: left !important;
+        background: #eff6ff !important;
+        padding: 8px 12px !important;
+        border-radius: 8px !important;
+        border-left: 3px solid #3b82f6 !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 8px !important;
+    }
+    body.isas-password-page #content-main form > div > p::before, body.password-change #content-main form > div > p::before {
+        content: '🔒';
+        font-size: 18px !important;
+    }
+
+    body.isas-password-page fieldset.module, body.password-change fieldset.module {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    body.isas-password-page .form-row, body.password-change .form-row {
+        border-bottom: none !important;
+        padding: 0 0 8px 0 !important;
+        background: transparent !important;
+    }
+
+    body.isas-password-page .form-row .flex-container, body.password-change .form-row .flex-container {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        width: 100% !important;
+    }
+
+    /* 🏷️ Nadpisy polí */
+    body.isas-password-page .form-row label, body.password-change .form-row label {
+        font-weight: 900 !important;
+        color: #0f172a !important;
+        font-size: 11px !important;
+        margin-bottom: 6px !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.5px !important;
+        width: 100% !important;
+        text-align: left !important;
+        padding: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+    }
+
+    body.isas-password-page label[for="id_old_password"]::before, body.password-change label[for="id_old_password"]::before { content: '🗝️'; font-size: 13px; }
+    body.isas-password-page label[for="id_new_password1"]::before, body.password-change label[for="id_new_password1"]::before { content: '✨'; font-size: 13px; }
+    body.isas-password-page label[for="id_new_password2"]::before, body.password-change label[for="id_new_password2"]::before { content: '🔐'; font-size: 13px; }
+
+    /* ⌨️ Kompaktné Inputy (42px) */
+    body.isas-password-page .password-wrapper, body.password-change .password-wrapper {
+        position: relative !important;
+        width: 100% !important;
+        display: block !important;
+    }
+
+    body.isas-password-page .form-row input[type="password"],
+    body.isas-password-page .form-row input[type="text"],
+    body.password-change .form-row input[type="password"],
+    body.password-change .form-row input[type="text"] {
+        width: 100% !important;
+        max-width: 100% !important;
+        height: 38px !important;
+        padding: 0 42px 0 12px !important;
+        border-radius: 8px !important;
+        border: 1.5px solid #cbd5e1 !important;
+        background: #f8fafc !important;
+        font-size: 13.5px !important;
+        font-weight: 600 !important;
+        color: #0f172a !important;
+        box-sizing: border-box !important;
+        transition: all 0.2s ease !important;
+    }
+
+    body.isas-password-page .form-row input:focus, body.password-change .form-row input:focus {
+        border-color: #3b82f6 !important;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
+        background: #ffffff !important;
+        outline: none !important;
+    }
+
+    /* 👁️ Tlačidlo Zobraziť / Skryť heslo */
+    body.isas-password-page .toggle-password-btn, body.password-change .toggle-password-btn {
+        position: absolute !important;
+        right: 12px !important;
+        top: 50% !important;
+        transform: translateY(-50%) !important;
+        background: transparent !important;
+        border: none !important;
+        cursor: pointer !important;
+        font-size: 18px !important;
+        color: #94a3b8 !important;
+        padding: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        z-index: 5 !important;
+    }
+
+    /* 📋 Kompaktný Checklist pravidiel hesla */
+    body.isas-password-page .form-row .help,
+    body.isas-password-page .help,
+    body.password-change .form-row .help,
+    body.password-change .help {
+        color: #475569 !important;
+        font-size: 10.5px !important;
+        margin: 4px 0 0 0 !important;
+        line-height: 1.35 !important;
+        display: block !important;
+        font-weight: 600 !important;
+        padding: 8px 12px !important;
+        background: #f8fafc !important;
+        border-radius: 8px !important;
+        border: 1px solid #e2e8f0 !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    body.isas-password-page .help ul, body.password-change .help ul {
+        margin: 4px 0 0 0 !important;
+        padding: 0 !important;
+        list-style: none !important;
+    }
+
+    body.isas-password-page .help ul li, body.password-change .help ul li {
+        position: relative !important;
+        padding-left: 20px !important;
+        margin-bottom: 3px !important;
+        color: #475569 !important;
+        font-size: 11px !important;
+        line-height: 1.4 !important;
+    }
+
+    body.isas-password-page .help ul li::before, body.password-change .help ul li::before {
+        content: '✓' !important;
+        position: absolute !important;
+        left: 0 !important;
+        color: #10b981 !important;
+        font-weight: 900 !important;
+        font-size: 12px !important;
+    }
+
+    /* 🚀 Kompaktné Tlačidlo Uložiť */
+    body.isas-password-page .submit-row, body.password-change .submit-row {
+        margin-top: 10px !important;
+        margin-bottom: 0 !important;
+        padding: 0 !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        display: flex !important;
+        justify-content: center !important;
+    }
+
+    body.isas-password-page .submit-row input[type="submit"], body.password-change .submit-row input[type="submit"] {
+        width: 100% !important;
+        height: 44px !important;
+        min-height: 44px !important;
+        padding: 0 20px !important;
+        font-size: 13px !important;
+        margin: 0 !important;
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+        border-radius: 10px !important;
+        font-weight: 900 !important;
+        letter-spacing: 0.5px !important;
+        box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35) !important;
+        transition: all 0.25s ease !important;
+        border: none !important;
+        color: white !important;
+        text-transform: uppercase !important;
+        cursor: pointer !important;
+    }
+
+    body.isas-password-page .submit-row input[type="submit"]:hover, body.password-change .submit-row input[type="submit"]:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 6px 18px rgba(16, 185, 129, 0.45) !important;
+    }
+
+    /* 🔙 Kompaktné Tlačidlo Naspäť */
+    body.isas-password-page .isas-back-btn-top, body.password-change .isas-back-btn-top {
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+        background: #f8fafc !important;
+        color: #475569 !important;
+        padding: 4px 10px !important;
+        border-radius: 6px !important;
+        font-size: 9.5px !important;
+        font-weight: 800 !important;
+        text-transform: uppercase !important;
+        text-decoration: none !important;
+        margin-bottom: 8px !important;
+        border: 1px solid #e2e8f0 !important;
+    }
+
+    /* ==========================================
+       📝 13. GLOBÁLNY ISAS QUICKNOTE (Poznámkový blok)
+       ========================================== */
+    #isas-quicknote-container {
+        position: fixed !important;
+        bottom: 20px !important;
+        left: 20px !important;
+        z-index: 2147483647 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        font-family: 'Segoe UI', sans-serif !important;
+    }
+
+    #quicknote-toggle-btn {
+        background: #1e293b !important; 
+        color: #f59e0b !important; 
+        border: 3px solid #f59e0b !important;
+        border-radius: 50% !important; 
+        width: clamp(65px, 7vw, 85px) !important; 
+        height: clamp(65px, 7vw, 85px) !important;
+        cursor: pointer !important; 
+        font-size: clamp(24px, 2.5vw, 30px) !important;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.4) !important; 
+        transition: transform 0.2s !important;
+        display: flex !important; 
+        align-items: center !important; 
+        justify-content: center !important;
+        padding: 0 !important;
+    }
+    #quicknote-toggle-btn:hover { transform: scale(1.05) !important; }
+
+    #quicknote-window {
+        display: none; 
+        width: clamp(300px, 85vw, 380px) !important; 
+        height: clamp(350px, 60vh, 500px) !important;
+        background: rgba(255, 255, 255, 0.95) !important; 
+        backdrop-filter: blur(10px) !important;
+        border-radius: 16px !important; 
+        border: 1px solid rgba(203, 213, 225, 0.8) !important;
+        position: absolute !important; 
+        bottom: clamp(80px, 10vh, 100px) !important; 
+        left: 0 !important;
+        flex-direction: column !important; 
+        box-shadow: 0 20px 40px rgba(0,0,0,0.15) !important;
+        overflow: hidden !important; 
+        z-index: 9999 !important;
+        transition: opacity 0.3s ease, transform 0.3s ease !important;
+    }
+
+    /* 📌 Pripnutý režim - jemne priehľadný a menší, keď naň neukazujeme myšou */
+    #quicknote-window.pinned:not(:hover):not(:focus-within) {
+        opacity: 0.4 !important;
+        transform: scale(0.9) !important;
+        transform-origin: bottom left !important;
+    }
+    
+    /* Zvýraznenie, že je blok pripnutý */
+    #quicknote-window.pinned {
+        border: 2px solid #f59e0b !important;
+        box-shadow: 0 0 20px rgba(245, 158, 11, 0.15) !important;
+    }
+
+    /* 🔲 Maximalizovaný režim */
+    #quicknote-window.maximized {
+        width: 80vw !important; 
+        height: 85vh !important; 
+        bottom: 7.5vh !important; 
+        left: 10vw !important; 
+        border-radius: 20px !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+
+    /* 🎙️ Animácia nahrávania hlasu */
+    @keyframes pulse-mic {
+        0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+        70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    }
+    .qn-btn.recording, #ai-dictate-btn.recording {
+        background: #ef4444 !important;
+        color: white !important;
+        animation: pulse-mic 1.5s infinite !important;
+    }
+
+    #quicknote-textarea {
+        flex: 1 !important; 
+        width: 100% !important; 
+        border: none !important; 
+        resize: none !important; 
+        padding: 15px !important;
+        font-family: 'Inter', 'Segoe UI', sans-serif !important; 
+        font-size: 14px !important; 
+        line-height: 1.6 !important;
+        color: #1e293b !important; 
+        background: transparent !important; 
+        outline: none !important;
+        box-sizing: border-box !important;
+    }
+
+    .quicknote-toolbar {
+        display: flex !important; 
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+        gap: 8px !important; 
+        padding: 10px 15px !important; 
+        background: #f8fafc !important;
+        border-top: 1px solid #e2e8f0 !important;
+        align-items: center !important;
+    }
+
+    .qn-btn {
+        flex: 1 1 auto !important;
+        justify-content: center !important;
+        white-space: nowrap !important;
+        background: #e2e8f0 !important; 
+        color: #475569 !important; 
+        border: none !important; 
+        padding: 8px 12px !important;
+        border-radius: 8px !important; 
+        font-size: 11px !important; 
+        font-weight: 800 !important; 
+        cursor: pointer !important;
+        text-transform: uppercase !important; 
+        transition: all 0.2s !important; 
+        display: flex !important; 
+        align-items: center !important; 
+        gap: 6px !important;
+    }
+    .qn-btn:hover { background: #cbd5e1 !important; color: #0f172a !important; }
+    .qn-btn.primary { background: #3b82f6 !important; color: white !important; }
+    .qn-btn.primary:hover { background: #2563eb !important; }
+    .qn-btn.danger { background: #fee2e2 !important; color: #ef4444 !important; }
+
+    /* 📤 ISAS Fallback Share Menu (Pre staršie PC) */
+    #qn-share-menu {
+        display: none;
+        position: absolute;
+        bottom: 60px;
+        left: 15px;
+        right: 15px;
+        background: rgba(255, 255, 255, 0.98) !important;
+        backdrop-filter: blur(15px) !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 12px !important;
+        box-shadow: 0 -10px 30px rgba(0,0,0,0.15) !important;
+        padding: 15px !important;
+        z-index: 10000 !important;
+        flex-direction: column !important;
+        gap: 8px !important;
+        transform: translateY(10px);
+        opacity: 0;
+        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+    }
+    #qn-share-menu.active {
+        display: flex;
+        transform: translateY(0);
+        opacity: 1;
+    }
+    .qn-share-item {
+        display: flex !important;
+        align-items: center !important;
+        gap: 10px !important;
+        padding: 10px 15px !important;
+        background: #f8fafc !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 8px !important;
+        color: #1e293b !important;
+        font-weight: 800 !important;
+        font-size: 12px !important;
+        text-decoration: none !important;
+        cursor: pointer !important;
+        transition: all 0.2s !important;
+    }
+    .qn-share-item:hover { background: #e2e8f0 !important; transform: translateX(4px) !important; }
+    .qn-share-item.wa:hover { background: #dcfce7 !important; color: #166534 !important; border-color: #86efac !important; }
+    .qn-share-item.vi:hover { background: #f3e8ff !important; color: #6b21a8 !important; border-color: #d8b4fe !important; }
+    .qn-share-item.tg:hover { background: #e0f2fe !important; color: #075985 !important; border-color: #7dd3fc !important; }
+    .qn-share-item.ms:hover { background: #eff6ff !important; color: #1e40af !important; border-color: #93c5fd !important; }
+</style>
+{% endblock %}
+
+{% block footer %}
+    {{ block.super }}
+    <!-- 🚀 ISAS CORE: Import globálneho JS enginu (MUSÍ BYŤ PRVÝ!) -->
+    <script src="{% static 'js/admin_master.js' %}"></script>
+    
+    <div class="bg-animation">
+        <span class="ambient-icon" style="top: 8%; left: 4%; font-size: 160px; animation-duration: 25s;">⚙️</span>
+        <span class="ambient-icon" style="top: 65%; left: 5%; font-size: 180px; animation-duration: 35s;">🛡️</span>
+        <span class="ambient-icon" style="top: 10%; left: 80%; font-size: 150px; animation-duration: 28s;">📊</span>
+        <span class="ambient-icon" style="top: 75%; left: 85%; font-size: 130px; animation-duration: 22s;">🌐</span>
+        <span class="ambient-icon" style="top: 40%; left: 2%; font-size: 110px; animation-duration: 40s;">💼</span>
+        <span class="ambient-icon" style="top: 5%; left: 45%; font-size: 170px; animation-duration: 45s;">🏢</span>
+        <span class="ambient-icon" style="top: 85%; left: 42%; font-size: 140px; animation-duration: 30s;">🔐</span>
+        <span class="ambient-icon" style="top: 35%; left: 88%; font-size: 100px; animation-duration: 26s;">📋</span>
+        <span class="ambient-icon" style="top: 52%; left: 65%; font-size: 120px; animation-duration: 38s;">📈</span>
+        <span class="ambient-icon" style="top: 70%; left: 55%; font-size: 90px; animation-duration: 32s;">⚡</span>
+        <span class="ambient-icon" style="top: 20%; left: 20%; font-size: 80px; animation-duration: 50s; opacity: 0.1;">⚙️</span>
+        <span class="ambient-icon" style="top: 88%; left: 12%; font-size: 105px; animation-duration: 29s;">💡</span>
+        <span class="ambient-icon" style="top: 25%; left: 70%; font-size: 115px; animation-duration: 42s;">🚀</span>
+        <span class="ambient-icon" style="top: 48%; left: 15%; font-size: 95px; animation-duration: 31s;">📁</span>
+        <span class="ambient-icon" style="top: 12%; left: 92%; font-size: 85px; animation-duration: 24s;">📦</span>
+        <span class="ambient-icon" style="top: 60%; left: 90%; font-size: 110px; animation-duration: 37s;">🤝</span>
+    </div>
+
+    <div id="isas-chat-overlay" onclick="maximizeChat()"></div>
+
+    <!-- 📝 ISAS QUICKNOTE KONTAJNER -->
+    <div id="isas-quicknote-container">
+        <div id="quicknote-window">
+            <div style="background: #1e293b; color: #f8fafc; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #f59e0b;">
+                <span style="font-weight: 800; display: flex; align-items: center; gap: 10px; font-size: 14px;">📓 Rýchle poznámky</span>
+                <div style="display: flex; gap: 15px; align-items: center;">
+                    <button id="qn-pin-btn" onclick="togglePinQuickNote()" title="Pripnúť na obrazovku" style="background: none; border: none; color: white; cursor: pointer; font-size: 16px; opacity: 0.4; padding: 0; transition: all 0.2s;">📌</button>
+                    <button id="qn-max-btn" onclick="maximizeQuickNote()" title="Zväčšiť okno" style="background: none; border: none; color: white; cursor: pointer; font-size: 18px; opacity: 0.6; padding: 0; transition: all 0.2s;">▢</button>
+                    <button onclick="toggleQuickNote()" style="background: none; border: none; color: white; cursor: pointer; font-size: 20px; opacity: 0.8; padding: 0; line-height: 1; transition: all 0.2s;">×</button>
+                </div>
+            </div>
+            <textarea id="quicknote-textarea" placeholder="Rýchle poznámky, telefónne čísla, adresy...&#10;(Všetko sa automaticky ukladá)"></textarea>
+            
+            <!-- 📤 ISAS Fallback Share Menu -->
+            <div id="qn-share-menu">
+                <div style="font-size: 10px; color: #64748b; text-transform: uppercase; font-weight: 900; margin-bottom: 4px;">Vyberte sieť pre zdieľanie:</div>
+                <a class="qn-share-item wa" onclick="qnShareTo('whatsapp')">🟢 WhatsApp</a>
+                <a class="qn-share-item vi" onclick="qnShareTo('viber')">🟣 Viber</a>
+                <a class="qn-share-item tg" onclick="qnShareTo('telegram')">🔵 Telegram</a>
+                <a class="qn-share-item ms" onclick="qnShareTo('messenger')">💬 Kopírovať & otvoriť Messenger</a>
+                <a class="qn-share-item" onclick="qnShareTo('email')">📧 E-mail</a>
+                <button onclick="document.getElementById('qn-share-menu').classList.remove('active')" style="margin-top: 5px; background: none; border: none; color: #ef4444; font-weight: 800; cursor: pointer; font-size: 11px;">Zavrieť menu</button>
+            </div>
+
+            <div class="quicknote-toolbar">
+                <button class="qn-btn" onclick="qnInsertTime()" title="Vložiť aktuálny čas">⏱️ Čas</button>
+                <button class="qn-btn" id="qn-dictate-btn" onclick="qnDictate()" title="Hlasové diktovanie">🎙️ Diktovať</button>
+                <button class="qn-btn" onclick="qnShare()" title="Zdieľať poznámku">📤 Zdieľať</button>
+                <button class="qn-btn primary" id="qn-copy-btn" onclick="qnCopy()">📋 Kopírovať</button>
+                <button class="qn-btn danger" onclick="qnClear()">🗑️ Vymazať</button>
+            </div>
+        </div>
+        <button id="quicknote-toggle-btn" onclick="toggleQuickNote()" title="Otvoriť poznámkový blok">📓</button>
+    </div>
+    
+    <div id="ai-chat-container" style="position: fixed; bottom: 20px; right: 20px; z-index: 2147483647; font-family: 'Segoe UI', sans-serif;">
+        <button id="ai-toggle-btn" onclick="toggleChat()" style="background: #1e293b; color: #34d399; border: 3px solid #34d399; border-radius: 50%; width: clamp(65px, 7vw, 85px); height: clamp(65px, 7vw, 85px); cursor: pointer; font-weight: 900; font-size: clamp(12px, 1.2vw, 15px); box-shadow: 0 10px 25px rgba(0,0,0,0.4); transition: transform 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.2;">
+            ISAS<br>AI
+        </button>
+
+        <div id="ai-chat-window">
+            <div style="background: #1e293b; color: #f8fafc; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #10b981;">
+                <span style="font-weight: 800; display: flex; align-items: center; gap: 10px; font-size: 15px;">🧠 ISAS CORE AI</span>
+                <div>
+                    <button class="chat-ctrl-btn" onclick="resetChat()" title="Nová konverzácia (Vymazať pamäť)">🔄</button>
+                    <button class="chat-ctrl-btn" onclick="maximizeChat()" title="Zväčšiť">▢</button>
+                    <button class="chat-ctrl-btn" onclick="toggleChat()" title="Zatvoriť">×</button>
+                </div>
+            </div>
+            
+            <div id="ai-messages" style="flex: 1; padding: 20px; overflow-y: auto; overscroll-behavior: contain; background: transparent; display: flex; flex-direction: column; gap: 15px;">
+            </div>
+
+            <div class="ai-input-container">
+                <div class="ai-input-capsule">
+                    <!-- 🖼️ Vizuálne náhľady pripojených súborov -->
+                    <div id="ai-file-preview-container" class="ai-file-preview-container" style="display: none;"></div>
+                    
+                    <textarea id="ai-input" rows="1" placeholder="Opýtajte sa asistenta, priložte súbor alebo vložte screenshot..."></textarea>
+                    
+                    <!-- 📁 Skrytý input pre výber súborov -->
+                    <input type="file" id="ai-file-input" style="display: none;" multiple accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv" onchange="handleAiFileSelect(this)">
+                    
+                    <div class="ai-input-toolbar">
+                        <span class="ai-input-hint" id="ai-input-hint">Shift+Enter = nový riadok</span>
+                        <div class="ai-input-actions">
+                            <button type="button" id="ai-attach-btn" onclick="triggerAiFileInput()" title="Priložiť obrázok, video alebo dokument">📎</button>
+                            <button type="button" id="ai-dictate-btn" onclick="aiDictate()" title="Hlasové diktovanie">🎙️</button>
+                            <button type="button" id="ai-send-btn" onclick="sendMessage()" title="Odoslať správu"><span>Odoslať</span> ➤</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div style="display: none;">{% csrf_token %}</div>
+
+    <script>
+        const welcomeMsg = `
+        <div class="ai-bubble ai-bot">
+            {% if request.user.is_superuser %}
+                👋 <b>Ahoj šéfe!</b> Som ISAS CORE AI, tvoj elitný asistent pre riadenie firmy.<br><br>
+                Vidím do všetkých modulov systému a som pripravený na hĺbkovú analýzu. Tu je kompletný prehľad toho, čo pre teba viem zistiť a vyriešiť:<br><br>
+                💰 <b>Financie a Účtovníctvo:</b> Cash-flow, neuhradené pohľadávky a záväzky, prijaté/vystavené faktúry, ERP exporty a hľadanie účtovných anomálií.<br>
+                🤝 <b>Obchod a CRM:</b> Ziskovosť zákazníkov, analýza dodávateľov, cenové ponuky, prijaté objednávky, otvorená pipeline, prenájmy a CRM udalosti.<br>
+                ⚙️ <b>Operatíva a Servis:</b> Otvorené úlohy, aktívne reklamácie (SLA), história servisov, zariadenia (IoT, telemetria), predikcie údržby a povolenia na vstup (SBS).<br>
+                📦 <b>Sklad a Logistika:</b> Aktuálny aj historický stav skladu (filiálky), pohyby zásob, nákupný košík, odoslané objednávky a presný výpočet trás (km/čas).<br>
+                👥 <b>HR a Fleet:</b> Mzdy, dovolenky, záväzky, Live Radar (GPS poloha), knihy jázd, tankovania a stráženie expirácií (BOZP, STK, PZP, diaľničné).<br>
+                🧠 <b>AI a Systém:</b> Čítanie a analýza PDF/obrázkov (zmluvy, manuály), vizualizácia schém, prehľadávanie e-mailov, ISO 9001 audity a komplexné manažérske štatistiky.<br><br>
+                <i>Čo dnes vyriešime?</i> 🚀
+            {% elif request.user.zamestnanec %}
+                {% if request.user.zamestnanec.typ_pomeru == 'KO' or request.user.zamestnanec.pracovna_rola == 'AD' %}
+                    👋 <b>Ahoj šéfe!</b> Som ISAS CORE AI, tvoj elitný asistent pre riadenie firmy.<br><br>
+                    Vidím do všetkých modulov systému a som pripravený na hĺbkovú analýzu. Tu je kompletný prehľad toho, čo pre teba viem zistiť a vyriešiť:<br><br>
+                    💰 <b>Financie a Účtovníctvo:</b> Cash-flow, neuhradené pohľadávky a záväzky, prijaté/vystavené faktúry, ERP exporty a hľadanie účtovných anomálií.<br>
+                    🤝 <b>Obchod a CRM:</b> Ziskovosť zákazníkov, analýza dodávateľov, cenové ponuky, prijaté objednávky, otvorená pipeline, prenájmy a CRM udalosti.<br>
+                    ⚙️ <b>Operatíva a Servis:</b> Otvorené úlohy, aktívne reklamácie (SLA), história servisov, zariadenia (IoT, telemetria), predikcie údržby a povolenia na vstup (SBS).<br>
+                    📦 <b>Sklad a Logistika:</b> Aktuálny aj historický stav skladu (filiálky), pohyby zásob, nákupný košík, odoslané objednávky a presný výpočet trás (km/čas).<br>
+                    👥 <b>HR a Fleet:</b> Mzdy, dovolenky, záväzky, Live Radar (GPS poloha), knihy jázd, tankovania a stráženie expirácií (BOZP, STK, PZP, diaľničné).<br>
+                    🧠 <b>AI a Systém:</b> Čítanie a analýza PDF/obrázkov (zmluvy, manuály), vizualizácia schém, prehľadávanie e-mailov, ISO 9001 audity a komplexné manažérske štatistiky.<br><br>
+                    <i>Čo dnes vyriešime?</i> 🚀
+                {% elif request.user.zamestnanec.pracovna_rola == 'DI' %}
+                    👋 <b>Ahoj!</b> Som ISAS CORE AI, tvoj asistent pre riadenie operatívy a dispečingu.<br><br>
+                    Mám prehľad o dianí vo firme. Som pripravený pomôcť ti s týmito oblasťami:<br><br>
+                    ⚙️ <b>Operatíva a Servis:</b> Otvorené úlohy, aktívne reklamácie (SLA), história servisov, zariadenia a povolenia na vstup (SBS).<br>
+                    📦 <b>Sklad a Logistika:</b> Aktuálny a historický stav skladu, pohyby zásob a presný výpočet trás (km/čas).<br>
+                    🚚 <b>Fleet:</b> Knihy jázd, tankovania a stráženie expirácií (STK, PZP, diaľničné).<br>
+                    🧠 <b>AI a Systém:</b> Čítanie a analýza PDF/obrázkov, vizualizácia schém a prehľadávanie e-mailov.<br><br>
+                    <i>S čím ti môžem pomôcť?</i> 🚀
+                {% else %}
+                    👋 <b>Ahoj!</b> Som ISAS CORE AI, tvoj technický asistent.<br><br>
+                    Som tu, aby som ti uľahčil prácu v teréne aj na sklade. Môžeš sa ma pýtať na:<br><br>
+                    🛠️ <b>Moja práca:</b> Pracovné postupy (SOP), detaily o zariadeniach a technické parametre.<br>
+                    📦 <b>Sklad a Logistika:</b> Dostupnosť položiek na skladoch, historický stav a presný výpočet trás (km/čas).<br>
+                    🚚 <b>Fleet:</b> Moje jazdy a tankovania.<br>
+                    🧠 <b>AI a Systém:</b> Čítanie PDF manuálov a vizualizácia technických schém priamo do chatu.<br><br>
+                    <i>Čo pre teba môžem zistiť?</i> 🚀
+                {% endif %}
+            {% else %}
+                👋 <b>Ahoj!</b> Som ISAS CORE AI.<br><br>
+                Tvoj používateľský účet nemá priradený profil zamestnanca. Moje funkcie sú pre teba momentálne obmedzené.<br><br>
+                <i>Ak potrebuješ plný prístup, kontaktuj administrátora.</i> 🚀
+            {% endif %}
+            <div class="ai-bubble-actions"><button type="button" class="ai-tts-btn" onclick="togglePlayAiSpeech(this)" title="Prečítať odpoveď nahlas">🔊 Prečítať</button></div>
+        </div>`;
+
+        function toggleChat() {
+            const win = document.getElementById('ai-chat-window');
+            const overlay = document.getElementById('isas-chat-overlay');
+            const isVisible = win.style.display === 'flex';
+
+            if (isVisible) {
+                // ZATVÁRANIE CHATU
+                win.style.display = 'none';
+                sessionStorage.setItem('isasChatOpen', 'false');
+                
+                // Bezpečnostne zastavíme hlasový výstup a zresetujeme ikony tlačidiel
+                if (window.ISASStopSpeech) window.ISASStopSpeech();
+                document.querySelectorAll('.ai-tts-btn.is-playing').forEach(b => {
+                    b.classList.remove('is-playing');
+                    b.innerHTML = '🔊 Prečítať';
+                });
+
+                // Bezpečnostne vypneme aj rozmazaný podklad, zrušíme maximalizáciu a odomkneme scrollovanie
+                win.classList.remove('maximized');
+                overlay.classList.remove('active');
+                document.body.classList.remove('isas-chat-locked');
+                sessionStorage.setItem('isasChatMaximized', 'false');
+            } else {
+                // OTVÁRANIE CHATU
+                win.style.display = 'flex';
+                sessionStorage.setItem('isasChatOpen', 'true');
+                
+                // Focus na pole a okamžitá kalibrácia výšky po otvorení
+                setTimeout(() => {
+                    const aiInp = document.getElementById('ai-input');
+                    if (aiInp) {
+                        aiInp.focus();
+                        resizeAiInput();
+                    }
+                }, 50);
+            }
+        }
+
+        // 🎙️ ISAS ENGINE: Hlasové diktovanie je centrálne riadené z admin_master.js
+
+        // 📁 GLOBÁLNA SPRÁVA PRÍLOH AI ASISTENTA
+        let selectedAiFiles = [];
+
+        function triggerAiFileInput() {
+            document.getElementById('ai-file-input').click();
+        }
+
+        function handleAiFileSelect(input) {
+            if (!input.files || input.files.length === 0) return;
+            const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25 MB limit na súbor
+
+            Array.from(input.files).forEach(file => {
+                if (file.size > MAX_FILE_SIZE) {
+                    if (window.showGlobalAlertModal) {
+                        window.showGlobalAlertModal("Veľký súbor", `Súbor "${file.name}" prekračuje povolený limit 25 MB.`, "warning");
+                    } else {
+                        alert(`Súbor "${file.name}" prekračuje povolený limit 25 MB.`);
+                    }
+                    return;
+                }
+                selectedAiFiles.push(file);
+            });
+
+            input.value = ''; // Reset inputu pre možnosť opätovného výberu rovnakého súboru
+            renderAiFilePreviews();
+        }
+
+        function removeAiFile(index) {
+            selectedAiFiles.splice(index, 1);
+            renderAiFilePreviews();
+        }
+
+        function clearAiFiles() {
+            selectedAiFiles = [];
+            renderAiFilePreviews();
+        }
+
+        function renderAiFilePreviews() {
+            const container = document.getElementById('ai-file-preview-container');
+            const attachBtn = document.getElementById('ai-attach-btn');
+            if (!container) return;
+
+            if (selectedAiFiles.length === 0) {
+                container.innerHTML = '';
+                container.classList.remove('has-content');
+                if (attachBtn) attachBtn.classList.remove('has-files');
+                resizeAiInput();
+                return;
+            }
+
+            container.classList.add('has-content');
+            if (attachBtn) attachBtn.classList.add('has-files');
+
+            let html = '';
+            selectedAiFiles.forEach((file, index) => {
+                const isImage = file.type.startsWith('image/');
+                const isVideo = file.type.startsWith('video/');
+                const isPdf = file.type === 'application/pdf';
+                let icon = isImage ? '🖼️' : (isVideo ? '🎥' : (isPdf ? '📕' : '📄'));
+                
+                const safeName = String(file.name).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+                
+                let thumbHtml = `<span>${icon}</span>`;
+                if (isImage) {
+                    const blobUrl = URL.createObjectURL(file);
+                    thumbHtml = `<img src="${blobUrl}" class="ai-file-chip-thumb" alt="preview" onload="URL.revokeObjectURL(this.src)">`;
+                }
+
+                html += `
+                    <div class="ai-file-chip">
+                        ${thumbHtml}
+                        <span class="ai-file-chip-name" title="${safeName}">${safeName}</span>
+                        <button type="button" class="ai-file-chip-remove" onclick="removeAiFile(${index})" title="Odstrániť súbor">×</button>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+            resizeAiInput();
+        }
+
+        // 🔄 Inteligentné automatické rozťahovanie vstupného poľa
+        function resizeAiInput() {
+            const ta = document.getElementById('ai-input');
+            if (!ta) return;
+            ta.style.height = 'auto'; // Reset pre presné zmeranie pri mazaní textu
+            const isMax = document.getElementById('ai-chat-window')?.classList.contains('maximized');
+            const maxAllowed = isMax ? 220 : 110;
+            const newHeight = Math.min(ta.scrollHeight, maxAllowed);
+            ta.style.height = (newHeight > 38 ? newHeight : 38) + 'px';
+        }
+
+        // Hlasové diktovanie pre AI chat (Speech-to-Text) 🎙️ s plynulým živým rozťahovaním
+        let aiDictateInterval = null;
+        function aiDictate() {
+            const btn = document.getElementById('ai-dictate-btn');
+            const input = document.getElementById('ai-input');
+            window.ISASDictateEngine(btn, input, '🎙️', '🔴');
+            
+            // Živé sledovanie rastu textu počas celej doby diktovania
+            if (aiDictateInterval) clearInterval(aiDictateInterval);
+            aiDictateInterval = setInterval(() => {
+                resizeAiInput();
+                if (!btn.classList.contains('recording')) {
+                    clearInterval(aiDictateInterval);
+                }
+            }, 300);
+        }
+
+        function maximizeChat() {
+            const win = document.getElementById('ai-chat-window');
+            const overlay = document.getElementById('isas-chat-overlay');
+            const isMaximized = win.classList.toggle('maximized');
+            overlay.classList.toggle('active', isMaximized);
+            
+            // 🔒 Ukotvenie pozadia, ak je okno zväčšené
+            document.body.classList.toggle('isas-chat-locked', isMaximized);
+            sessionStorage.setItem('isasChatMaximized', isMaximized);
+            resizeAiInput(); // Prepočet výšky po zmene rozmerov okna
+        }
+
+        function resetChat() {
+            // 🛡️ Okamžite zastavíme hlasový výstup už pri otvorení potvrdzovacieho dialógu
+            if (window.ISASStopSpeech) window.ISASStopSpeech();
+            document.querySelectorAll('.ai-tts-btn.is-playing').forEach(b => {
+                b.classList.remove('is-playing');
+                b.innerHTML = '🔊 Prečítať';
+            });
+
+            const executeReset = () => {
+                // 1. Vymažeme pamäť na serveri (Django Session) a pošleme ID úlohy na upratanie Redisu
+                const payload = currentAiTaskId ? { task_id: currentAiTaskId } : {};
+                
+                window.ISASAction(payload, null, {
+                    url: "{% url 'evidencia:ai_chat_reset' %}",
+                    reload: false,
+                    onComplete: (data) => {
+                        if (data.status === 'success') {
+                            // 2. 🛡️ Zastavíme hlasový výstup a bežiace dopytovanie (polling)
+                            if (window.ISASStopSpeech) window.ISASStopSpeech();
+                            if (typeof aiPollingInterval !== 'undefined' && aiPollingInterval) {
+                                clearInterval(aiPollingInterval);
+                            }
+                            
+                            // 3. 🛡️ Odomkneme tlačidlo odoslať a vyčistíme input (ak boli zablokované)
+                            const sendBtn = document.getElementById('ai-send-btn');
+                            if (sendBtn) {
+                                sendBtn.disabled = false;
+                                sendBtn.style.opacity = "1";
+                            }
+                            const aiInp = document.getElementById('ai-input');
+                            if (aiInp) {
+                                aiInp.value = '';
+                                resizeAiInput();
+                            }
+                            clearAiFiles(); // Vyčistenie príloh po resete pamäte
+
+                            // 4. Vymažeme pamäť v prehliadači a resetneme UI
+                            sessionStorage.removeItem('isasChatHistory');
+                            const container = document.getElementById('ai-messages');
+                            container.innerHTML = welcomeMsg;
+                            container.scrollTop = container.scrollHeight;
+                            
+                            // 5. 🛡️ Vynulujeme ID úlohy, čím zabijeme akékoľvek oneskorené odpovede na ceste
+                            currentAiTaskId = null;
+                        }
+                    },
+                    onError: (err) => console.error("Chyba pri resete chatu:", err)
+                });
+            };
+
+            window.showGlobalConfirmModal(
+                "Nová konverzácia (Reset pamäte)", 
+                "Chystáte sa natrvalo vymazať históriu aktuálneho chatu. <b>AI asistent zabudne celý doterajší kontext debaty</b> a začne s čistým štítom.<br><br>💡 <i>Odporúčame to urobiť vždy, keď meníte tému (napr. prechádzate z analýzy faktúr na technické manuály), aby sa predišlo zmätočným odpovediam.</i>", 
+                executeReset
+            );
+        }
+
+        function loadChatState() {
+            const container = document.getElementById('ai-messages');
+            const history = sessionStorage.getItem('isasChatHistory');
+            const isOpen = sessionStorage.getItem('isasChatOpen') === 'true';
+            const isMax = sessionStorage.getItem('isasChatMaximized') === 'true';
+
+            container.innerHTML = history ? history : welcomeMsg;
+
+            // 🛡️ OCHRANA PO REFRESHE: Ak bola v sessionStorage uložená hovoriaca ikona, zresetujeme ju
+            container.querySelectorAll('.ai-tts-btn').forEach(b => {
+                b.classList.remove('is-playing');
+                b.innerHTML = '🔊 Prečítať';
+            });
+
+            if (isOpen) {
+                document.getElementById('ai-chat-window').style.display = 'flex';
+                
+                if (isMax) {
+                    document.getElementById('ai-chat-window').classList.add('maximized');
+                    document.getElementById('isas-chat-overlay').classList.add('active');
+                    document.body.classList.add('isas-chat-locked');
+                } else {
+                    document.body.classList.remove('isas-chat-locked');
+                }
+            } else {
+                document.getElementById('ai-chat-window').style.display = 'none';
+                document.getElementById('ai-chat-window').classList.remove('maximized');
+                document.getElementById('isas-chat-overlay').classList.remove('active');
+                document.body.classList.remove('isas-chat-locked');
+                sessionStorage.setItem('isasChatMaximized', 'false');
+            }
+            
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // 🧠 ISAS CORE: Globálna premenná pre polling interval
+        let aiPollingInterval = null;
+        let currentAiTaskId = null; // 🛡️ Ochrana proti oneskoreným odpovediam (Ghost responses)
+
+        function sendMessage() {
+            const input = document.getElementById('ai-input');
+            const container = document.getElementById('ai-messages');
+            const sendBtn = document.getElementById('ai-send-btn');
+            const text = input.value.trim();
+            const hasFiles = selectedAiFiles.length > 0;
+
+            // Správu odošleme, ak je zadaný text ALEBO je priložený súbor
+            if (!text && !hasFiles) return;
+
+            // 🛡️ Ochrana proti double-clicku na strane klienta
+            if (sendBtn.disabled) return;
+            
+            // 🌐 Okamžitá detekcia chýbajúceho internetu (Offline režim)
+            if (!navigator.onLine) {
+                container.innerHTML += `<div class="ai-bubble ai-bot" style="color: #ef4444; font-weight: bold;">🌐 Zariadenie je offline. Skontrolujte svoje internetové pripojenie a skúste to znova.</div>`;
+                container.scrollTop = container.scrollHeight;
+                return; // Zastavíme vykonávanie, neblokujeme tlačidlo
+            }
+
+            sendBtn.disabled = true;
+            sendBtn.style.opacity = "0.5";
+
+            // 🛡️ Okamžite umlčíme asistenta, ak ešte dočítava predchádzajúcu odpoveď
+            if (window.ISASStopSpeech) window.ISASStopSpeech();
+            container.querySelectorAll('.ai-tts-btn.is-playing').forEach(b => {
+                b.classList.remove('is-playing');
+                b.innerHTML = '🔊 Prečítať';
+            });
+
+            // Escapovanie užívateľského vstupu proti Client-Side XSS
+            const safeText = String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+            
+            // Vizuálne zobrazenie odoslaných príloh v užívateľskej bubline
+            let filesVisualBadge = '';
+            if (hasFiles) {
+                filesVisualBadge = '<div style="margin-top:6px; display:flex; flex-wrap:wrap; gap:4px;">' +
+                    selectedAiFiles.map(f => `<span style="background:rgba(255,255,255,0.25); padding:2px 6px; border-radius:6px; font-size:11px; font-weight:700;">📎 ${String(f.name).replace(/</g, '&lt;')}</span>`).join('') +
+                    '</div>';
+            }
+
+            container.innerHTML += `<div class="ai-bubble ai-user">${safeText}${filesVisualBadge}</div>`;
+            input.value = '';
+            
+            // 1. Uložíme históriu IHNEĎ po pridaní otázky
+            sessionStorage.setItem('isasChatHistory', container.innerHTML);
+
+            // 2. Pridáme dočasnú bublinu "Premýšľam..."
+            const loadingId = 'ai-loading-' + Date.now();
+            container.innerHTML += `<div id="${loadingId}" class="ai-bubble ai-bot" style="opacity: 0.7; font-style: italic;">⏳ Premýšľam, analyzujem...</div>`;
+            container.scrollTop = container.scrollHeight;
+
+            const formData = new FormData();
+            // 🛡️ Bezpečnostná poistka: Ak používateľ pošle iba súbor bez textu, nastavíme zmysluplný prompt
+            const promptMessage = text ? text : 'Analyzuj priložené súbory a poskytni k nim podrobný prehľad.';
+            formData.append('message', promptMessage);
+            
+            // Priloženie všetkých vybraných súborov pod kľúčmi 'files' aj 'attachments' (pre 100% kompatibilitu s Django)
+            selectedAiFiles.forEach(file => {
+                formData.append('files', file);
+                formData.append('attachments', file);
+            });
+
+            // Vyčistenie pripojených súborov a reset výšky
+            clearAiFiles();
+            resizeAiInput();
+
+            // 🚀 KROK 1: Odoslanie požiadavky (Okamžitá odpoveď zo servera)
+            window.ISASAction(formData, null, {
+                url: "{% url 'evidencia:ai_chat' %}",
+                reload: false,
+                onComplete: (data) => {
+                    if (data.status === 'processing' && data.task_id) {
+                        // 🔄 KROK 2: Spustenie Pollingu (Dopytovanie každé 3 sekundy)
+                        currentAiTaskId = data.task_id; // 🛡️ Zaznamenáme si, na ktorú úlohu čakáme
+                        startAiPolling(data.task_id, loadingId, sendBtn);
+                    } else {
+                        // Server vrátil okamžitú chybu (napr. vyčerpaný denný limit alebo zámok)
+                        handleAiResponse(data, loadingId, sendBtn);
+                    }
+                },
+                onError: () => {
+                    const errorMsg = !navigator.onLine 
+                        ? '🌐 Zariadenie stratilo pripojenie k internetu. Skontrolujte sieť a skúste to znova.' 
+                        : '🔌 Nepodarilo sa spojiť so serverom. Skontrolujte pripojenie alebo to skúste neskôr.';
+                    handleAiResponse({status: 'error', message: errorMsg}, loadingId, sendBtn);
+                }
+            });
+        }
+
+        function startAiPolling(taskId, loadingId, sendBtn) {
+            // Zastavíme predchádzajúci polling, ak nejaký beží
+            if (aiPollingInterval) clearInterval(aiPollingInterval);
+            
+            // Vytvoríme URL pre kontrolu stavu (Nahradíme placeholder za reálne ID)
+            // POZOR: Predpokladáme, že URL v urls.py je pomenovaná 'ai_chat_status'
+            const statusUrlBase = "{% url 'evidencia:ai_chat_status' 'TASK_ID_PLACEHOLDER' %}";
+            const statusUrl = statusUrlBase.replace('TASK_ID_PLACEHOLDER', taskId);
+
+            aiPollingInterval = window.ISASPoller({
+                url: statusUrl,
+                type: 'json',
+                interval: 3000,
+                maxAttempts: 40,
+                onData: (data) => {
+                    if (currentAiTaskId !== taskId) return true; // true = zastaví poller
+                    
+                    // Ak AI stále generuje odpoveď, pokračujeme v čakaní
+                    if (data.status === 'processing' || data.status === 'pending' || data.status === 'PENDING') {
+                        return false; // false = pokračuje v dopytovaní
+                    }
+                    
+                    // Ak prišiel výsledok (success alebo error), spracujeme ho a zastavíme poller
+                    handleAiResponse(data, loadingId, sendBtn);
+                    return true; // true = zastaví poller
+                },
+                onTimeout: () => handleAiResponse({status: 'error', message: 'Časový limit vypršal. Asistent neodpovedal včas.'}, loadingId, sendBtn),
+                onError: () => {
+                    const errorMsg = !navigator.onLine 
+                        ? '🌐 Pripojenie k internetu bolo prerušené. Odpoveď od AI sa nepodarilo doručiť.' 
+                        : '🔌 Stratilo sa spojenie so serverom počas čakania na odpoveď.';
+                    handleAiResponse({status: 'error', message: errorMsg}, loadingId, sendBtn);
+                    return true; // Zastaví poller pri chybe
+                }
+            });
+        }
+
+        function handleAiResponse(data, loadingId, sendBtn) {
+            const container = document.getElementById('ai-messages');
+            
+            // Odstránime dočasnú bublinu "Premýšľam..."
+            const loadingBubble = document.getElementById(loadingId);
+            if (loadingBubble) loadingBubble.remove();
+
+            // Odomkneme tlačidlo odoslať
+            if (sendBtn) {
+                sendBtn.disabled = false;
+                sendBtn.style.opacity = "1";
+            }
+
+            let rawResponse = data.status === 'success' ? (data.response || "") : "❌ " + (data.message || "Neznáma chyba");
+        
+            // 🛡️ 100% BEZPEČNÉ SANITIZOVANIE (HTML + Markdown podpora pre Gemini API)
+            let safeResponseText = String(rawResponse)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;')
+                // Markdown Bold & Italic podpora z Gemini API
+                .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
+                .replace(/\*(.*?)\*/g, '<i>$1</i>')
+                // Bezpečné povolenie formátovacích značiek
+                .replace(/&lt;b&gt;/gi, '<b>')
+                .replace(/&lt;\/b&gt;/gi, '</b>')
+                .replace(/&lt;strong&gt;/gi, '<strong>')
+                .replace(/&lt;\/strong&gt;/gi, '</strong>')
+                .replace(/&lt;i&gt;/gi, '<i>')
+                .replace(/&lt;\/i&gt;/gi, '</i>')
+                .replace(/&lt;em&gt;/gi, '<em>')
+                .replace(/&lt;\/em&gt;/gi, '</em>')
+                .replace(/&lt;code&gt;/gi, '<code style="background:rgba(0,0,0,0.06);padding:2px 6px;border-radius:4px;font-size:12px;">')
+                .replace(/&lt;\/code&gt;/gi, '</code>')
+                // 👁️ 1. Markdown odkaz s preview: [Text](/...preview...) -> Prémiový odznak
+                .replace(/\[(.*?)\]\(((?:https?:\/\/[^\s\)]+|\/|\?)[^\s\)]*preview=[^\s\)]*)\)/gi, function(match, p1, p2) {
+                    const href = p2.startsWith('http') || p2.startsWith('/') ? p2 : '/' + p2;
+                    return '<a href="' + href + '" class="ai-preview-badge" target="_blank" rel="noopener noreferrer">👁️ ' + p1 + '</a>';
+                })
+                // 📧 1.5 Markdown odkaz na koncept mailu: [Text](/admin/ISASaplikacia/emailovasprava/ID/change/) -> Prémiový odznak
+                .replace(/\[(.*?)\]\(((?:https?:\/\/[^\s\)]+|\/)[^\s\)]*emailovasprava\/\d+\/change\/?[^\s\)]*)\)/gi, function(match, p1, p2) {
+                    const href = p2.startsWith('http') || p2.startsWith('/') ? p2 : '/' + p2;
+                    return '<a href="' + href + '" class="ai-preview-badge ai-mail-badge" target="_blank" rel="noopener noreferrer">📧 ' + p1 + '</a>';
+                })
+                // 🔗 2. Bežné Markdown obrázky & odkazy
+                .replace(/!\[(.*?)\]\(((?:https?:\/\/|\/)[^\s\)]+)\)/gi, '<img src="$2" alt="$1" style="max-width:100%; border-radius:8px; margin-top:8px;" loading="lazy">')
+                .replace(/\[(.*?)\]\(((?:https?:\/\/|\/|mailto:|tel:)[^\s\)]+)\)/gi, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
+                // 👁️ 3. Samostatné PREVIEW URL -> Elegantný kompaktný odznak bez rušivých zátvoriek
+                .replace(/(^|[\s>(]|&lt;b&gt;|<b>)(https?:\/\/[^\s<>"']+\?preview=[a-zA-Z0-9_\-\.\/&=%]+|\/?\?preview=[a-zA-Z0-9_\-\.\/&=%]+)/gi, function(match, p1, p2) {
+                    const href = p2.startsWith('http') || p2.startsWith('/') ? p2 : '/' + p2;
+                    return p1 + '<a href="' + href + '" class="ai-preview-badge" target="_blank" rel="noopener noreferrer">👁️ Náhľad webu</a>';
+                })
+                // 📧 3.5 Samostatná URL na koncept mailu -> Elegantný odznak
+                .replace(/(^|[\s>(]|&lt;b&gt;|<b>)(https?:\/\/[^\s<>"']*\/admin\/ISASaplikacia\/emailovasprava\/\d+\/change\/?|\/admin\/ISASaplikacia\/emailovasprava\/\d+\/change\/?)/gi, function(match, p1, p2) {
+                    const href = p2.startsWith('http') || p2.startsWith('/') ? p2 : '/' + p2;
+                    return p1 + '<a href="' + href + '" class="ai-preview-badge ai-mail-badge" target="_blank" rel="noopener noreferrer">📧 Otvoriť koncept e-mailu</a>';
+                })
+                // 🔗 4. HTML odkazy: <a href="...">...</a> -> striktná validácia protokolu proti javascript: XSS
+                .replace(/&lt;a\s+[^&]*?href=(?:&quot;|&#39;)((?:https?:\/\/|\/|mailto:|tel:)[^\s&"']+)(?:&quot;|&#39;)[^&]*?&gt;(.*?)&lt;\/a&gt;/gi, '<a href="$1" target="_blank" rel="noopener noreferrer">$2</a>')
+                // 🔗 5. Čisté URL adresy (https://, http://): Automatická konverzia na odkaz otvárajúci sa v novej karte
+                .replace(/(^|[^"'>])(https?:\/\/[^\s<>"']+)/gi, '$1<a href="$2" target="_blank" rel="noopener noreferrer">$2</a>')
+                // 🖼️ 6. HTML obrázky: <img src="..."> -> striktná validácia zdroja
+                .replace(/&lt;img\s+[^&]*?src=(?:&quot;|&#39;)((?:https?:\/\/|\/)[^\s&"']+)(?:&quot;|&#39;)[^&]*?&gt;/gi, '<img src="$1" style="max-width:100%; border-radius:8px; margin-top:8px;" loading="lazy">')
+                .replace(/\n/g, '<br>');
+                
+            // Ak je to chyba, dáme textu červenú farbu
+            const colorStyle = data.status === 'error' ? 'border: 1px solid #ef4444; background: #fef2f2; color: #b91c1c;' : '';
+            
+            // 🔊 Tlačidlo hlasového výstupu pridávame len v prípade úspešnej odpovede
+            const ttsButtonHtml = data.status === 'success' 
+                ? `<div class="ai-bubble-actions"><button type="button" class="ai-tts-btn" onclick="togglePlayAiSpeech(this)" title="Prečítať odpoveď nahlas">🔊 Prečítať</button></div>` 
+                : '';
+                
+            container.innerHTML += `<div class="ai-bubble ai-bot" style="${colorStyle}">🤖 ${safeResponseText}${ttsButtonHtml}</div>`;
+            container.scrollTop = container.scrollHeight;
+            
+            // Uložíme finálnu históriu
+            sessionStorage.setItem('isasChatHistory', container.innerHTML);
+        }
+
+        // 🔊 Prepínanie prehrávania / zastavenia hlasového výstupu (S ochranou double-clicku)
+        function togglePlayAiSpeech(btn) {
+            if (btn.dataset.locked === "true") return; // 🛡️ Zamedzenie race condition pri rýchlom klikaní
+            btn.dataset.locked = "true";
+            setTimeout(() => { btn.dataset.locked = "false"; }, 300);
+
+            const bubble = btn.closest('.ai-bubble');
+            if (!bubble) return;
+
+            // Ak už tento asistent hovorí -> okamžite zastavíme
+            if (btn.classList.contains('is-playing')) {
+                if (window.ISASStopSpeech) window.ISASStopSpeech();
+                btn.classList.remove('is-playing');
+                btn.innerHTML = '🔊 Prečítať';
+                return;
+            }
+
+            // Vypneme akékoľvek iné aktívne prehrávanie v okne chatu
+            document.querySelectorAll('.ai-tts-btn.is-playing').forEach(b => {
+                b.classList.remove('is-playing');
+                b.innerHTML = '🔊 Prečítať';
+            });
+
+            // Klonujeme bublinu a odstránime z nej lištu akcií, aby asistent nečítal slovo "Prečítať"
+            const clone = bubble.cloneNode(true);
+            const actions = clone.querySelector('.ai-bubble-actions');
+            if (actions) actions.remove();
+            const textToRead = clone.innerText || clone.textContent;
+
+            if (window.ISASTextToSpeechEngine) {
+                const ok = window.ISASTextToSpeechEngine(
+                    textToRead,
+                    () => {
+                        btn.classList.add('is-playing');
+                        btn.innerHTML = '⏹️ Zastaviť';
+                    },
+                    () => {
+                        btn.classList.remove('is-playing');
+                        btn.innerHTML = '🔊 Prečítať';
+                    },
+                    (err) => {
+                        btn.classList.remove('is-playing');
+                        btn.innerHTML = '🔊 Prečítať';
+                        console.warn("ISAS TTS Chyba:", err);
+                    }
+                );
+                if (!ok) {
+                    btn.classList.remove('is-playing');
+                    btn.innerHTML = '🔊 Prečítať';
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- 🚀 FIX POZÍCIE IBA PRE AI ASISTENTA ---
+            const overlay = document.getElementById('isas-chat-overlay');
+            const chatContainer = document.getElementById('ai-chat-container');
+            
+            if (overlay) document.body.appendChild(overlay);
+            if (chatContainer) document.body.appendChild(chatContainer);
+
+            // 🛡️ OCHRANA PROTI ZÁSEKU NA POZADÍ: Pri prepnutí karty, minimalizácii alebo prechode na inú stránku okamžite umlčíme zvuk
+            const handleStopTts = function() {
+                if (window.ISASStopSpeech) window.ISASStopSpeech();
+                document.querySelectorAll('.ai-tts-btn.is-playing').forEach(b => {
+                    b.classList.remove('is-playing');
+                    b.innerHTML = '🔊 Prečítať';
+                });
+            };
+            document.addEventListener('visibilitychange', function() { if (document.hidden) handleStopTts(); });
+            window.addEventListener('pagehide', handleStopTts);
+
+            // 🌐 Poistka: Každý odkaz v chate sa vždy otvorí na novej karte
+            const messagesContainer = document.getElementById('ai-messages');
+            if (messagesContainer) {
+                messagesContainer.addEventListener('click', function(e) {
+                    const link = e.target.closest('a');
+                    if (link) {
+                        link.setAttribute('target', '_blank');
+                        link.setAttribute('rel', 'noopener noreferrer');
+                    }
+                });
+            }
+
+            // ⌨️ Klávesové skratky, Drag & Drop a čisté vkladanie screenshotov (Ctrl+V)
+            const aiInputEl = document.getElementById('ai-input');
+            const chatWindow = document.getElementById('ai-chat-window');
+
+            if (aiInputEl) {
+                aiInputEl.addEventListener('input', resizeAiInput);
+                
+                // 📸 100% čisté vloženie obrázku/screenshotu zo schránky (bez znečistenia textového poľa)
+                aiInputEl.addEventListener('paste', function(e) {
+                    const clipboardItems = e.clipboardData?.items;
+                    let imagePasted = false;
+                    if (clipboardItems) {
+                        for (let i = 0; i < clipboardItems.length; i++) {
+                            if (clipboardItems[i].type.indexOf('image') !== -1) {
+                                const blob = clipboardItems[i].getAsFile();
+                                if (blob) {
+                                    e.preventDefault(); // Zamedzí vloženiu binárneho odpadu do textarea
+                                    imagePasted = true;
+                                    const file = new File([blob], `screenshot_${Date.now()}.png`, { type: blob.type });
+                                    selectedAiFiles.push(file);
+                                    renderAiFilePreviews();
+                                }
+                            }
+                        }
+                    }
+                    if (!imagePasted) setTimeout(resizeAiInput, 0);
+                });
+
+                aiInputEl.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter' && !e.isComposing) {
+                        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+                        if (!e.shiftKey && !isTouchDevice) {
+                            e.preventDefault();
+                            sendMessage();
+                        }
+                    }
+                });
+            }
+
+            // 🛡️ OCHRANA PROTI NECHCENÉMU OTVORENIU SÚBORU PREHLIADAČOM (Drag & Drop podpora)
+            if (chatWindow) {
+                // 🔒 SENIORSKÝ SCROLL-TRAP: Pozadie sa nikdy nepohne pri scrollovaní v okne AI asistenta
+                chatWindow.addEventListener('wheel', function(e) {
+                    const scrollable = e.target.closest('#ai-messages, #ai-input, #ai-file-preview-container');
+                    if (!scrollable) {
+                        // Ak používateľ točí kolieskom nad hlavičkou alebo lištou nástrojov chatu
+                        e.preventDefault();
+                        return;
+                    }
+                    const delta = e.deltaY;
+                    const atTop = delta < 0 && scrollable.scrollTop <= 0;
+                    const atBottom = delta > 0 && (scrollable.scrollTop + scrollable.clientHeight >= scrollable.scrollHeight - 1);
+                    if (atTop || atBottom) {
+                        e.preventDefault(); // Zastaví prenos scrollu na body pri dosiahnutí stropu/dna
+                    }
+                }, { passive: false });
+
+                chatWindow.addEventListener('touchmove', function(e) {
+                    const scrollable = e.target.closest('#ai-messages, #ai-input, #ai-file-preview-container');
+                    if (!scrollable) {
+                        e.preventDefault();
+                    }
+                }, { passive: false });
+
+                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                    chatWindow.addEventListener(eventName, (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    }, false);
+                });
+
+                chatWindow.addEventListener('drop', (e) => {
+                    const dt = e.dataTransfer;
+                    const files = dt.files;
+                    if (files && files.length > 0) {
+                        handleAiFileSelect({ files: files });
+                    }
+                });
+            }
+
+            loadChatState();
+        });
+    </script>
+
+    <!-- 🎩 ISAS CORE: Detektív a čistenie URL je centrálne a bezpečne vykonávané v admin_master.js -->
+
+    <!-- 🛡️ ISAS CORE: Globálne modály (Alert, Confirm, GDPR) sú centrálne obsluhované v admin_master.js -->
+
+    <!-- 🚀 UI automatizácie (zložky, skloňovanie, mobilné karty, zmena hesla) sú centrálne vykonávané v admin_master.js -->
+
+    <!-- 📝 ISAS QUICKNOTE LOGIKA -->
+    <script>
+        // 1. Otváranie a zatváranie
+        function toggleQuickNote() {
+            const win = document.getElementById('quicknote-window');
+            if (win.style.display === 'flex') {
+                win.style.display = 'none';
+                // Ak ho používateľ manuálne zavrie krížikom, zrušíme aj pripnutie
+                if (localStorage.getItem('isas_quicknote_pinned') === 'true') {
+                    togglePinQuickNote(); 
+                }
+            } else {
+                win.style.display = 'flex';
+                // Focus na textové pole po otvorení
+                setTimeout(() => document.getElementById('quicknote-textarea').focus(), 50);
+            }
+        }
+
+        // 1.5 Pripnutie na obrazovku (Pin Mode)
+        function togglePinQuickNote() {
+            const win = document.getElementById('quicknote-window');
+            const pinBtn = document.getElementById('qn-pin-btn');
+            const isPinned = localStorage.getItem('isas_quicknote_pinned') === 'true';
+
+            if (isPinned) {
+                localStorage.setItem('isas_quicknote_pinned', 'false');
+                win.classList.remove('pinned');
+                pinBtn.style.opacity = '0.4';
+                pinBtn.style.transform = 'rotate(0deg)';
+            } else {
+                localStorage.setItem('isas_quicknote_pinned', 'true');
+                win.classList.add('pinned');
+                pinBtn.style.opacity = '1';
+                pinBtn.style.transform = 'rotate(45deg)'; // Vizuálny efekt zapichnutia
+            }
+        }
+
+        // 1.8 Maximalizácia okna
+        function maximizeQuickNote() {
+            const win = document.getElementById('quicknote-window');
+            const isMax = win.classList.contains('maximized');
+            
+            if (isMax) {
+                win.classList.remove('maximized');
+                localStorage.setItem('isas_quicknote_maximized', 'false');
+            } else {
+                win.classList.add('maximized');
+                localStorage.setItem('isas_quicknote_maximized', 'true');
+            }
+            document.getElementById('quicknote-textarea').focus();
+        }
+
+        // 2. Ukladanie do pamäte prehliadača
+        function saveQuickNote() {
+            const text = document.getElementById('quicknote-textarea').value;
+            localStorage.setItem('isas_quicknote_data', text);
+        }
+
+        // 3. Vloženie časovej pečiatky (Super pre dispečerov)
+        function qnInsertTime() {
+            const ta = document.getElementById('quicknote-textarea');
+            const now = new Date();
+            const timeStr = now.toLocaleDateString() + ' ' + now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + ' ➔ ';
+            
+            // Ak pole nie je prázdne a nekončí novým riadkom, pridáme nový riadok
+            if (ta.value.length > 0 && !ta.value.endsWith('\n')) {
+                ta.value += '\n';
+            }
+            ta.value += timeStr;
+            ta.focus();
+            saveQuickNote();
+        }
+
+        // 4. Kopírovanie do schránky
+        function qnCopy() {
+            const ta = document.getElementById('quicknote-textarea');
+            
+            navigator.clipboard.writeText(ta.value).then(() => {
+                // Vizuálna spätná väzba
+                const btn = document.getElementById('qn-copy-btn');
+                const originalHtml = btn.innerHTML;
+                btn.innerHTML = '✅ Hotovo';
+                btn.style.background = '#10b981';
+                
+                setTimeout(() => {
+                    btn.innerHTML = originalHtml;
+                    btn.style.background = '';
+                }, 2000);
+            }).catch(err => {
+                window.showGlobalAlertModal("Chyba", "Nepodarilo sa skopírovať text.", "error");
+            });
+        }
+
+        // 5. Vymazanie s potvrdením
+        function qnClear() {
+            window.showGlobalConfirmModal("Vymazať poznámky", "⚠️ Naozaj chcete vymazať všetky poznámky? Tento krok sa nedá vrátiť späť.", function() {
+                document.getElementById('quicknote-textarea').value = '';
+                saveQuickNote();
+                document.getElementById('quicknote-textarea').focus();
+            });
+        }
+
+        // 5.2 Bleskové zdieľanie (Web Share API / ISAS Fallback Menu) 📤
+        function qnShare() {
+            const text = document.getElementById('quicknote-textarea').value.trim();
+            if (!text) {
+                window.showGlobalAlertModal("Upozornenie", "📭 Poznámkový blok je prázdny. Nemáte čo zdieľať.", "warning");
+                return;
+            }
+
+            if (navigator.share) {
+                navigator.share({
+                    title: 'ISAS Poznámka',
+                    text: text
+                }).catch(err => {
+                    if (err.name !== 'AbortError') {
+                        document.getElementById('qn-share-menu').classList.toggle('active');
+                    }
+                });
+            } else {
+                document.getElementById('qn-share-menu').classList.toggle('active');
+            }
+        }
+
+        // 5.3 Logika pre konkrétne siete vo Fallback Menu
+        function qnShareTo(network) {
+            const text = document.getElementById('quicknote-textarea').value.trim();
+            const encodedText = encodeURIComponent(text);
+            let url = '';
+
+            switch(network) {
+                case 'whatsapp':
+                    url = "https://wa.me/?text=" + encodedText;
+                    break;
+                case 'viber':
+                    url = "viber://forward?text=" + encodedText;
+                    break;
+                case 'telegram':
+                    url = "https://t.me/share/url?url=&text=" + encodedText;
+                    break;
+                case 'email':
+                    url = "mailto:?subject=ISAS Poznámka&body=" + encodedText;
+                    break;
+                case 'messenger':
+                    // Messenger nepodporuje predvyplnenie textu. Skopírujeme ho a otvoríme web.
+                    qnCopy();
+                    if (window.showGlobalAlertModal) window.showGlobalAlertModal("Skopírované", "✅ Text bol skopírovaný do schránky.<br><br>Teraz sa otvorí Messenger. Vyberte kontakt a stlačte Ctrl+V (Vložiť).", "success");
+                    url = "https://www.messenger.com/";
+                    break;
+            }
+
+            if (url) {
+                window.open(url, '_blank');
+            }
+            
+            // Po kliknutí menu zavrieme
+            document.getElementById('qn-share-menu').classList.remove('active');
+        }
+
+        // 5.5 Hlasové diktovanie (Speech-to-Text) 🎙️
+        function qnDictate() {
+            const btn = document.getElementById('qn-dictate-btn');
+            const ta = document.getElementById('quicknote-textarea');
+            window.ISASDictateEngine(btn, ta, '🎙️ Diktovať', '🔴 Počúvam...');
+        }
+
+        // 6. Inicializácia po načítaní stránky
+        document.addEventListener('DOMContentLoaded', function() {
+            const ta = document.getElementById('quicknote-textarea');
+            const win = document.getElementById('quicknote-window');
+            const pinBtn = document.getElementById('qn-pin-btn');
+            
+            if (ta) {
+                // Načítanie uložených dát
+                ta.value = localStorage.getItem('isas_quicknote_data') || '';
+                // Event listener pre automatické ukladanie pri každom stlačení klávesy
+                ta.addEventListener('input', saveQuickNote);
+                
+                // Kontrola, či bol blok pripnutý z predchádzajúcej stránky
+                if (localStorage.getItem('isas_quicknote_pinned') === 'true') {
+                    win.style.display = 'flex';
+                    win.classList.add('pinned');
+                    if (pinBtn) {
+                        pinBtn.style.opacity = '1';
+                        pinBtn.style.transform = 'rotate(45deg)';
+                    }
+                }
+
+                // Kontrola, či bol blok maximalizovaný
+                if (localStorage.getItem('isas_quicknote_maximized') === 'true') {
+                    win.classList.add('maximized');
+                }
+            }
+        });
+    </script>
+
+    <!-- 🎮 ISAS 2048 STEALTH EASTER EGG (Iba pre interný personál) -->
+    {% if user.is_authenticated and user.is_staff %}
+        {% include 'admin/easter_egg_2048.html' %}
+    {% endif %}
+{% endblock %}

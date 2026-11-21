@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Faktúra - {{ faktura.cislo_faktury }}</title>
+    
+    {% include "documents/document_design_system.html" %}
+</head>
+<body>
+
+    <div class="document-wrapper">
+    <div class="watermark">{% if faktura.typ_dokladu == 'DOBROPIS' %}DOBROPIS{% elif faktura.typ_dokladu == 'ZALOHA' %}ZÁLOHA{% else %}FAKTÚRA{% endif %}</div>
+
+    <!-- HLAVIČKA -->
+    <div class="header">
+        <div class="header-left">
+            {% if identita.logo and identita.logo.name %}
+                <img src="{{ identita.logo.url }}" class="logo-img" alt="Logo">
+            {% else %}
+                <h1 class="logo-text">{{ faktura.dodavatel_nazov }}</h1>
+            {% endif %}
+            {% if identita.podtitul %}
+                <div class="company-meta">{{ identita.podtitul }}</div>
+            {% endif %}
+        </div>
+        <div class="header-right">
+            <div class="doc-type">
+                {% if faktura.typ_dokladu == 'DOBROPIS' %}
+                    Dobropis (Opravný doklad)
+                {% elif faktura.typ_dokladu == 'ZALOHA' %}
+                    Zálohová faktúra (Proforma)
+                {% else %}
+                    Faktúra - Daňový doklad
+                {% endif %}
+            </div>
+            <div class="doc-number">{{ faktura.cislo_faktury }}</div>
+            
+            <!-- 🛡️ ISAS ARCHITECT FIX: Legislatívna povinnosť pre Dobropis -->
+            {% if faktura.typ_dokladu == 'DOBROPIS' and faktura.povodna_faktura %}
+                <div class="doc-date" style="color: var(--danger); font-weight: 800; font-size: 11px; margin-bottom: 4px;">
+                    K faktúre č.: {{ faktura.povodna_faktura.cislo_faktury }}
+                </div>
+            {% endif %}
+            
+            <div class="doc-date">Dátum vystavenia: {{ faktura.datum_vystavenia|date:"d.m.Y" }}</div>
+            {% if faktura.typ_dokladu != 'ZALOHA' %}
+                <div class="doc-date">Dátum dodania: {{ faktura.datum_dodania|date:"d.m.Y" }}</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- INFORMAČNÉ KARTY -->
+    <div class="info-grid">
+        <!-- DODÁVATEĽ (Snapshot z faktúry) -->
+        <div class="info-card avoid-break">
+            <div class="info-card-header">🏢 Dodávateľ</div>
+            <div class="info-value">{{ faktura.dodavatel_nazov }}</div>
+            <div class="info-meta" style="margin-bottom: 10px;">
+                {{ faktura.dodavatel_sidlo|linebreaksbr }}
+            </div>
+            <div class="meta-line"><strong>IČO:</strong> <span>{{ faktura.dodavatel_ico }}</span></div>
+            <div class="meta-line"><strong>DIČ:</strong> <span>{{ faktura.dodavatel_dic }}</span></div>
+            <div class="meta-line"><strong>IČ DPH:</strong> <span>{% if identita.je_platca_dph %}{{ faktura.dodavatel_ic_dph|default:"-" }}{% else %}<span style="color: var(--slate-500); font-weight: 600;">Neplatca DPH</span>{% endif %}</span></div>
+            
+            <div class="meta-line" style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e2e8f0;">
+                <strong>Vystavil:</strong> 
+                <span>
+                    {% if faktura.vystavil.zamestnanec %}
+                        {{ faktura.vystavil.zamestnanec.meno }} {{ faktura.vystavil.zamestnanec.priezvisko }}
+                    {% else %}
+                        {{ identita.vystavuje_faktury|default:identita.konatel|default:"Oprávnená osoba" }}
+                    {% endif %}
+                </span>
+            </div>
+            <div class="meta-line"><strong>Tel:</strong> <span>{% if faktura.vystavil.zamestnanec.telefon %}{{ faktura.vystavil.zamestnanec.telefon }}{% elif faktura.vystavil.telefon %}{{ faktura.vystavil.telefon }}{% else %}{{ identita.telefon|default:"-" }}{% endif %}</span></div>
+            <div class="meta-line"><strong>Email:</strong> <span>{% if faktura.vystavil.zamestnanec.email %}{{ faktura.vystavil.zamestnanec.email }}{% elif faktura.vystavil.email %}{{ faktura.vystavil.email }}{% else %}{{ identita.email_vseobecny|default:"-" }}{% endif %}</span></div>
+            {% if identita.web %}
+            <div class="meta-line"><strong>Web:</strong> <span>{{ identita.web }}</span></div>
+            {% endif %}
+        </div>
+
+        <!-- ODBERATEĽ (Snapshot z faktúry) -->
+        <div class="info-card avoid-break">
+            <div class="info-card-header">👤 Odberateľ (Zákazník)</div>
+            <div class="info-value">{{ faktura.odberatel_nazov }}</div>
+            <div class="info-meta" style="margin-bottom: 10px;">
+                {% if faktura.odberatel_ulica %}{{ faktura.odberatel_ulica }}<br>{% endif %}
+                {% if faktura.odberatel_psc or faktura.odberatel_mesto %}{{ faktura.odberatel_psc }} {{ faktura.odberatel_mesto }}<br>{% endif %}
+                {% if faktura.odberatel_stat %}{{ faktura.odberatel_stat }}{% endif %}
+            </div>
+            <div class="meta-line"><strong>IČO:</strong> <span>{{ faktura.odberatel_ico }}</span></div>
+            <div class="meta-line"><strong>DIČ:</strong> <span>{{ faktura.odberatel_dic|default:"-" }}</span></div>
+            <div class="meta-line"><strong>IČ DPH:</strong> <span>{{ faktura.odberatel_ic_dph|default:"-" }}</span></div>
+            
+            <!-- 🧠 ISAS B2B REFERENCIE: Zobrazenie objednávky -->
+            {% if faktura.cislo_objednavky_klienta %}
+            <div style="margin-top: 12px; padding: 10px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px;">
+                <div style="font-size: 9px; color: var(--primary); text-transform: uppercase; font-weight: 800; margin-bottom: 2px;">Objednávka / PO:</div>
+                <div style="font-size: 14px; font-weight: 900; color: var(--primary-dark); white-space: pre-wrap;">{{ faktura.cislo_objednavky_klienta }}</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- PREDMET FAKTÚRY (Zariadenia, ponuky a servisné podklady) -->
+    {% if faktura.zariadenie or faktura.zdrojove_zaznamy.exists or faktura.zdrojove_ponuky.exists or faktura.typ_servisu.all %}
+    <div class="section-title avoid-break">
+        {% if faktura.typ_dokladu == 'DOBROPIS' %}Predmet dobropisu
+        {% elif faktura.typ_dokladu == 'ZALOHA' %}Predmet zálohovej faktúry
+        {% else %}Predmet fakturácie{% endif %}
+    </div>
+    <div class="ai-insight avoid-break">
+        <div class="ai-label">ISAS CORE - Špecifikácia</div>
+        <div class="ai-content">
+            {% if faktura.typ_servisu.all %}
+                <span style="display:block; margin-bottom: 4px; color: var(--slate-500); font-weight: 700; text-transform: uppercase; font-size: 8.5px; letter-spacing: 0.5px;">Typ prác a úkonov:</span>
+                <div style="margin-bottom: 12px;">
+                    {% for t in faktura.typ_servisu.all %}
+                        <span style="display: inline-block; background: #f8fafc; border: 1px solid #e2e8f0; color: var(--slate-700); padding: 2px 6px; border-radius: 4px; font-weight: 700; margin-right: 4px; margin-bottom: 4px;">🔧 {{ t.nazov }}</span>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <strong style="color: var(--slate-900); display: block; margin-bottom: 12px;">
+                    {% if faktura.typ_dokladu == 'DOBROPIS' %}Dobropisujeme Vám dodané položky a odborné služby.
+                    {% elif faktura.typ_dokladu == 'ZALOHA' %}Zálohová platba za dohodnuté položky a odborné služby.
+                    {% else %}Fakturácia za dodané položky a odborné služby.{% endif %}
+                </strong>
+            {% endif %}
+
+            <!-- A. OBCHODNÝ ZÁKLAD: Cenové ponuky a VŠETKY zariadenia -->
+            {% if faktura.zdrojove_ponuky.all %}
+                <div style="margin-top: 8px; font-size: 11px; color: var(--slate-900); border-top: 1px dashed rgba(37, 99, 235, 0.15); padding-top: 6px;">
+                    <span style="display:block; margin-bottom: 4px; color: var(--slate-500); font-weight: 700; text-transform: uppercase; font-size: 8.5px; letter-spacing: 0.5px;">Schválené cenové ponuky:</span>
+                    <div style="margin-bottom: 8px;">
+                        {% for ponuka in faktura.zdrojove_ponuky.all %}
+                            <span style="display: inline-block; background: #eff6ff; color: var(--primary-dark); padding: 2px 6px; border-radius: 4px; font-weight: 700; margin-right: 4px; margin-bottom: 4px;">📄 {{ ponuka.cislo_ponuky }}</span>
+                        {% endfor %}
+                    </div>
+                    
+                    <span style="display:block; margin-bottom: 4px; color: var(--slate-500); font-weight: 700; text-transform: uppercase; font-size: 8.5px; letter-spacing: 0.5px;">Zariadenia spojené s vykonanými prácami a úkonmi:</span>
+                    {% if unikatne_zariadenia %}
+                        {% for zar in unikatne_zariadenia %}
+                            <div style="margin-bottom: 3px; color: var(--primary-dark); font-weight: 700;">
+                                {{ zar.get_kategoria_display }} | {{ zar.model_zariadenia|upper }} <span style="color: var(--slate-500); font-weight: 500;">(S/N: {{ zar.vyrobne_cislo }})</span>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <span style="color: var(--slate-500); font-style: italic;">Všeobecné položky a odborné služby</span>
+                    {% endif %}
+                </div>
+            {% endif %}
+
+            <!-- B. FYZICKÁ REALIZÁCIA: Servisné protokoly (Doklikaný bonus, ak existuje) -->
+            {% if faktura.zdrojove_zaznamy.all %}
+                <div style="margin-top: 10px; font-size: 11px; color: var(--slate-900); border-top: 1px dashed rgba(16, 185, 129, 0.2); padding-top: 6px;">
+                    <span style="display:block; margin-bottom: 5px; color: var(--success); font-weight: 700; text-transform: uppercase; font-size: 8.5px; letter-spacing: 0.5px;">Potvrdenie o fyzickom prevzatí prác (Protokoly):</span>
+                    {% for zaznam in faktura.zdrojove_zaznamy.all %}
+                        <div style="margin-bottom: 4px; padding: 5px 10px; background: rgba(16, 185, 129, 0.03); border: 1px solid rgba(16, 185, 129, 0.1); border-radius: 6px; color: #065f46; line-height: 1.4;">
+                            
+                            {% if zaznam.protokol_uzavrety %}
+                                ✅ <b>Protokol #{{ zaznam.poradove_cislo|default:zaznam.id }}</b> (zo dňa {% if zaznam.cas_podpisu %}{{ zaznam.cas_podpisu|date:"d.m.Y" }}{% else %}{{ zaznam.vytvorene|date:"d.m.Y" }}{% endif %}):<br>
+                                <span style="margin-left: 18px; display: inline-block; margin-top: 2px;">👨‍🔧 Vykonal: <b>{% for tech in zaznam.technici.all %}{{ tech.meno }} {{ tech.priezvisko }}{% if not forloop.last %}, {% endif %}{% empty %}Neznámy technik{% endfor %}</b></span><br>
+                                <span style="margin-left: 18px; display: inline-block; margin-top: 2px;">✍️ Prevzal: <b>{% if zaznam.meno_podpisujuceho and zaznam.meno_podpisujuceho.strip %}{{ zaznam.meno_podpisujuceho }}{% else %}Oprávnená osoba{% endif %}</b></span>
+                            {% else %}
+                                📝 <b>Servisný záznam</b> (vykonaný dňa {{ zaznam.vytvorene|date:"d.m.Y" }}):<br>
+                                <span style="margin-left: 18px; display: inline-block; margin-top: 2px;">👨‍🔧 Vykonal: <b>{% for tech in zaznam.technici.all %}{{ tech.meno }} {{ tech.priezvisko }}{% if not forloop.last %}, {% endif %}{% empty %}Neznámy technik{% endfor %}</b></span>
+                            {% endif %}
+                            
+                            {% if zaznam.zariadenie %}
+                                pre <span style="font-weight: 700;">{{ zaznam.zariadenie.get_kategoria_display }} | {{ zaznam.zariadenie.model_zariadenia|upper }}</span> (S/N: {{ zaznam.zariadenie.vyrobne_cislo }})
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <!-- C. FALLBACK: Ak náhodou nie je prepojená ponuka ani protokol (manuálna faktúra), ale je vybraté zariadenie -->
+            {% if not faktura.zdrojove_ponuky.exists and not faktura.zdrojove_zaznamy.exists and faktura.zariadenie %}
+                <div style="margin-top: 8px; padding: 8px 12px; background: var(--slate-100); border-radius: 6px; border: 1px solid #e2e8f0; font-size: 11px; line-height: 1.4;">
+                    ⚙️ <b>Špecifikácia technológie:</b> 
+                    <span style="color: var(--primary-dark); font-weight: 700;">{{ faktura.zariadenie.model_zariadenia|upper }}</span> 
+                    {% if faktura.zariadenie.nazov %} - "{{ faktura.zariadenie.nazov }}"{% endif %}
+                    <br>
+                    <span style="font-size: 9.5px; color: var(--slate-500); display: inline-block; margin-top: 4px;">
+                        {% if faktura.zariadenie.vyrobca %}Výrobca: {{ faktura.zariadenie.vyrobca.nazov_vyrobcu }} | {% endif %}
+                        S/N: {{ faktura.zariadenie.vyrobne_cislo }}
+                    </span>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="section-title avoid-break">
+        {% if faktura.typ_dokladu == 'DOBROPIS' %}Dobropisované položky
+        {% elif faktura.typ_dokladu == 'ZALOHA' %}Rozpis položiek (Nedaňový doklad)
+        {% else %}Rozpis položiek a služieb{% endif %}
+    </div>
+
+    <!-- SEKCIA A: POLOŽKY A KOMPONENTY -->
+    <div class="info-card-header avoid-break" style="border:none; margin-bottom: 5px; font-size: 11px; color: var(--slate-900);">
+        {% if faktura.typ_dokladu == 'DOBROPIS' %}📦 Vrátené a stornované položky{% else %}📦 Dodané položky a komponenty{% endif %}
+    </div>
+    <table class="modern-table">
+        <thead>
+            <tr>
+                <th style="width: 40%;">Popis položky</th>
+                <th class="right" style="width: 10%;">Množstvo</th>
+                <th class="right" style="width: 15%;">Cena / j.</th>
+                <th class="right" style="width: 10%;">Zľava</th>
+                <th class="right" style="width: 10%;">DPH</th>
+                <th class="right" style="width: 15%;">Spolu bez DPH</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in polozky %}
+                {% if p.typ_polozky == 'MAT' %}
+                    <tr class="avoid-break">
+                        <td>
+                            {% if p.kategoria_nazov %}
+                                <span class="mat-cat">{{ p.kategoria_nazov }}</span>
+                            {% endif %}
+                            
+                            <!-- 🧠 ISAS SMART FALLBACK: Názov -->
+                            <span class="item-name">{% if p.obchodny_nazov %}{{ p.obchodny_nazov }}{% else %}{{ p.nazov }}{% endif %}</span>
+                            
+                            <!-- 🕵️ ISAS SMART FALLBACK: Výrobca -->
+                            {% if not p.skryt_vyrobcu %}
+                                {% if p.vyrobca_nazov %}
+                                    <span class="item-manufacturer">Výrobca: <strong>{{ p.vyrobca_nazov }}</strong></span>
+                                {% elif p.skladovy_diel.vyrobca %}
+                                    <span class="item-manufacturer">Výrobca: <strong>{{ p.skladovy_diel.vyrobca }}</strong></span>
+                                {% elif p.skladovy_diel.vyrobca_dielu %}
+                                    <span class="item-manufacturer">Výrobca: <strong>{{ p.skladovy_diel.vyrobca_dielu }}</strong></span>
+                                {% endif %}
+                            {% endif %}
+                            
+                            <!-- ⚙️ ISAS FIX: Zobrazenie zariadenia pre konkrétny diel -->
+                            {% if p.zariadenie %}
+                                <div class="item-device-badge">
+                                    ⚙️ {{ p.zariadenie.model_zariadenia }} <span>(S/N: {{ p.zariadenie.vyrobne_cislo }})</span>
+                                </div>
+                            {% endif %}
+                        </td>
+                        <td class="right"><b>{{ p.mnozstvo|floatformat:2 }}</b> <span style="font-size:9px; color:var(--slate-500);">{{ p.merna_jednotka }}</span></td>
+                        <td class="right">{{ p.jednotkova_cena_bez_dph|floatformat:2 }} {{ faktura.mena }}</td>
+                        <td class="right">{% if p.zlava_percento > 0 %}<span class="badge-discount">-{{ p.zlava_percento|floatformat:1 }}%</span>{% else %}-{% endif %}</td>
+                        <td class="right">{% if faktura.prenos_danovej_povinnosti %}0%{% else %}{{ p.sadzba_dph|floatformat:0 }}%{% endif %}</td>
+                        <td class="right"><b>{{ p.cena_po_zlave_bez_dph|floatformat:2 }} {{ faktura.mena }}</b></td>
+                    </tr>
+                {% endif %}
+            {% empty %}
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 15px; color: var(--slate-500); font-style: italic;">
+                        V tejto sekcii nie sú evidované žiadne položky.
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- SEKCIA B: SLUŽBY, ODBORNÁ PRÁCA A DOPRAVA -->
+    <div class="info-card-header avoid-break" style="border:none; margin-bottom: 5px; font-size: 11px; color: var(--slate-900);">
+        {% if faktura.typ_dokladu == 'DOBROPIS' %}🔧 Dobropisované služby, odborná práca a doprava{% else %}🔧 Služby, odborná práca a doprava{% endif %}
+    </div>
+    <table class="modern-table">
+        <thead>
+            <tr>
+                <th style="width: 40%;">Popis položky</th>
+                <th class="right" style="width: 10%;">Množstvo</th>
+                <th class="right" style="width: 15%;">Cena / j.</th>
+                <th class="right" style="width: 10%;">Zľava</th>
+                <th class="right" style="width: 10%;">DPH</th>
+                <th class="right" style="width: 15%;">Spolu bez DPH</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in polozky %}
+                {% if p.typ_polozky == 'PRACA' or p.typ_polozky == 'DOPRAVA' or p.typ_polozky == 'INE' %}
+                    <tr class="avoid-break">
+                        <td>
+                            <span class="item-name">{{ p.nazov|cut:"🚨 EXPRES/HAVÁRIA: "|cut:"EXPRES/HAVÁRIA: " }}</span>
+                            
+                            {% if "HAVÁRIA" in p.nazov or "EXPRES" in p.nazov %}
+                                <span style="display: inline-block; font-size: 9px; background: #fef2f2; color: #ef4444; font-weight: 700; padding: 2px 6px; border-radius: 4px; border: 1px solid #fca5a5; margin-top: 4px;">🚨 Havarijný príplatok</span>
+                            {% endif %}
+                            {% if p.praca_naviac %}
+                                <span style="display: inline-block; font-size: 9px; background: #fffbeb; color: #d97706; font-weight: 700; padding: 2px 6px; border-radius: 4px; border: 1px solid #fde68a; margin-top: 4px;">➕ Práca naviac</span>
+                            {% endif %}
+                            
+                            <!-- ⚙️ ISAS FIX: Zobrazenie zariadenia pre konkrétnu prácu -->
+                            {% if p.zariadenie %}
+                                <br>
+                                <div class="item-device-badge">
+                                    ⚙️ {{ p.zariadenie.model_zariadenia }} <span>(S/N: {{ p.zariadenie.vyrobne_cislo }})</span>
+                                </div>
+                            {% endif %}
+                        </td>
+                        <td class="right">
+                            <b>{{ p.mnozstvo|floatformat:2 }}</b> 
+                            {% if p.merna_jednotka|lower != 'ks' %}
+                                <span style="font-size:9px; color:var(--slate-500);">{{ p.merna_jednotka }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="right">{{ p.jednotkova_cena_bez_dph|floatformat:2 }} {{ faktura.mena }}</td>
+                        <td class="right">{% if p.zlava_percento > 0 %}<span class="badge-discount">-{{ p.zlava_percento|floatformat:1 }}%</span>{% else %}-{% endif %}</td>
+                        <td class="right">{% if faktura.prenos_danovej_povinnosti %}0%{% else %}{{ p.sadzba_dph|floatformat:0 }}%{% endif %}</td>
+                        <td class="right"><b>{{ p.cena_po_zlave_bez_dph|floatformat:2 }} {{ faktura.mena }}</b></td>
+                    </tr>
+                {% endif %}
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- SEKCIA C: MIMORIADNE ZĽAVY -->
+    {% regroup polozky by typ_polozky as polozky_skupiny %}
+    {% for skupina in polozky_skupiny %}
+        {% if skupina.grouper == 'ZLA' %}
+            <div class="info-card-header avoid-break" style="border:none; margin-bottom: 5px; font-size: 11px; color: var(--danger);">
+                {% if faktura.typ_dokladu == 'DOBROPIS' %}🏷️ Storno mimoriadnych zliav{% else %}🏷️ Mimoriadne zľavy{% endif %}
+            </div>
+            <table class="modern-table" style="border-top: 1px solid #fca5a5; border-bottom: 1px solid #fca5a5;">
+                <thead>
+                    <tr>
+                        <th style="width: 80%; background: var(--danger-bg); color: var(--danger); border-bottom: 2px solid #f87171;">Popis poskytnutej zľavy</th>
+                        <th class="right" style="width: 20%; background: var(--danger-bg); color: var(--danger); text-align: right; border-bottom: 2px solid #f87171;">Výška zľavy bez DPH</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in skupina.list %}
+                        <tr class="avoid-break">
+                            <td style="background: #fff5f5;">
+                                <span class="item-name" style="color: var(--danger); font-weight: 700;">{{ p.nazov }}</span>
+                                <span style="font-size: 10px; color: var(--slate-500); display: block; margin-top: 3px;">Mimoriadne odpočítanie z celkovej ceny</span>
+                            </td>
+                            <td class="right" style="text-align: right; vertical-align: middle; background: #fff5f5;">
+                                <b style="color: var(--danger); font-size: 13px;">{{ p.cena_po_zlave_bez_dph|floatformat:2 }} {{ faktura.mena }}</b>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    {% endfor %}
+
+    <!-- FINANČNÝ SUMÁR A QR KÓD -->
+    <div class="summary-wrapper avoid-break">
+        <div class="qr-box">
+            {% if faktura.sposob_uhrady == 'PREVOD' %}
+                {% with qr_code=faktura.get_qr_code_base64 %}
+                    {% if qr_code %}
+                        <img src="{{ qr_code }}" alt="SEPA QR platba">
+                        <div class="qr-label">SEPA QR platba</div>
+                    {% endif %}
+                {% endwith %}
+            {% endif %}
+        </div>
+        
+        <div class="totals-box">
+            {% if identita.je_platca_dph %}
+                <div class="total-line">
+                    <span>Základ pre DPH:</span>
+                    <span>{{ faktura.celkom_bez_dph|floatformat:2 }} {{ faktura.mena }}</span>
+                </div>
+                
+                {% if not faktura.prenos_danovej_povinnosti %}
+                <div class="total-line">
+                    <span>DPH celkom:</span>
+                    <span>{{ faktura.celkom_dph|floatformat:2 }} {{ faktura.mena }}</span>
+                </div>
+                {% endif %}
+            {% else %}
+                <div class="total-line">
+                    <span>Suma celkom:</span>
+                    <span>{{ faktura.celkom_bez_dph|floatformat:2 }} {{ faktura.mena }}</span>
+                </div>
+                <div class="total-line" style="font-size: 9px; color: var(--slate-500);">
+                    <span>* Nie sme platcami DPH</span>
+                </div>
+            {% endif %}
+            
+            <div class="total-final">
+                <span>
+                    {% if faktura.typ_dokladu == 'DOBROPIS' %}Celková suma dobropisu:
+                    {% else %}Spolu k úhrade:{% endif %}
+                </span>
+                <span>{{ faktura.celkom_s_dph|floatformat:2 }} {{ faktura.mena }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- PLATOBNÝ PÁS -->
+    <div class="payment-strip avoid-break">
+        <div class="payment-item">
+            <span class="payment-label">Banka a IBAN</span>
+            <span class="payment-val">{{ faktura.dodavatel_banka|default:"" }} <br> {{ faktura.dodavatel_iban }}</span>
+        </div>
+        <div class="payment-item">
+            <span class="payment-label">SWIFT / BIC</span>
+            <span class="payment-val" style="font-family: 'Inter', sans-serif;">{{ faktura.dodavatel_swift|default:"-" }}</span>
+        </div>
+        <div class="payment-item">
+            <span class="payment-label">Variabilný / Konšt. symbol</span>
+            <span class="payment-val">{{ faktura.variabilny_symbol }} / {{ faktura.konstantny_symbol }}</span>
+        </div>
+        <div class="payment-item">
+            <span class="payment-label">Forma úhrady</span>
+            <span class="payment-val" style="font-family: 'Inter', sans-serif;">{{ faktura.get_sposob_uhrady_display }}</span>
+        </div>
+        <div class="payment-item" style="text-align: right;">
+            <span class="payment-label" style="color: var(--danger);">Dátum splatnosti</span>
+            <span class="payment-val" style="color: var(--danger); font-family: 'Inter', sans-serif;">{{ faktura.datum_splatnosti|date:"d.m.Y" }}</span>
+        </div>
+    </div>
+
+    <!-- PRENESENIE DPH ALERT -->
+    {% if faktura.prenos_danovej_povinnosti %}
+    <div class="legal-alert avoid-break">
+        ⚠️ Prenesenie daňovej povinnosti (Reverse charge) v zmysle platných daňových predpisov. Daň odvedie zákazník.
+    </div>
+    {% endif %}
+
+    <!-- LEGISLATÍVA A POZNÁMKY -->
+    <div class="legal-box avoid-break">
+        {% if faktura.poznamka_pre_klienta or faktura.zdrojove_ponuky.exists or faktura.cislo_objednavky_klienta %}
+            <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-left: 4px solid var(--primary); border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+                <div style="font-size: 9px; color: var(--primary); text-transform: uppercase; font-weight: 800; margin-bottom: 6px; letter-spacing: 0.5px;">📝 Poznámka k dokladu</div>
+                
+                {% if faktura.poznamka_pre_klienta %}
+                    <div style="color: var(--slate-900); font-weight: 600; font-size: 11px; margin-bottom: {% if faktura.zdrojove_ponuky.exists or faktura.cislo_objednavky_klienta %}10px{% else %}0{% endif %}; white-space: pre-wrap;">{{ faktura.poznamka_pre_klienta }}</div>
+                {% endif %}
+                
+                {% if faktura.zdrojove_ponuky.exists or faktura.cislo_objednavky_klienta %}
+                    <div style="color: var(--primary-dark); font-weight: 600; font-size: 10.5px; {% if faktura.poznamka_pre_klienta %}padding-top: 10px; border-top: 1px dashed #bfdbfe;{% endif %}">
+                        {% if faktura.typ_dokladu == 'DOBROPIS' %}Dobropisujeme{% else %}Fakturujeme{% endif %} Vám na základe {% if faktura.zdrojove_ponuky.exists %}{% with count=faktura.zdrojove_ponuky.count %}{% if count == 1 %}cenovej ponuky:{% else %}cenových ponúk:{% endif %}{% endwith %} {% for ponuka in faktura.zdrojove_ponuky.all %}<strong>{{ ponuka.cislo_ponuky }}</strong>{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}{% if faktura.zdrojove_ponuky.exists and faktura.cislo_objednavky_klienta %} a {% endif %}{% if faktura.cislo_objednavky_klienta %}{% if "," in faktura.cislo_objednavky_klienta %}objednávok:{% else %}objednávky:{% endif %} <strong>{{ faktura.cislo_objednavky_klienta }}</strong>{% endif %}.
+                    </div>
+                {% endif %}
+            </div>
+        {% endif %}
+        
+        {% if faktura.typ_dokladu == 'ZALOHA' %}
+        <div style="margin-bottom: 12px; padding: 8px 12px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; color: #b45309; font-weight: 700;">
+            ⚠️ Tento doklad nie je daňovým dokladom. Riadny daňový doklad (faktúra) Vám bude vystavený po prijatí platby na náš účet.
+        </div>
+        {% endif %}
+        
+        <div style="margin-bottom: 8px;">
+            <strong style="color: var(--slate-900);">Výhrada vlastníctva:</strong> Vlastnícke alebo užívacie právo k dodanému plneniu a dielu prechádza na odberateľa až dňom úplného zaplatenia fakturovanej sumy, v súlade s platnými právnymi predpismi a dohodnutými obchodnými podmienkami.
+        </div>
+        
+        <div style="margin-bottom: 8px;">
+            <strong style="color: var(--slate-900);">Omeškanie s platbou a reklamácie:</strong> V prípade omeškania s úhradou sme oprávnení účtovať úrok z omeškania {% if gn.sadzba_uroku_omeskanie %}v dohodnutej výške <strong>{{ gn.sadzba_uroku_omeskanie }} %</strong> za každý deň omeškania{% else %}v dohodnutej alebo zákonnej výške{% endif %}, prípadne zákonný úrok. Pri B2B vzťahoch si vyhradzujeme právo účtovať paušálnu náhradu nákladov spojených s uplatnením pohľadávky v zmysle platných právnych predpisov. Prípadné nezrovnalosti v tomto doklade je odberateľ povinný reklamovať písomne do 3 pracovných dní od jeho doručenia, inak sa doklad považuje za bezvýhradne akceptovaný.
+        </div>
+
+        <div style="margin-top: 10px; font-size: 8.5px; color: var(--slate-500); border-top: 1px solid #e2e8f0; padding-top: 6px; line-height: 1.4;">
+            <strong>Elektronický doklad a GDPR:</strong> Tento vizuálny dokument bol vyhotovený elektronicky. V zmysle platných národných a medzinárodných predpisov o elektronickej fakturácii je pri elektronických dodaniach daňovým dokladom štruktúrovaný XML súbor doručený prostredníctvom certifikovanej siete (Peppol / eFaktúra). Toto PDF slúži výhradne ako ľudsky čitateľná kópia. Doklad slúži zároveň ako potvrdenie o dodaní a záruke, pokiaľ nebol vystavený samostatný dokument. Informácie o spracúvaní osobných údajov (GDPR) sú dostupné na vyžiadanie.
+        </div>
+    </div>
+
+    <!-- PÄTIČKA (Podpis) -->
+    <div class="signature-grid avoid-break">
+        
+        <!-- Kaskádový podpis vystavovateľa -->
+        <div class="sign-block">
+            <div class="sign-pad">
+                {% if faktura.vystavil.zamestnanec.osobny_podpis and faktura.vystavil.zamestnanec.osobny_podpis.name %}
+                    <img src="{{ faktura.vystavil.zamestnanec.osobny_podpis.url }}" class="sign-img" alt="Osobný podpis">
+                {% elif identita.peciatka_podpis and identita.peciatka_podpis.name %}
+                    <img src="{{ identita.peciatka_podpis.url }}" class="sign-img" alt="Pečiatka a Podpis">
+                {% endif %}
+            </div>
+            <div class="sign-line">
+                {% if faktura.vystavil.zamestnanec %}
+                    {{ faktura.vystavil.zamestnanec.meno }} {{ faktura.vystavil.zamestnanec.priezvisko }}
+                {% else %}
+                    {{ identita.vystavuje_faktury|default:identita.konatel|default:"Oprávnená osoba" }}
+                {% endif %}
+            </div>
+            <div class="sign-detail">Vystavil (Oprávnená osoba)</div>
+        </div>
+    </div>
+
+    <div class="registry-footer avoid-break">
+        {{ faktura.dodavatel_zapis }}
+    </div>
+
+</div>
+</body>
+</html>

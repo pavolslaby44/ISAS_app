@@ -1,0 +1,246 @@
+{% extends 'web/base.html' %}
+
+{% block title %}Odborné články a novinky | {{ nastavenia.titulok_webu|default:identita.nazov_spolocnosti }}{% endblock %}
+{% block description %}Prečítajte si odborné články, tipy z praxe a novinky z odvetvia od spoločnosti {{ identita.nazov_spolocnosti }}.{% endblock %}
+{% block og_type %}website{% endblock %}
+{% block og_url %}{{ request.scheme }}://{{ request.get_host }}{% url 'webbuilder:blog_list' %}{% endblock %}
+{% block og_title %}Odborné články a novinky | {{ nastavenia.titulok_webu|default:identita.nazov_spolocnosti }}{% endblock %}
+{% block og_description %}Prečítajte si odborné články, tipy z praxe a novinky z odvetvia.{% endblock %}
+
+{% block extra_head %}
+    <link rel="canonical" href="{{ request.scheme }}://{{ request.get_host }}{% url 'webbuilder:blog_list' %}{% if page_obj.number > 1 %}?page={{ page_obj.number }}{% endif %}">
+    {% if search_query or aktivna_kategoria %}
+    <meta name="robots" content="noindex, follow">
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+<nav aria-label="Omrvinková navigácia" class="bg-gray-100 py-4 border-b border-gray-200">
+    <div class="max-w-7xl mx-auto px-6 text-sm text-gray-500 font-medium">
+        <ol class="flex items-center flex-wrap gap-2">
+            <li>
+                <a href="{% url 'webbuilder:home' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="hover:text-brand transition">Domov</a>
+            </li>
+            <li aria-hidden="true" class="text-gray-400">/</li>
+            {% if aktivna_kategoria %}
+            <li>
+                <a href="{% url 'webbuilder:blog_list' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="hover:text-brand transition">Blog</a>
+            </li>
+            <li aria-hidden="true" class="text-gray-400">/</li>
+            <li aria-current="page" class="text-gray-900 font-bold">
+                {{ aktivna_kategoria_nazov|default:aktivna_kategoria }}
+            </li>
+            {% else %}
+            <li aria-current="page" class="text-gray-900 font-bold">Blog</li>
+            {% endif %}
+        </ol>
+    </div>
+</nav>
+
+<section class="py-16 bg-white px-6">
+    <div class="max-w-7xl mx-auto">
+        <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+            <div>
+                <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4">Odborné články a novinky</h1>
+                <p class="text-lg text-gray-500 max-w-2xl">Tipy z praxe, návody na údržbu a novinky z nášho odvetvia.</p>
+            </div>
+            
+            <!-- 🔍 Vyhľadávací formulár -->
+            <form method="get" class="w-full md:w-80 flex-shrink-0">
+                {% if is_preview %}<input type="hidden" name="preview" value="ai_draft">{% endif %}
+                {% if aktivna_kategoria %}<input type="hidden" name="kategoria" value="{{ aktivna_kategoria }}">{% endif %}
+                <div class="relative">
+                    <input type="text" name="q" value="{{ search_query }}" aria-label="Hľadať v článkoch" placeholder="Hľadať v článkoch..." class="w-full bg-gray-50 border border-gray-200 rounded-xl pl-10 pr-10 py-2.5 text-sm focus:ring-2 ring-brand outline-none transition">
+                    <svg class="w-4 h-4 text-gray-400 absolute left-3.5 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    {% if search_query %}
+                    <a href="{% url 'webbuilder:blog_list' %}{% if aktivna_kategoria %}?kategoria={{ aktivna_kategoria|urlencode }}{% if is_preview %}&preview=ai_draft{% endif %}{% elif is_preview %}?preview=ai_draft{% endif %}" class="absolute right-3 top-3 text-gray-400 hover:text-gray-600 text-xs font-bold" title="Zrušiť hľadanie">&times;</a>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+
+        <!-- 🏷️ Kategórie (Filtračné Pillboxy) -->
+        {% if dostupne_kategorie or aktivna_kategoria %}
+        <div class="flex items-center gap-2 overflow-x-auto pb-2 mb-4 text-sm [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+            <a href="{% url 'webbuilder:blog_list' %}{% if search_query %}?q={{ search_query|urlencode }}{% if is_preview %}&preview=ai_draft{% endif %}{% elif is_preview %}?preview=ai_draft{% endif %}" class="px-4 py-1.5 rounded-full font-bold transition whitespace-nowrap {% if not aktivna_kategoria %}bg-brand text-white shadow-sm{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
+                Všetky
+            </a>
+            {% for kat in dostupne_kategorie %}
+            <a href="{% if aktivna_kategoria == kat.kod %}{% url 'webbuilder:blog_list' %}{% if search_query %}?q={{ search_query|urlencode }}{% if is_preview %}&preview=ai_draft{% endif %}{% elif is_preview %}?preview=ai_draft{% endif %}{% else %}{% url 'webbuilder:blog_list' %}?kategoria={{ kat.kod|urlencode }}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}{% if is_preview %}&preview=ai_draft{% endif %}{% endif %}" class="px-4 py-1.5 rounded-full font-bold transition whitespace-nowrap {% if aktivna_kategoria == kat.kod %}bg-brand text-white shadow-sm{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}" {% if aktivna_kategoria == kat.kod %}title="Kliknutím zrušíte filter tejto kategórie"{% endif %}>
+                {{ kat.nazov }}{% if aktivna_kategoria == kat.kod %} <span class="ml-1 opacity-75 font-normal">&times;</span>{% endif %}
+            </a>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if search_query or aktivna_kategoria %}
+        <div class="mb-6 flex items-center justify-between text-xs text-gray-500 font-medium">
+            <span>Nájdených <b>{{ paginator.count }}</b> {% if paginator.count == 1 %}článok{% elif paginator.count >= 2 and paginator.count <= 4 %}články{% else %}článkov{% endif %}{% if search_query %} pre výraz <i>„{{ search_query|truncatechars:50 }}“</i>{% endif %}.</span>
+            <a href="{% url 'webbuilder:blog_list' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="text-brand hover:underline font-bold">Vyčistiť filter</a>
+        </div>
+        {% endif %}
+
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {% for clanok in clanky %}
+            <a href="{% url 'webbuilder:blog_detail' clanok.slug %}{% if is_preview %}?preview=ai_draft{% endif %}" class="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden group">
+                
+                <!-- 🖼️ OBRÁZOK A ODZNAKY -->
+                <div class="h-56 bg-gray-100 relative overflow-hidden">
+                    {% if clanok.obrazok and clanok.obrazok.name %}
+                        <img src="{{ clanok.obrazok.url }}" alt="{{ clanok.obrazok_alt|default:clanok.nadpis }}" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+                    {% else %}
+                        <div class="w-full h-full flex items-center justify-center text-5xl opacity-20">📰</div>
+                    {% endif %}
+                    
+                    {% if clanok.kategoria %}
+                    <div class="absolute top-4 left-4 flex flex-col gap-2 items-start">
+                        <span class="bg-brand text-white text-xs font-extrabold px-3 py-1.5 rounded-lg shadow-sm uppercase tracking-wider">
+                            {{ clanok.get_kategoria_display }}
+                        </span>
+                    </div>
+                    {% endif %}
+                    <div class="absolute bottom-4 right-4 bg-white/90 backdrop-blur-sm text-gray-900 text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-1">
+                        ⏱️ {{ clanok.cas_citania|default:"3" }} min.
+                    </div>
+                </div>
+                
+                <!-- 📝 TEXTOVÁ ČASŤ (100% E-E-A-T & UX Potenciál) -->
+                <div class="p-6 flex flex-col flex-grow">
+                    <div class="flex items-center justify-between text-xs text-gray-400 font-medium mb-2">
+                        {% if clanok.datum_vydania %}
+                        <time datetime="{{ clanok.datum_vydania|date:'Y-m-d' }}">{{ clanok.datum_vydania|date:"d.m.Y" }}</time>
+                        {% else %}
+                        <span class="text-amber-600 italic font-semibold">Koncept</span>
+                        {% endif %}
+                        {% if clanok.autor and clanok.autor.zobrazit_na_webe and not clanok.autor.je_anonymizovany %}
+                        <span class="truncate max-w-[140px] text-gray-500 font-semibold">{{ clanok.autor.meno }} {{ clanok.autor.priezvisko }}</span>
+                        {% endif %}
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3 group-hover:text-brand transition-colors line-clamp-2">{{ clanok.nadpis }}</h3>
+                    <p class="text-sm text-gray-500 line-clamp-3 mb-5 flex-grow">{{ clanok.perex|default:clanok.obsah|striptags|truncatewords:28 }}</p>
+                    
+                    <div class="pt-4 border-t border-gray-100 flex items-center justify-between mt-auto">
+                        {% if clanok.autor and clanok.autor.zobrazit_na_webe and not clanok.autor.je_anonymizovany %}
+                        <div class="flex items-center gap-2">
+                            {% if clanok.autor.profilova_fotka and clanok.autor.profilova_fotka.name %}
+                                <img src="{{ clanok.autor.profilova_fotka.url }}" alt="{{ clanok.autor.meno }} {{ clanok.autor.priezvisko }}" class="w-7 h-7 rounded-full object-cover border border-gray-200" loading="lazy">
+                            {% else %}
+                                <div class="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-xs">👤</div>
+                            {% endif %}
+                            <span class="text-xs text-gray-600 font-medium truncate max-w-[130px]">{{ clanok.autor.verejna_rola|default:"Špecialista" }}</span>
+                        </div>
+                        {% else %}
+                        <span class="text-xs text-gray-400 font-medium">Odborný tím</span>
+                        {% endif %}
+                        <span class="text-brand font-bold text-sm flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                            Čítať <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                        </span>
+                    </div>
+                </div>
+            </a>
+            {% empty %}
+            <div class="col-span-full text-center py-16 bg-gray-50 rounded-3xl border border-dashed border-gray-200">
+                {% if search_query or aktivna_kategoria %}
+                    <span class="text-5xl opacity-30 block mb-4">🔍</span>
+                    <p class="text-gray-900 font-bold text-lg mb-1">Nenašli sa žiadne vyhovujúce články</p>
+                    <p class="text-gray-500 text-sm max-w-md mx-auto mb-6">Pre zadané kritériá vyhľadávania neevidujeme žiadne publikácie.</p>
+                    <a href="{% url 'webbuilder:blog_list' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="inline-flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-5 py-2.5 rounded-xl font-bold text-sm shadow-sm hover:bg-gray-100 transition">
+                        Zrušiť filtre
+                    </a>
+                {% else %}
+                    <span class="text-5xl opacity-20 block mb-4">✍️</span>
+                    <p class="text-gray-500 font-medium text-lg">Zatiaľ neboli publikované žiadne články.</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        
+        <!-- 📄 STRÁNKOVANIE -->
+        {% if is_paginated %}
+        <nav aria-label="Navigácia stránkovania blogu" class="mt-12 flex flex-wrap justify-center items-center gap-2">
+            {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}{% if aktivna_kategoria %}&kategoria={{ aktivna_kategoria|urlencode }}{% endif %}{% if is_preview %}&preview=ai_draft{% endif %}" rel="prev" class="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-bold text-sm transition" aria-label="Predchádzajúca strana">&larr; Predchádzajúca</a>
+            {% endif %}
+
+            <div class="hidden sm:flex items-center gap-1.5">
+                {% if page_obj.number > 3 %}
+                    <a href="?page=1{% if search_query %}&q={{ search_query|urlencode }}{% endif %}{% if aktivna_kategoria %}&kategoria={{ aktivna_kategoria|urlencode }}{% endif %}{% if is_preview %}&preview=ai_draft{% endif %}" class="w-9 h-9 flex items-center justify-center bg-gray-50 hover:bg-gray-200 text-gray-700 rounded-lg font-bold text-sm transition" title="Prvá strana">1</a>
+                    {% if page_obj.number > 4 %}<span class="px-1 text-gray-400 font-bold">…</span>{% endif %}
+                {% endif %}
+
+                {% for p in paginator.page_range %}
+                    {% if p == page_obj.number %}
+                        <span class="w-9 h-9 flex items-center justify-center bg-brand text-white rounded-lg font-bold shadow-sm text-sm" aria-current="page">{{ p }}</span>
+                    {% elif p >= page_obj.number|add:"-2" and p <= page_obj.number|add:"2" %}
+                        <a href="?page={{ p }}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}{% if aktivna_kategoria %}&kategoria={{ aktivna_kategoria|urlencode }}{% endif %}{% if is_preview %}&preview=ai_draft{% endif %}" class="w-9 h-9 flex items-center justify-center bg-gray-50 hover:bg-gray-200 text-gray-700 rounded-lg font-bold text-sm transition">{{ p }}</a>
+                    {% endif %}
+                {% endfor %}
+
+                {% if page_obj.number < paginator.num_pages|add:"-2" %}
+                    {% if page_obj.number < paginator.num_pages|add:"-3" %}<span class="px-1 text-gray-400 font-bold">…</span>{% endif %}
+                    <a href="?page={{ paginator.num_pages }}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}{% if aktivna_kategoria %}&kategoria={{ aktivna_kategoria|urlencode }}{% endif %}{% if is_preview %}&preview=ai_draft{% endif %}" class="w-9 h-9 flex items-center justify-center bg-gray-50 hover:bg-gray-200 text-gray-700 rounded-lg font-bold text-sm transition" title="Posledná strana">{{ paginator.num_pages }}</a>
+                {% endif %}
+            </div>
+
+            <span class="sm:hidden px-3 py-2 bg-brand text-white rounded-lg font-bold text-xs shadow-sm">Strana {{ page_obj.number }} / {{ paginator.num_pages }}</span>
+
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}{% if aktivna_kategoria %}&kategoria={{ aktivna_kategoria|urlencode }}{% endif %}{% if is_preview %}&preview=ai_draft{% endif %}" rel="next" class="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-bold text-sm transition" aria-label="Ďalšia strana">Ďalšia &rarr;</a>
+            {% endif %}
+        </nav>
+        {% endif %}
+    </div>
+</section>
+
+<!-- 🚀 ISAS SEO ENGINE: BreadcrumbList, CollectionPage & ItemList Schema pre Google -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Domov",
+          "item": "{{ request.scheme }}://{{ request.get_host }}{% url 'webbuilder:home' %}"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Blog",
+          "item": "{{ request.scheme }}://{{ request.get_host }}{% url 'webbuilder:blog_list' %}"
+        }{% if aktivna_kategoria %},
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": "{{ aktivna_kategoria_nazov|default:aktivna_kategoria|escapejs }}",
+          "item": "{{ request.scheme }}://{{ request.get_host }}{% url 'webbuilder:blog_list' %}?kategoria={{ aktivna_kategoria|urlencode }}"
+        }{% endif %}
+      ]
+    },
+    {
+      "@type": "CollectionPage",
+      "name": "Odborné články a novinky | {{ identita.nazov_spolocnosti|default:nastavenia.titulok_webu|default:'ISAS CORE'|escapejs }}",
+      "description": "Prečítajte si odborné články, tipy z praxe a novinky z odvetvia.",
+      "url": "{{ request.build_absolute_uri|escapejs }}"{% if clanky %},
+      "mainEntity": {
+        "@type": "ItemList",
+        "itemListElement": [
+          {% for clanok in clanky %}
+        {
+          "@type": "ListItem",
+          "position": {{ page_obj.start_index|default:1|add:forloop.counter0 }},
+          "name": "{{ clanok.nadpis|striptags|escapejs }}",
+          "url": "{{ request.scheme }}://{{ request.get_host }}{% url 'webbuilder:blog_detail' clanok.slug %}"
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+        ]
+      }{% endif %}
+    }
+  ]
+}
+</script>
+{% endblock %}

@@ -1,0 +1,2763 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}💰 Tvorba vystavenej faktúry | ISAS Command Center{% endblock %}
+
+{% block extrahead %}
+    {{ block.super }}
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<style>
+    /* --- 💎 VIVID QUOTE BUILDER --- */
+    :root {
+        --primary: #6366f1; --primary-dark: #4f46e5;
+        --slate-900: #0f172a; --slate-800: #1e293b; --slate-500: #64748b; --slate-200: #e2e8f0;
+        --emerald: #10b981; --emerald-dark: #059669;
+        --amber: #f59e0b; --rose: #ef4444;
+        --glass-bg: rgba(255, 255, 255, 0.85);
+    }
+    
+    #content { background: transparent !important; padding: 20px 30px !important; min-height: 90vh; }
+    .breadcrumbs, #content > h1, .pretitle { display: none !important; }
+    
+    /* Layout */
+    .builder-container { display: grid; grid-template-columns: 400px 1fr; gap: 30px; max-width: 1600px; margin: 0 auto; align-items: start; animation: fadeUp 0.5s ease; }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Panels */
+    .panel { background: var(--glass-bg); backdrop-filter: blur(20px); border-radius: 24px; border: 1px solid rgba(255,255,255,0.9); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.08); padding: 30px; position: relative; }
+    .panel-header { font-size: 18px; font-weight: 900; color: var(--slate-900); margin-bottom: 25px; display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #f1f5f9; padding-bottom: 15px;}
+    
+    /* Inputs & Selects */
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; font-size: 11px; font-weight: 800; color: var(--slate-500); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+    .vivid-input { width: 100%; padding: 12px 16px; border-radius: 12px; border: 2px solid var(--slate-200); background: white; font-size: 14px; font-weight: 700; color: var(--slate-800); outline: none; transition: 0.3s; box-sizing: border-box; }
+    .vivid-input:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15); }
+    .vivid-input:disabled { background-color: #f1f5f9; color: var(--slate-500); cursor: not-allowed; border-color: #e2e8f0; opacity: 0.8; }
+    
+    /* --- ✨ SELECT2 PREMIUM STYLING (Identické s Update Stock) ✨ --- */
+    /* Ochrana natívnych selectov pred vykreslením (Zabráni škaredému prebliknutiu) */
+    select.vivid-input { display: none; }
+    
+    /* --- ✨ SELECT2 PREMIUM STYLING (Identické s Update Stock) ✨ --- */
+    .select2-container { width: 100% !important; }
+    
+    /* 1. SINGLE SELECT (Zákazník, Vozidlo, Štart) */
+    .select2-container--default .select2-selection--single {
+        height: 60px !important; border-radius: 16px !important; border: 2px solid #e2e8f0 !important;
+        background: rgba(255, 255, 255, 0.9) !important; display: flex; align-items: center;
+        font-size: 15px; font-weight: 700; color: var(--slate-800); box-shadow: inset 0 2px 4px rgba(0,0,0,0.02) !important;
+        transition: all 0.3s ease;
+    }
+    .select2-container--default.select2-container--focus .select2-selection--single,
+    .select2-container--default.select2-container--open .select2-selection--single {
+        border-color: var(--primary-indigo, #6366f1) !important; background-color: #ffffff !important; box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1) !important;
+    }
+    .select2-container--default.select2-container--disabled .select2-selection--single { background-color: #f8fafc !important; cursor: not-allowed; opacity: 0.8; border-color: #e2e8f0 !important; }
+    .select2-container--default .select2-selection--single .select2-selection__arrow { height: 56px !important; right: 15px !important; }
+    .select2-container--default .select2-selection--single .select2-selection__rendered { padding-left: 20px !important;  padding-right: 50px !important; color: var(--slate-800) !important; line-height: normal; }
+    .select2-container--default .select2-selection--single .select2-selection__placeholder { color: #94a3b8; font-weight: 600; }
+
+    /* ==========================================================================
+       💎 2. MULTIPLE SELECT (Presné zacielenie súrodeneckých UL + SPAN kontajnerov)
+       ========================================================================== */
+    .select2-container--default .select2-selection--multiple {
+        min-height: 60px !important; 
+        max-height: 120px !important; 
+        overflow-y: auto !important; 
+        border-radius: 16px !important; 
+        border: 2px solid #e2e8f0 !important;
+        background: rgba(255, 255, 255, 0.9) !important; 
+        display: flex !important; 
+        flex-wrap: wrap !important;
+        align-items: center !important; 
+        padding: 4px 15px !important; 
+        box-sizing: border-box !important;
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.02) !important; 
+        transition: all 0.3s ease;
+    }
+    .select2-container--default.select2-container--focus .select2-selection--multiple {
+        border-color: var(--primary-indigo, #6366f1) !important; 
+        background-color: #ffffff !important; 
+        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1) !important;
+    }
+
+    /* 1. Súrodenec 1: Zoznam odznakov (Šírka auto, aby nevytláčal search span) */
+    .select2-container--default .select2-selection--multiple .select2-selection__rendered {
+        width: auto !important; 
+        max-width: 100% !important;
+        display: inline-flex !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        list-style: none !important;
+        box-sizing: border-box !important;
+        gap: 6px !important;
+    }
+
+    /* 2. Zvolené odznaky (Tagy) */
+    .select2-container--default .select2-selection--multiple .select2-selection__choice {
+        background-color: #eef2ff !important; 
+        border: 1px solid #c7d2fe !important; 
+        border-radius: 8px !important;
+        color: #4338ca !important; 
+        font-weight: 800; 
+        padding: 4px 10px !important; 
+        margin: 2px 0 !important;
+        float: none !important;
+        display: inline-flex !important; 
+        align-items: center !important;
+        max-width: 180px !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+    .select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+        color: #ef4444 !important; 
+        margin-right: 6px !important; 
+        font-weight: 900 !important; 
+        border: none !important;
+        float: none !important;
+        display: inline-block !important; 
+        vertical-align: middle !important; 
+        line-height: 1 !important;
+    }
+
+    /* 3. Súrodenec 2: Vyhľadávací SPAN */
+    .select2-container--default .select2-selection--multiple .select2-search--inline {
+        flex: 1 1 0% !important;
+        min-width: 200px !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        height: 38px !important;
+        box-sizing: border-box !important;
+    }
+
+    /* 4. Samotná TEXTAREA vnútri súrodeneckého SPANu */
+    .select2-container--default .select2-selection--multiple .select2-search--inline .select2-search__field { 
+        width: 100% !important; 
+        min-width: 100% !important;
+        height: 38px !important;
+        line-height: 38px !important;
+        margin: 0 !important;
+        padding: 0 4px !important;
+        font-size: 15px !important;
+        font-weight: 700 !important; 
+        color: var(--slate-800) !important; 
+        background: transparent !important;
+        border: none !important;
+        outline: none !important;
+        box-shadow: none !important;
+        box-sizing: border-box !important;
+        resize: none !important;
+        display: block !important;
+    }
+
+    /* 5. Placeholder pravidlá */
+    .select2-container--default .select2-selection--multiple .select2-search--inline .select2-search__field::placeholder,
+    .select2-container--default .select2-selection--multiple .select2-search--inline .select2-search__field::-webkit-input-placeholder {
+        color: #94a3b8 !important;
+        opacity: 1 !important;
+        font-size: 15px !important;
+        font-weight: 600 !important;
+        line-height: 38px !important;
+    }
+
+    /* 3. ROZBAĽOVACIE MENU (Dropdown & Hľadanie) */
+    .select2-dropdown { border: 1px solid var(--primary-indigo, #6366f1); border-radius: 16px; box-shadow: 0 25px 50px rgba(0,0,0,0.15); overflow: hidden; padding: 10px; z-index: 11000 !important; margin-top: 5px; }
+    .select2-search--dropdown { padding: 5px 5px 15px 5px; }
+    .select2-search--dropdown .select2-search__field { 
+        border-radius: 12px; border: 2px solid var(--slate-200); padding: 14px 15px 14px 45px; 
+        font-family: inherit; font-size: 14px; font-weight: 700; outline: none; transition: 0.3s;
+        background: #f8fafc url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="%2394a3b8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>') no-repeat 15px center;
+    }
+    .select2-search--dropdown .select2-search__field:focus { border-color: var(--primary-indigo, #6366f1); background-color: white; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.1); }
+    .select2-container--default .select2-results__option { padding: 14px 20px; font-size: 14px; font-weight: 700; color: var(--slate-800); border-radius: 12px; margin-bottom: 4px; transition: 0.2s; cursor: pointer; border: 1px solid transparent; }
+    .select2-container--default .select2-results__option--highlighted[aria-selected] { background-color: #eef2ff; color: #4f46e5; border-color: #c7d2fe; transform: translateX(5px); }
+    .select2-container--default .select2-results__option[aria-selected=true] { background-color: #f1f5f9; color: var(--slate-900); }
+    .select2-container--default .select2-results__group { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--slate-400); font-weight: 900; padding: 10px 15px 5px 15px; }
+
+    /* Buttons */
+    .btn { padding: 12px 24px; border-radius: 12px; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; border: none; transition: 0.3s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+    .btn-ai { background: linear-gradient(135deg, #8b5cf6, #6d28d9); color: white; width: 100%; box-shadow: 0 10px 20px rgba(139, 92, 246, 0.3); margin-top: 10px; }
+    .btn-ai:hover { transform: translateY(-2px); box-shadow: 0 15px 25px rgba(139, 92, 246, 0.4); }
+    .btn-save { background: linear-gradient(135deg, var(--emerald), var(--emerald-dark)); color: white; box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3); width: 100%; font-size: 16px; height: 60px;}
+    .btn-save:hover { transform: translateY(-2px); box-shadow: 0 15px 30px rgba(16, 185, 129, 0.4); }
+    .btn-ghost { background: #f1f5f9; color: var(--slate-800); border: 1px solid var(--slate-200); }
+    .btn-ghost:hover { background: #e2e8f0; }
+
+    /* VIVID Dropdown Menu */
+    .vivid-dropdown { position: relative; display: inline-block; }
+    .vivid-dropdown-content { 
+        visibility: hidden; opacity: 0; position: absolute; right: 0; top: 110%; 
+        background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); 
+        min-width: 230px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); 
+        border-radius: 12px; border: 1px solid var(--slate-200); 
+        z-index: 100; transform: translateY(10px); transition: all 0.3s ease; 
+    }
+    /* Hover funguje len na PC s myšou */
+    @media (hover: hover) {
+        .vivid-dropdown:hover .vivid-dropdown-content { visibility: visible; opacity: 1; transform: translateY(0); }
+    }
+    /* Trieda pre ovládanie kliknutím (Mobil) */
+    .vivid-dropdown-content.show { visibility: visible; opacity: 1; transform: translateY(0); }
+    .vivid-dropdown-content a { 
+        color: var(--slate-800); padding: 12px 16px; text-decoration: none; 
+        display: block; font-size: 13px; font-weight: 700; border-bottom: 1px solid #f1f5f9; transition: 0.2s;
+    }
+    .vivid-dropdown-content a:hover { background-color: #f8fafc; color: var(--primary); padding-left: 20px; }
+    .vivid-dropdown-content a:last-child { border-bottom: none; }
+    
+    .btn-action { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 800; display: inline-flex; gap: 8px; align-items: center; cursor: pointer;}
+    .btn-action:hover { background: var(--primary-dark); }
+
+    /* Right Panel Table */
+    .quote-table { width: 100%; border-collapse: separate; border-spacing: 0 8px; table-layout: fixed; }
+    .quote-table th { text-align: left; font-size: 11px; font-weight: 800; color: var(--slate-500); text-transform: uppercase; letter-spacing: 1px; padding: 0 15px 10px 15px; border-bottom: 2px solid #e2e8f0; }
+    .quote-table td { background: white; padding: 15px; border-top: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+    .quote-table tr td:first-child { border-left: 1px solid #f1f5f9; border-radius: 12px 0 0 12px; }
+    .quote-table tr td:last-child { border-right: 1px solid #f1f5f9; border-radius: 0 12px 12px 0; }
+    
+    .row-input { width: 100%; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; font-weight: 700; color: var(--slate-900); background: #f8fafc; outline: none; transition: 0.2s; text-align: center; box-sizing: border-box; }
+    .row-input:focus { border-color: var(--primary); background: white; box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
+    .row-input.text-left { text-align: left; }
+
+    /* --- 📝 ISAS FIX: Rozťahovateľné pole pre názov (Premium Textarea) --- */
+    textarea.row-input.i-nazov {
+        resize: none; /* Zakáže rozťahovanie, keď v poli nie si */
+        height: 38px;
+        min-height: 38px;
+        white-space: nowrap;
+        overflow: hidden;
+        line-height: 20px;
+        font-family: inherit;
+        /* Namiesto 3 bodiek (ktoré textarea nepodporuje) použijeme prémiový fade-out efekt na posledných 30 pixeloch */
+        -webkit-mask-image: linear-gradient(to right, black calc(100% - 30px), transparent 100%);
+        mask-image: linear-gradient(to right, black calc(100% - 30px), transparent 100%);
+    }
+    textarea.row-input.i-nazov:focus {
+        resize: none; /* Vypneme manuálne ťahanie, systém to urobí automaticky */
+        white-space: normal;
+        overflow: hidden; /* Skryjeme škaredý scrollbar, pole sa natiahne samo */
+        -webkit-mask-image: none;
+        mask-image: none;
+    }
+    
+    /* Toggle Switch (DPH a nastavenia) - 100% fixný a nedeformovateľný */
+    .toggle-switch {
+        position: relative !important;
+        display: inline-block !important;
+        width: 48px !important;
+        height: 26px !important;
+        min-width: 48px !important;
+        min-height: 26px !important;
+        max-width: 48px !important;
+        max-height: 26px !important;
+        flex-shrink: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        vertical-align: middle !important;
+        cursor: pointer !important;
+    }
+    .toggle-switch input {
+        position: absolute !important;
+        opacity: 0 !important;
+        width: 0 !important;
+        height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        pointer-events: none !important;
+    }
+    .slider {
+        position: absolute !important;
+        cursor: pointer !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        background-color: #cbd5e1 !important;
+        transition: background-color 0.25s ease !important;
+        border-radius: 26px !important;
+        box-sizing: border-box !important;
+    }
+    .slider:before {
+        position: absolute !important;
+        content: "" !important;
+        height: 20px !important;
+        width: 20px !important;
+        min-width: 20px !important;
+        min-height: 20px !important;
+        max-width: 20px !important;
+        max-height: 20px !important;
+        left: 3px !important;
+        top: 3px !important;
+        bottom: 3px !important;
+        background-color: #ffffff !important;
+        transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        border-radius: 50% !important;
+        box-sizing: border-box !important;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+        transform: translateX(0) !important;
+    }
+    input:checked + .slider {
+        background-color: var(--amber) !important;
+    }
+    input:checked + .slider:before {
+        transform: translateX(22px) !important;
+    }
+    #chk-odpis-sklad:checked + .slider, #chk-havaria:checked + .slider {
+        background-color: #ef4444 !important;
+    }
+
+    /* Totals Box */
+    .totals-box { background: var(--slate-900); color: white; border-radius: 20px; padding: 25px; margin-top: 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 20px 40px rgba(15, 23, 42, 0.4); }
+    .totals-row { display: flex; flex-direction: column; gap: 5px; }
+    .tot-label { font-size: 12px; color: #94a3b8; text-transform: uppercase; font-weight: 800; letter-spacing: 1px; }
+    .tot-val { font-size: 24px; font-weight: 900; color: white; }
+    .tot-main { font-size: 36px; color: var(--emerald); text-shadow: 0 0 20px rgba(16, 185, 129, 0.4);}
+
+    /* 🖥️ FIX PRE PC: Vynútenie vertikálneho posuvníka a zákaz horizontálneho */
+    body { overflow-y: scroll !important; overflow-x: hidden !important; }
+
+    /* ==========================================
+       📱 ISAS MOBILE RESPONSIVE FIX (BUILDERY)
+       ========================================== */
+    @media (max-width: 1024px) {
+        #content { padding: 15px 10px !important; overflow-x: hidden; }
+        
+        .builder-container { 
+            grid-template-columns: 1fr; 
+            gap: 20px; 
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        .panel {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 20px 15px; /* Zmenšený padding pre mobil */
+            min-width: 0; /* 🪄 MAGICKÝ FIX: Zabraňuje Gridu roztiahnuť panel mimo obrazovku */
+        }
+
+        /* 🛠️ OPRAVA HLAVIČKY: Zalomí dlhý text a tlačidlo pod seba */
+        .panel-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 15px;
+            height: auto;
+        }
+        .panel-header > span { line-height: 1.3; }
+        .vivid-dropdown { width: 100%; }
+        .btn-action { width: 100%; justify-content: center; }
+        
+        /* 1. Obal pre horizontálne scrollovanie tabuľky */
+        .table-responsive-wrapper {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            border-radius: 12px;
+            padding-bottom: 10px;
+            border-right: 1px solid #e2e8f0; /* Jemná vizuálna pomôcka, že sa dá scrollovať */
+        }
+        .quote-table { min-width: 900px; } 
+        
+        /* 2. Horizontálne scrollovanie pre čierny sumár */
+        .totals-box { 
+            overflow-x: auto; 
+            -webkit-overflow-scrolling: touch; 
+            justify-content: flex-start; 
+            gap: 30px; 
+            padding: 20px 15px;
+            border-radius: 16px;
+        }
+        .totals-box > div { 
+            min-width: 200px; 
+            flex-shrink: 0; 
+        }
+    }
+
+    /* --- 🛡️ ISAS FIX: Ochrana Select2 vnútri tabuľky --- */
+    .device-badge-container {
+        position: relative;
+        width: 100%;
+        max-width: 100%;
+    }
+    .device-badge {
+        max-width: 100%;
+        white-space: normal; /* Dovolí textu sa zalomiť na 2 riadky, ak je dlhý */
+        word-break: break-word;
+    }
+    .device-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    /* Špeciálna trieda len pre dropdowny v riadkoch tabuľky (zabraňuje pretekaniu na mobile) */
+    .isas-row-dropdown {
+        max-width: 90vw !important; /* Na mobile nikdy nepretečie obrazovku */
+    }
+    .isas-row-dropdown .select2-results__option {
+        white-space: normal !important; /* Dlhý text v roletke sa zalomí, neroztiahne ju */
+        word-break: break-word;
+    }
+</style>
+
+<div class="builder-container">
+    
+    <!-- 🎛️ ĽAVÝ PANEL: KONFIGURÁCIA (COMMAND CENTER) -->
+    <div class="panel">
+        <div class="panel-header">
+            <span>⚙️ Nastavenia</span>
+            <a href="{{ back_url }}" class="btn-ghost" style="padding: 6px 12px; border-radius: 8px; font-size: 11px; text-decoration: none; display: flex; align-items: center; gap: 4px; font-weight: 800; text-transform: uppercase;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg> Naspäť
+            </a>
+        </div>
+
+        <!-- 📥 IMPORT A PREPOJENIA (ŠPECIFICKÉ PRE FAKTÚRU) -->
+        <div class="form-group" style="background: #eff6ff; padding: 15px; border-radius: 16px; border: 1px dashed #93c5fd; margin-bottom: 25px;">
+            <label style="color: #1e3a8a; font-size: 13px; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                <span style="font-size: 16px;">🔗</span> Zdrojové doklady a Import
+            </label>
+
+            <!-- 1. Import z Ponuky -->
+            <div style="margin-bottom: 12px;">
+                <label style="font-size: 10px; color: #3b82f6;">📄 Import z Cenových Ponúk (Zberná faktúra)</label>
+                <select id="sel-import-ponuka" class="vivid-input select2-main" multiple="multiple" data-placeholder="📄 Vyberte cenové ponuky...">
+                    {% for p in dostupne_ponuky %}
+                        <option value="{{ p.id }}">{{ p }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <!-- 1.5 Prijatá Objednávka (Cross-filling) -->
+            <div style="margin-bottom: 12px;">
+                <label style="font-size: 10px; color: #3b82f6;">📥 Prijaté objednávky (Čísla sa prenesú na PDF faktúry)</label>
+                <select id="sel-import-objednavka" class="vivid-input select2-main" multiple="multiple" data-placeholder="📥 Vyberte prijaté objednávky...">
+                    {% for o in dostupne_objednavky %}
+                        <option value="{{ o.id }}">{{ o }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- 2. Náhľad Úlohy -->
+            <div style="margin-bottom: 12px;">
+                <label style="font-size: 10px; color: #3b82f6;">📋 Náhľad Úlohy (Otvorí sa v novom okne)</label>
+                <select id="sel-link-uloha" class="vivid-input select2-main" data-placeholder="📋 Vyberte úlohu...">
+                    <option></option>
+                    {% for u in dostupne_ulohy %}
+                        <option value="{{ u.id }}">{{ u }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- 3. Náhľad Záznamu -->
+            <div>
+                <label style="font-size: 10px; color: #3b82f6;">📑 Servisné záznamy (Podklad pre faktúru)</label>
+                <select id="sel-link-zaznam" class="vivid-input select2-main" multiple="multiple" data-placeholder="📑 Vyberte servisné záznamy...">
+                    {% for z in dostupne_zaznamy %}
+                        <option value="{{ z.id }}">{{ z }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <!-- 📄 TYP DOKLADU A DOBROPIS -->
+        <div class="form-group" style="background: #f8fafc; padding: 15px; border-radius: 16px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
+            <label style="color: var(--primary-dark);">📄 Typ dokladu</label>
+            <select id="sel-typ-dokladu" class="vivid-input select2-no-search">
+                <option value="FAKTURA" {% if faktura.typ_dokladu == 'FAKTURA' %}selected{% endif %}>🧾 Riadna faktúra</option>
+                <option value="ZALOHA" {% if faktura.typ_dokladu == 'ZALOHA' %}selected{% endif %}>⏳ Zálohová faktúra (Proforma)</option>
+                <option value="DOBROPIS" {% if faktura.typ_dokladu == 'DOBROPIS' %}selected{% endif %}>↩️ Dobropis (Opravný doklad)</option>
+            </select>
+
+            <div id="box-povodna-faktura" style="margin-top: 15px; display: {% if faktura.typ_dokladu == 'DOBROPIS' %}block{% else %}none{% endif %};">
+                <label style="color: var(--danger);">🔗 Pôvodná faktúra (Povinné pre Dobropis)</label>
+                <select id="sel-povodna-faktura" class="vivid-input select2-main" data-placeholder="Vyberte pôvodnú faktúru...">
+                    <option></option>
+                    {% for f in dostupne_faktury %}
+                        <option value="{{ f.id }}" {% if faktura.povodna_faktura_id == f.id %}selected{% endif %}>{{ f.cislo_faktury }} | {{ f.zakaznik.Nazov_spolocnosti }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <!-- ZÁKAZNÍK -->
+        <div class="form-group">
+            <label>🏢 Zákazník</label>
+            <select id="sel-zakaznik" class="vivid-input" data-placeholder="🏢 Vyberte zákazníka..." {% if zakaznik_id %}disabled{% endif %}>
+                <option></option>
+                {% for z in zakaznici %}
+                    <!-- 🌐 Pridaný data-domena pre dynamické stiahnutie loga (Google Favicon) a data-vstup pre badge -->
+                    <option value="{{ z.id }}" data-domena="{{ z.domena|default:'' }}" data-vstup="{{ z.vyzaduje_povolenie_vstupu|yesno:'true,false' }}" data-zlava="{{ z.b2b_zlava_percenta|default:0|stringformat:'.2f' }}" {% if zakaznik_id == z.id %}selected{% endif %}>{{ z.Nazov_spolocnosti }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- ZARIADENIE -->
+        <div class="form-group">
+            <label>⚙️ Zariadenie</label>
+            <select id="sel-zariadenie" class="vivid-input" data-placeholder="{% if zakaznik_id %}⚙️ Vyberte zariadenie...{% else %}🔒 Najprv zvoľte zákazníka...{% endif %}" {% if not zakaznik_id %}disabled{% endif %}>
+                <option></option>
+                {% for zar in zariadenia_zakaznika %}
+                    <!-- 📦 Využívame get_kategoria_display a pripájame dáta o záruke pre moderný odznak -->
+                    <option value="{{ zar.id }}" 
+                            data-kategoria="{{ zar.get_kategoria_display|default:'⚙️ Neznáme zariadenie' }}" 
+                            data-zaruka-do="{{ zar.zaruka_do|date:'d.m.Y' }}" 
+                            data-predlzena-do="{{ zar.predlzena_zaruka_do|date:'d.m.Y' }}" 
+                            data-je-v-zaruke="{{ zar.je_v_zaruke|yesno:'true,false' }}"
+                            {% if zariadenie_id == zar.id %}selected{% endif %}>
+                        {{ zar.model_zariadenia }} (S/N: {{ zar.vyrobne_cislo }})
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- 👨‍🔧 TECHNICI -->
+        <div class="form-group">
+            <label>👨‍🔧 Priradení zamestnanci</label>
+            <select id="sel-technici" class="vivid-input" multiple="multiple" data-placeholder="👨‍🔧 Vyberte zamestnancov...">
+                {% for t in technici %}
+                    <!-- 👔 Prenášame presné dáta rolí a pomeru do JS -->
+                    <option value="{{ t.id }}" data-rola="{{ t.pracovna_rola }}" data-pomer="{{ t.typ_pomeru }}">👷‍♂️ {{ t.meno }} {{ t.priezvisko }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- TYP PRÁC -->
+        <div class="form-group" style="background: #f8fafc; padding: 15px; border-radius: 16px; border: 1px solid #e2e8f0;">
+            <label style="color: var(--primary-dark);">🛠️ Typ servisu/práce</label>
+            <select id="sel-praca" class="vivid-input select2-main" multiple="multiple" data-placeholder="🛠️ Vyberte typ servisu/práce...">
+                {% for p in typy_prac %}
+                    <option value="{{ p.id }}">🔧 {{ p.nazov }}</option>
+                {% endfor %}
+            </select>
+        
+            <div style="margin-top: 12px; display: flex; gap: 15px; font-size: 12px; font-weight: 800; color: var(--slate-500);">
+                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; text-transform: none;">
+                    <input type="radio" name="strategia_prace" value="hodinovka" checked style="accent-color: var(--primary);"> 
+                    ⏱️ Normohodiny ({{ sadzba_praca }} {{ val_mena }}/h)
+                </label>
+                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; text-transform: none;">
+                    <input type="radio" name="strategia_prace" value="fix" style="accent-color: var(--primary);"> 
+                    🎯 Fixné sumy z cenníka
+                </label>
+            </div>
+        </div>
+
+        <!-- VOZIDLO A LOGISTIKA -->
+        <div class="form-group" style="background: #f8fafc; padding: 15px; border-radius: 16px; border: 1px solid #e2e8f0;">
+            <label style="color: var(--primary-dark);">🚙 Priradené vozidlo</label>
+            <select id="sel-vozidlo" class="vivid-input select2-no-search" data-placeholder="🚐 Vyberte priradené vozidlo..." style="margin-bottom: 15px;">
+                <option></option>
+                <option value="GLOBAL">🌍 Globálna sadzba</option>
+                {% for v in vozidla %}
+                    <option value="{{ v.id }}">🚘 {{ v.znacka_a_model }} [{{ v.spz }}]</option>
+                {% endfor %}
+            </select>
+
+            <label style="color: var(--primary-dark); display: flex; justify-content: space-between;">
+                <span>📍 Bod odjazdu</span>
+            </label>
+            <select id="sel-start-trasy" class="vivid-input select2-no-search">
+                <option value="HQ_CENTRAL" data-adresa="{{ adresa_centraly }}" selected>
+                    🏢 {{ nazov_hlavneho_skladu|default:"Hlavný sklad" }}{% if adresa_centraly %} ({{ adresa_centraly|truncatechars:35 }}){% endif %}
+                </option>
+                {% if aktivne_filialky %}
+                <optgroup label="🏪 Filiálky/Sklady">
+                    {% for f in aktivne_filialky %}
+                        {% if f.adresa %}
+                        <!-- 🏢 Pridaná adresa do zátvorky, automaticky skrátená na max 35 znakov pre čistý dizajn -->
+                        <option value="FILIALKA_{{ f.id }}" data-adresa="{{ f.adresa }}">📍 {{ f.nazov }} ({{ f.adresa|truncatechars:35 }})</option>
+                        {% endif %}
+                    {% endfor %}
+                </optgroup>
+                {% endif %}
+            </select>
+
+            <div style="margin-top: 15px; display: flex; gap: 15px; font-size: 12px; font-weight: 800; color: var(--slate-500); padding-top: 12px; border-top: 1px dashed #cbd5e1;">
+                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; text-transform: none;">
+                    <input type="radio" name="strategia_dopravy" value="kalkulacka" checked style="accent-color: var(--primary);"> 
+                    🗺️ Trasa (KM + Čas)
+                </label>
+                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; text-transform: none;">
+                    <input type="radio" name="strategia_dopravy" value="pausal" style="accent-color: var(--primary);"> 
+                    🎫 Paušál ({{ sadzba_doprava_pausal|default:sadzba_doprava }} {{ val_mena }})
+                </label>
+            </div>
+        </div>
+
+        <!-- NOVÉ: HAVARIJNÝ REŽIM -->
+        <div class="form-group">
+            <div style="display: flex; justify-content: space-between; align-items: center; background: #fef2f2; padding: 15px; border-radius: 12px; border: 1px solid #fecaca; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);">
+                <div>
+                    <label style="color: #b91c1c; margin: 0 0 4px 0; display: flex; align-items: center; gap: 6px;">
+                        <span style="font-size: 16px;">🚨</span> Havarijný / Expresný výjazd
+                    </label>
+                    <span style="font-size: 10px; color: #ef4444; font-weight: 700;">Aplikuje sa príplatok +{{ pohotovostny_priplatok }}% na prácu a výjazd</span>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="chk-havaria">
+                    <span class="slider" style="background-color: #fca5a5;"></span>
+                </label>
+            </div>
+        </div>
+
+        <button id="btn-ai-kalkulacia" class="btn btn-ai form-group">
+            🤖 Načítať dáta do rozpisu + kalkulácie
+        </button>
+
+        <div class="form-group" style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #f1f5f9;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <label style="margin: 0;">📉 Globálna zľava (%)</label>
+                <!-- 🚀 ISAS FIX: Načítanie zľavy priamo z uloženého draftu 💾 -->
+                <input type="number" id="inp-global-zlava" class="vivid-input" value="{{ faktura.globalna_zlava_percento|default:'0.00' }}" step="0.5" min="0" max="100" style="width: 80px; text-align: right; padding: 8px;">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <div style="display: flex; justify-content: space-between; align-items: center; background: #fffbeb; padding: 15px; border-radius: 12px; border: 1px solid #fde68a;">
+                <div>
+                    <label style="color: #b45309; margin: 0 0 4px 0;">Prenos daňovej povinnosti (Reverse charge)</label>
+                    <span style="font-size: 10px; color: #d97706;">Vypne DPH pre celú faktúru</span>
+                </div>
+                <label class="toggle-switch">
+                    <!-- 🚀 ISAS FIX: Ochrana stavu prepínača prenosu daňovej povinnosti pre uložený draft 🔄 -->
+                    <input type="checkbox" id="chk-prenos-dph" {% if faktura.prenos_danovej_povinnosti %}checked{% endif %}>
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+        </div>
+
+        <!-- 💰 PLATOBNÉ ÚDAJE, DÁTUMY A POZNÁMKA PRE KLIENTA -->
+        <style>
+            /* 💎 Precízne zjednotenie rozmerov finančného bloku */
+            .box-platobne-podmienky .vivid-input { height: 48px !important; padding: 10px 14px !important; font-size: 13px !important; box-sizing: border-box !important; }
+            .box-platobne-podmienky .select2-container--default .select2-selection--single { height: 48px !important; border-radius: 12px !important; }
+            .box-platobne-podmienky .select2-container--default .select2-selection--single .select2-selection__rendered { line-height: 44px !important; padding-left: 12px !important; padding-right: 32px !important; font-size: 13px !important; }
+            .box-platobne-podmienky .select2-container--default .select2-selection--single .select2-selection__arrow { height: 44px !important; right: 8px !important; }
+            .box-platobne-podmienky input[type="date"] { font-family: inherit; font-weight: 700; color: var(--slate-800); }
+        </style>
+
+        <div class="form-group box-platobne-podmienky" style="background: #f8fafc; padding: 16px; border-radius: 16px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
+            <label style="color: var(--primary-dark); font-size: 12px; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                <span>💰</span> Platobné podmienky a termíny
+            </label>
+
+            <!-- Riadok 1: Spôsob úhrady (široký) a Mena (kompaktná) -->
+            <div style="display: grid; grid-template-columns: 1fr 90px; gap: 10px; margin-bottom: 12px;">
+                <div>
+                    <label style="font-size: 10px; color: var(--slate-500);">Spôsob úhrady</label>
+                    <select id="sel-sposob-uhrady" class="vivid-input select2-no-search">
+                        {% for kod, nazov in sposob_uhrady_choices %}
+                            <option value="{{ kod }}" {% if val_sposob_uhrady == kod %}selected{% endif %}>{{ nazov }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size: 10px; color: var(--slate-500);">Mena</label>
+                    <input type="text" id="inp-mena" class="vivid-input" value="{{ val_mena }}" maxlength="6" style="text-align: center; text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px;">
+                </div>
+            </div>
+
+            <!-- Riadok 2: Dátum vystavenia a dodania -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                <div>
+                    <label style="font-size: 10px; color: var(--slate-500);">📅 Dátum vystavenia</label>
+                    <input type="date" id="inp-datum-vystavenia" class="vivid-input" value="{{ val_datum_vystavenia }}">
+                </div>
+                <div>
+                    <label style="font-size: 10px; color: var(--slate-500);">📦 Dátum dodania</label>
+                    <input type="date" id="inp-datum-dodania" class="vivid-input" value="{{ val_datum_dodania }}">
+                </div>
+            </div>
+
+            <!-- Riadok 3: Dátum splatnosti -->
+            <div style="margin-bottom: 12px;">
+                <label style="font-size: 10px; color: var(--slate-500);">⏳ Dátum splatnosti</label>
+                <input type="date" id="inp-datum-splatnosti" class="vivid-input" value="{{ val_datum_splatnosti }}">
+            </div>
+
+            <!-- Riadok 4: Poznámka pre klienta -->
+            <div>
+                <label style="font-size: 10px; color: var(--slate-500);">📝 Poznámka pre klienta (Na PDF doklade)</label>
+                <textarea id="inp-poznamka-klient" class="vivid-input" rows="2" placeholder="Text vytlačený priamo na faktúre (nepovinné)..." style="height: auto !important; min-height: 54px; resize: vertical; font-weight: 600; font-size: 12px; line-height: 1.4; font-family: inherit;">{{ val_poznamka_pre_klienta|default:'' }}</textarea>
+            </div>
+        </div>
+
+        <!-- 📦 ODPIS ZO SKLADU A VÝBER SKLADU -->
+        <div class="form-group" style="background: #fef2f2; padding: 15px; border-radius: 16px; border: 1px solid #fecaca; margin-bottom: 25px;">
+            <label style="color: #b91c1c; font-size: 13px; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                <span style="font-size: 16px;">🏢</span> Zdrojový sklad pre výdajku
+            </label>
+            
+            <div style="margin-bottom: 15px;">
+                <select id="sel-zdrojovy-sklad" class="vivid-input select2-main" data-placeholder="🏭 Vyberte sklad/filiálku...">
+                    <option></option>
+                    <optgroup label="Hlavný sklad">
+                        <option value="HLAVNY" {% if faktura.zdrojovy_sklad_id == 'HLAVNY' %}selected{% endif %}>🏭 {{ nazov_hlavneho_skladu|default:"Hlavný sklad" }}</option>
+                    </optgroup>
+                    {% if aktivne_filialky %}
+                    <optgroup label="Sklady/Filiálky">
+                        {% for f in aktivne_filialky %}
+                            <!-- Automatické dosadenie Emojis presne podľa tvojich zadaní -->
+                            {% with f_id_str=f.id|stringformat:"s" %}{% with f_kod="FILIALKA_"|add:f_id_str %}<option value="{{ f_kod }}" {% if faktura.zdrojovy_sklad_id == f_kod %}selected{% endif %}>{% endwith %}{% endwith %}
+                                {% if f.typ_skladu == 'AUTO' %}🚐{% elif f.typ_skladu == 'KONTAJNER' %}🏗️{% elif f.typ_skladu == 'INE' %}📦{% else %}🏢{% endif %} {{ f.nazov }} {% if f.kod_pobocky %}[{{ f.kod_pobocky }}]{% endif %}
+                            </option>
+                        {% endfor %}
+                    </optgroup>
+                    {% endif %}
+                </select>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 15px; border-top: 1px dashed #fca5a5;">
+                <div>
+                    <label style="color: #b91c1c; margin: 0 0 4px 0; display: flex; align-items: center; gap: 6px; font-size: 13px;">
+                        <span style="font-size: 16px;">📦</span> Povoliť fyzický odpis
+                    </label>
+                    <span style="font-size: 10px; color: #ef4444; font-weight: 700;">⚠️ Zvolené položky sa odpíšu zo skladu.</span>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="chk-odpis-sklad" {% if faktura.odpisat_zo_skladu %}checked{% endif %}>
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <!-- 🚀 ISAS FIX: Nové prepínače pre skladové notifikácie -->
+            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px dashed #fca5a5;">
+                <label style="color: #b91c1c; font-size: 11px; margin-bottom: 12px; display: block; text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px;">🔔 Prajete si odoslať notifikáciu o odpise?</label>
+                
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <span style="font-size: 12px; font-weight: 800; color: #7f1d1d; display: flex; align-items: center; gap: 6px;"><span>✈️</span> Telegram</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="chk-odpis-tg" {% if faktura.notif_odpis_tg != False %}checked{% endif %}>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <span style="font-size: 12px; font-weight: 800; color: #7f1d1d; display: flex; align-items: center; gap: 6px;"><span>✉️</span> E-mail</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="chk-odpis-mail" {% if faktura.notif_odpis_mail != False %}checked{% endif %}>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 12px; font-weight: 800; color: #7f1d1d; display: flex; align-items: center; gap: 6px;"><span>💬</span> Discord</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="chk-odpis-discord" {% if faktura.notif_odpis_discord != False %}checked{% endif %}>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+            
+            <style>
+                #chk-odpis-tg:checked + .slider { background-color: #10b981 !important; }
+                #chk-odpis-mail:checked + .slider { background-color: #8b5cf6 !important; }
+                #chk-odpis-discord:checked + .slider { background-color: #5865f2 !important; }
+            </style>
+        </div>
+
+        <!-- 📲 NOTIFIKÁCIE PRE MAJITEĽA -->
+        <div class="form-group" style="background: #f8fafc; padding: 15px; border-radius: 16px; border: 1px solid #e2e8f0; margin-bottom: 25px;">
+            <label style="color: var(--slate-900); font-size: 13px; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                <span style="font-size: 16px;">📲</span> Notifikácie majiteľovi
+            </label>
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px dashed #e2e8f0;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="background: #e0f2fe; color: #0284c7; width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px;">✈️</div>
+                    <div>
+                        <div style="font-size: 12px; font-weight: 800; color: #0f172a;">Telegram Bot</div>
+                        <div style="font-size: 10px; font-weight: 600; color: #64748b;">Odošle upozornenie o vystavenej faktúre</div>
+                    </div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="chk-notif-tg" {% if faktura.notif_majitel_tg != False %}checked{% endif %}>
+                    <span class="slider" style="background-color: #cbd5e1;"></span>
+                </label>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px dashed #e2e8f0;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="background: #f3e8ff; color: #7e22ce; width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px;">✉️</div>
+                    <div>
+                        <div style="font-size: 12px; font-weight: 800; color: #0f172a;">E-mail</div>
+                        <div style="font-size: 10px; font-weight: 600; color: #64748b;">Odošle upozornenie o vystavenej faktúre</div>
+                    </div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="chk-notif-mail" {% if faktura.notif_majitel_mail != False %}checked{% endif %}>
+                    <span class="slider" style="background-color: #cbd5e1;"></span>
+                </label>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="background: #e0e7ff; color: #4338ca; width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px;">💬</div>
+                    <div>
+                        <div style="font-size: 12px; font-weight: 800; color: #0f172a;">Discord Webhook</div>
+                        <div style="font-size: 10px; font-weight: 600; color: #64748b;">Odošle upozornenie o vystavenej faktúre</div>
+                    </div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="chk-notif-discord" {% if faktura.notif_majitel_discord != False %}checked{% endif %}>
+                    <span class="slider" style="background-color: #cbd5e1;"></span>
+                </label>
+            </div>
+            
+            <style>
+                #chk-notif-tg:checked + .slider { background-color: #10b981 !important; }
+                #chk-notif-mail:checked + .slider { background-color: #8b5cf6 !important; }
+                #chk-notif-discord:checked + .slider { background-color: #5865f2 !important; }
+            </style>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 25px;">
+            <button id="btn-ulozit-koncept" class="btn btn-ghost" style="height: 44px; font-size: 13px; width: 100%; background: #f1f5f9; border: 2px solid #cbd5e1; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-weight: 800;">
+                📝 Uložiť ako koncept (Draft)
+            </button>
+            <button id="btn-ulozit-nachystat" class="btn btn-action" style="height: 48px; font-size: 13px; width: 100%; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-weight: 800; border-radius: 12px; border: none; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); cursor: pointer;">
+                📦 Vystaviť doklad (Neodosielať)
+            </button>
+            <button id="btn-ulozit-odoslat" class="btn btn-save" style="margin-top: 0; height: 52px; font-size: 14px;">
+                🚀 Vystaviť a odoslať (Klientovi a štátu)
+            </button>
+        </div>
+    </div>
+
+    <!-- 📄 PRAVÝ PANEL: LIVE NÁHĽAD A TABUĽKA -->
+    <div class="panel">
+        <div class="panel-header" style="border-bottom: none;">
+            <span>📄 Rozpis + ✍️ Kalkulácia vystavenej faktúry</span>
+            <!-- VIVID Dropdown Tlačidlo pre čisté UX -->
+            <div class="vivid-dropdown">
+                <button class="btn-action">➕ Pridať položku/službu ▼</button>
+                <div class="vivid-dropdown-content">
+                    <a href="#" id="btn-add-mat">📦 Položka zo skladu (Kaskáda)</a>
+                    <a href="#" id="btn-add-mat-volny">🛒 Voľná položka (Mimo skladu)</a>
+                    <a href="#" id="btn-add-praca">👨‍🔧 Práca / Služba</a>
+                    <a href="#" id="btn-add-ine">🔖 Vlastný projekt / Služba</a>
+                    <a href="#" id="btn-add-doprava">🚗 Doprava / Výjazd</a>
+                    <a href="#" id="btn-add-posta">📮 Poštovné / Kuriér</a>
+                    <a href="#" id="btn-add-zlava" style="color: var(--rose);">📉 Zľava (Fixná suma)</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- 📱 Obal pre horizontálny scroll na mobiloch -->
+        <div class="table-responsive-wrapper">
+            <table class="quote-table" id="polozky-table">
+                <thead>
+                    <tr>
+                        <th style="width: 5%; white-space: nowrap;">🏷️ Typ</th>
+                        <th style="width: 35%; white-space: nowrap;">📦 Názov položky</th>
+                        <th style="width: 10%; text-align: center; white-space: nowrap;">🔢 Množstvo</th>
+                        <th style="width: 8%; text-align: center; white-space: nowrap;">📏 MJ</th>
+                        <th style="width: 15%; text-align: center; white-space: nowrap;">💰 Cena bez DPH</th>
+                        <th style="width: 10%; text-align: center; white-space: nowrap;">📉 Zľava %</th>
+                        <th style="width: 12%; text-align: right; white-space: nowrap;">💰 Spolu</th>
+                        <th style="width: 5%; text-align: center;"></th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-polozky">
+                    <!-- Javascript sem vkladá riadky -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Live Sumáre -->
+        <div class="totals-box">
+            <!-- Ľavý stĺpec - Tržby -->
+            <div style="display: flex; flex-direction: column; gap: 15px; flex: 1;">
+                <div class="totals-row">
+                    <span class="tot-label">Celkom bez DPH</span>
+                    <span class="tot-val" id="tot-bez-dph">0.00 {{ val_mena }}</span>
+                    <span style="font-size: 11px; color: #ef4444; display: none;" id="tot-zľava-info">Zľava: 0.00 {{ val_mena }}</span>
+                </div>
+                <div class="totals-row">
+                    <span class="tot-label">DPH (<span id="lbl-dph-sadzba">{% if faktura.prenos_danovej_povinnosti %}0.00{% else %}{{ dph_predvolena }}{% endif %}</span>%)</span>
+                    <span class="tot-val" id="tot-dph" style="color: #94a3b8; font-size: 18px;">0.00 {{ val_mena }}</span>
+                </div>
+            </div>
+
+            <!-- Stredný stĺpec - ZISK (ISAS ENTERPRISE VIEW) -->
+            <div style="display: flex; flex-direction: column; align-items: center; border-left: 2px solid rgba(255,255,255,0.1); border-right: 2px solid rgba(255,255,255,0.1); padding: 0 25px; flex: 1;">
+                <span class="tot-label" style="color: #cbd5e1; margin-bottom: 5px;">Odhadovaný Zisk</span>
+                <span class="tot-val" id="tot-zisk" style="color: #60a5fa; font-size: 28px; line-height: 1;">0.00 {{ val_mena }}</span>
+                
+                <!-- Nový blok pre Maržu a Prirážku -->
+                <div style="display: flex; gap: 10px; margin-top: 12px; width: 100%; justify-content: center;">
+                    <!-- Prirážka (To, čo zadáva v katalógu) -->
+                    <div style="background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); padding: 4px 10px; border-radius: 8px; text-align: center; flex: 1;">
+                        <div style="font-size: 9px; font-weight: 800; color: #fcd34d; text-transform: uppercase; margin-bottom: 2px;">Prirážka</div>
+                        <div id="tot-prirazka" style="font-size: 13px; font-weight: 900; color: #f59e0b;">0.0%</div>
+                    </div>
+                    
+                    <!-- Marža (Skutočná ziskovosť) -->
+                    <div style="background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); padding: 4px 10px; border-radius: 8px; text-align: center; flex: 1;">
+                        <div style="font-size: 9px; font-weight: 800; color: #93c5fd; text-transform: uppercase; margin-bottom: 2px;">Čistá Marža</div>
+                        <div id="tot-marza" style="font-size: 13px; font-weight: 900; color: #60a5fa;">0.0%</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pravý stĺpec - K úhrade -->
+            <div class="totals-row" style="text-align: right; flex: 1; padding-left: 10px;">
+                <span class="tot-label" style="color: var(--emerald);">K ÚHRADE S DPH</span>
+                <span class="tot-main" id="tot-s-dph">0.00 {{ val_mena }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{ builder_data|json_script:"invoice-builder-data" }}
+<script>
+// 🧠 ISAS SMART PANEL MEMORY
+let SOURCE_METADATA = {};
+
+// --- STATE MANAGEMENT & BEZPEČNÝ PARSING ---
+const BUILDER_DATA = JSON.parse(document.getElementById('invoice-builder-data')?.textContent || '{}') || {};
+let DPH_SADZBA = Number(BUILDER_DATA.dph_predvolena) || 0.0;
+// Pevné zviazanie premenných so stavom uloženého draftu 💾✨
+let PRENOS_DPH = Boolean(BUILDER_DATA.prenos_dph);
+let GLOBALNA_ZLAVA = Number(BUILDER_DATA.globalna_zlava) || 0.0;
+let MENA_DOKLADU = ($('#inp-mena').val() || String(BUILDER_DATA.mena || '')).trim();
+let FAKTURA_ID = String(BUILDER_DATA.faktura_id || '');
+let rowCounter = 0;
+
+const CATEGORY_MAP = BUILDER_DATA.category_map || {};
+const CATEGORY_EMOJIS = BUILDER_DATA.category_emojis || {};
+const ROLA_AVATARS = {'TE': '👨‍🔧', 'DI': '🎧', 'SK': '📦', 'AD': '👩‍💼'};
+const BG_COLORS = {'IN': '#e0f2fe', 'EX': '#f0fdf4', 'BR': '#fef08a', 'KO': '#fff7ed'};
+const VOZIDLA_MAP = BUILDER_DATA.vozidla_map || {};
+const PRACE_MAP = BUILDER_DATA.prace_map || {};
+const TECHNICI_MAP = BUILDER_DATA.technici_map || {};
+const TECHNICI_ADRESY_MAP = BUILDER_DATA.technici_adresy || {};
+
+// 🪄 ISAS MÁGIA: Mapy pre krížové vypĺňanie
+const MAPA_PONUKA_OBJ = BUILDER_DATA.mapa_ponuka_objednavka || {};
+const MAPA_OBJ_PONUKA = BUILDER_DATA.mapa_objednavka_ponuka || {};
+let isCrossFilling = false; // Zámok proti zacykleniu
+
+const SADZBA_PRACA = Number(BUILDER_DATA.sadzba_praca) || 0.0;
+const SADZBA_DOPRAVA = Number(BUILDER_DATA.sadzba_doprava) || 0.0;
+const SADZBA_DOPRAVA_PAUSAL = Number(BUILDER_DATA.sadzba_doprava_pausal) || 0.0;
+const POHOTOVOSTNY_PRIPLATOK = Number(BUILDER_DATA.pohotovostny_priplatok) || 0.0;
+const NAKLAD_PRACA = Number(BUILDER_DATA.naklad_praca) || 0.0;
+const SPLATNOST_DNI = Number(BUILDER_DATA.splatnost_dni) || 14;
+const VYJAZD_LABEL = String(BUILDER_DATA.vyjazd_label || 'Servisný výjazd');
+const VYJAZD_JEDNOTKA = String(BUILDER_DATA.vyjazd_jednotka || 'výjazd');
+const BACK_URL = String(BUILDER_DATA.back_url || '');
+
+// URL routy
+const URL_GET_DIELY = "{% url 'evidencia:ajax_get_diely' %}";
+const URL_GET_CENA = "{% url 'evidencia:api_ponuka_cena_dielu' %}";
+const URL_GET_ZARIADENIA = "{% url 'evidencia:get_zariadenia_for_zakaznik' %}";
+
+const escapeHTML = (str) => {
+    return String(str || '').replace(/[&<>'"]/g, match => {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[match];
+    });
+}; 
+
+// 🔥 VŠETKO SA MUSÍ ODOHRÁVAŤ VNÚTRI TOHTO JEDNÉHO BLOKU 🔥
+$(document).ready(function() {
+
+    // --- 📱 FIX PRE MOBILNÝ DROPDOWN (Otváranie/Zatváranie na klik) ---
+    $('.vivid-dropdown .btn-action').on('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation(); // Zabráni okamžitému zatvoreniu
+        $(this).next('.vivid-dropdown-content').toggleClass('show');
+    });
+
+    // Zatvorenie pri kliknutí kdekoľvek inde na obrazovke
+    $(document).on('click', function(e) {
+        if (!$(e.target).closest('.vivid-dropdown').length) {
+            $('.vivid-dropdown-content').removeClass('show');
+        }
+    });
+
+    // Zatvorenie menu po kliknutí na konkrétnu položku v ňom
+    $('.vivid-dropdown-content a').on('click', function() {
+        $(this).closest('.vivid-dropdown-content').removeClass('show');
+    });
+
+    // 🚀 ISAS FIX: Automatické obnovenie položiek pre existujúci DRAFT 🏗️✨
+    let editovanaFakturaId = FAKTURA_ID;
+    if (editovanaFakturaId) {
+        try {
+            let existujucePolozky = BUILDER_DATA.existujuce_polozky || [];
+            if (existujucePolozky.length > 0) {
+                existujucePolozky.forEach(p => pridajRiadokVolny(p));
+                prepoctiSumy();
+            }
+
+            // --- DEŠIFROVANIE A RESTORE VŠETKÝCH UI PARAMETROV FAKTÚRY (Prístup B) ---
+            const METADATA = BUILDER_DATA.metadata || {};
+            if (Object.keys(METADATA).length > 0) {
+                // 1. Obnova priradených technikov
+                if (METADATA.technici_ids && METADATA.technici_ids.length > 0) {
+                    $('#sel-technici').val(METADATA.technici_ids).trigger('change');
+                }
+                // 2. Obnova stratégie práce
+                if (METADATA.strategia_prace) {
+                    $(`input[name="strategia_prace"][value="${METADATA.strategia_prace}"]`).prop('checked', true);
+                }
+                // 3. Obnova priradeného vozidla
+                if (METADATA.vozidlo_id) {
+                    $('#sel-vozidlo').val(METADATA.vozidlo_id).trigger('change');
+                }
+                // 4. Obnova stratégie dopravy
+                if (METADATA.strategia_dopravy) {
+                    $(`input[name="strategia_dopravy"][value="${METADATA.strategia_dopravy}"]`).prop('checked', true);
+                }
+                // 5. Obnova havarijného režimu
+                if (METADATA.havarijny_rezim !== undefined) {
+                    $('#chk-havaria').prop('checked', METADATA.havarijny_rezim);
+                }
+                // 6. Obnova bodu odjazdu (oneskorené kvôli dobehnutiu asynchrónneho načítania adries technikov)
+                if (METADATA.start_trasy) {
+                    setTimeout(function() {
+                        $('#sel-start-trasy').val(METADATA.start_trasy).trigger('change');
+                    }, 150);
+                }
+                
+                // 7. Obnova importov a prepojení (BEZ SPUSTENIA IMPORTU!)
+                if (METADATA.zdrojove_ponuky_ids && METADATA.zdrojove_ponuky_ids.length > 0) {
+                    isCrossFilling = true;
+                    $('#sel-import-ponuka').val(METADATA.zdrojove_ponuky_ids).trigger('change.select2');
+                    isCrossFilling = false;
+                }
+                if (METADATA.zdrojove_objednavky_ids && METADATA.zdrojove_objednavky_ids.length > 0) {
+                    $('#sel-import-objednavka').val(METADATA.zdrojove_objednavky_ids).trigger('change.select2');
+                }
+                if (METADATA.zdrojova_uloha_id) {
+                    $('#sel-link-uloha').val(METADATA.zdrojova_uloha_id).trigger('change.select2');
+                }
+                if (METADATA.zdrojove_zaznamy_ids && METADATA.zdrojove_zaznamy_ids.length > 0) {
+                    $('#sel-link-zaznam').val(METADATA.zdrojove_zaznamy_ids).trigger('change.select2');
+                }
+                
+                // 🚀 8. OBNOVA GLOBÁLNEJ ZĽAVY (Pretože Faktúra nemá toto pole v DB!)
+                if (METADATA.globalna_zlava_percento) {
+                    $('#inp-global-zlava').val(METADATA.globalna_zlava_percento);
+                    GLOBALNA_ZLAVA = parseFloat(METADATA.globalna_zlava_percento) || 0;
+                }
+            }
+
+            // 🚀 9. OBNOVA TYPOV PRÁC
+            const ULOZENE_PRACE = BUILDER_DATA.ulozene_prace || [];
+            if (ULOZENE_PRACE.length > 0) {
+                $('#sel-praca').val(ULOZENE_PRACE).trigger('change');
+            }
+            
+            // 🚀 10. OBNOVA ZDROJOVÉHO SKLADU
+            let ZDROJOVY_SKLAD = String(BUILDER_DATA.zdrojovy_sklad || '');
+            if (ZDROJOVY_SKLAD) {
+                $('#sel-zdrojovy-sklad').val(ZDROJOVY_SKLAD).trigger('change');
+            }
+
+            // Na záver prepočítame sumy, aby sa zľava prejavila vizuálne
+            prepoctiSumy();
+
+        } catch (e) {
+            console.error("Chyba pri obnove DRAFTu ⚠️", e);
+        }
+    }
+
+    // --- 🔗 LOGIKA ODKAZOV: OTVÁRANIE V NOVOM OKNE ---
+    
+    // Otvorenie Úlohy (Zmenené na select2:select, aby sa dalo kliknúť aj viackrát bez vymazania)
+    $('#sel-link-uloha').on('select2:select', function(e) {
+        let uloha_id = e.params.data.id;
+        if (uloha_id) {
+            let url = `/admin/Evidencia/uloha/${uloha_id}/change/`;
+            window.open(url, '_blank');
+            // 🚀 ISAS FIX: Odstránený reset roletky. Hodnota ostáva vybraná pre uloženie do DB!
+        }
+    });
+
+    // Otvorenie Servisného záznamu
+    $('#sel-link-zaznam').on('select2:select', function(e) {
+        let zaznam_id = e.params.data.id;
+        if (zaznam_id) {
+            let url = `/admin/Evidencia/servisnyzaznam/${zaznam_id}/change/`;
+            window.open(url, '_blank');
+            // 🚀 ISAS FIX: Odstránený reset roletky. Hodnota ostáva vybraná pre uloženie do DB!
+        }
+    });
+
+    // --- 📥 LOGIKA IMPORTU A CROSS-FILLING (ISAS ENTERPRISE M:N) ---
+    
+    // 🧠 UNIVERZÁLNA ASYNCHRÓNNA FUNKCIA PRE IMPORT POLOŽIEK Z PONUKY
+    async function importujPonukuDoTabulky(ponuka_id) {
+        try {
+            let r = await fetch(`/evidencia/api/get-ponuka-polozky/?ponuka_id=${ponuka_id}`);
+            let data = await r.json();
+            
+            if (data.status === 'success') {
+                // Ak je to prvá ponuka (tabuľka je prázdna), natiahneme zľavu, DPH a menu
+                if ($('#tbody-polozky tr').length === 0) {
+                    $('#inp-global-zlava').val(data.globalna_zlava);
+                    GLOBALNA_ZLAVA = parseFloat(data.globalna_zlava) || 0;
+                    $('#chk-prenos-dph').prop('checked', data.prenos_dph).trigger('change');
+                    if (data.mena) {
+                        $('#inp-mena').val(data.mena).trigger('change');
+                    }
+                }
+
+                if (data.prenos_dph) $('#chk-prenos-dph').prop('checked', true).trigger('change');
+
+                // Nastavenie ľavého panela (Zákazník, Zariadenie, Práce)
+                if (data.zakaznik_id) {
+                    if ($('#sel-zakaznik').val() != data.zakaznik_id) {
+                        $('#sel-zakaznik').val(data.zakaznik_id).trigger('change');
+                        if (data.zariadenie_id) {
+                            setTimeout(() => { $('#sel-zariadenie').val(data.zariadenie_id).trigger('change'); }, 800);
+                        }
+                    } else {
+                        if (data.zariadenie_id) $('#sel-zariadenie').val(data.zariadenie_id).trigger('change');
+                    }
+                }
+
+                // Nastavenie Typov prác (M2M Select2) - Pridávame k existujúcim
+                if (data.typ_prace_ids && data.typ_prace_ids.length > 0) {
+                    let current_prace = $('#sel-praca').val() || [];
+                    let nove_prace = [...new Set([...current_prace, ...data.typ_prace_ids])];
+                    $('#sel-praca').val(nove_prace).trigger('change');
+                }
+
+                // Vložíme nové riadky s logikou zlučovania a pamäťou pre odstraňovanie
+                data.polozky.forEach(p => { 
+                    let pCena = parseFloat(p.cena_bez_dph) || 0;
+                    let pMnozstvo = parseFloat(p.mnozstvo) || 0;
+                    let pZlava = parseFloat(p.zlava_percento) || 0;
+
+                    if (p.typ === 'DOPRAVA') {
+                        let existingDoprava = $('#tbody-polozky tr').filter(function() { return $(this).find('.i-typ').val() === 'DOPRAVA'; });
+                        
+                        if (existingDoprava.length > 0) {
+                            let row = existingDoprava.first();
+                            let currentCena = parseFloat(row.find('.i-cena').val()) || 0;
+                            let zdroje = JSON.parse(row.find('.i-zdroje').val() || '{}');
+                            
+                            let newCenaCelkom = pCena * pMnozstvo; // Doprava sa sčítava cez cenu
+                            let mergedCena = currentCena + newCenaCelkom;
+                            
+                            zdroje[ponuka_id] = (zdroje[ponuka_id] || 0) + newCenaCelkom; // Zápis do pamäte
+                            
+                            row.find('.i-cena').val(mergedCena.toFixed(2));
+                            row.find('.i-zdroje').val(JSON.stringify(zdroje));
+                            row.find('.i-cena').trigger('input');
+                        } else {
+                            p.mnozstvo = '1.00';
+                            p.cena_bez_dph = (pCena * pMnozstvo).toFixed(2);
+                            p.nazov = 'Zberný servisný výjazd a logistika';
+                            p.jednotka = 'výjazd';
+                            p.zdroje = {}; p.zdroje[ponuka_id] = parseFloat(p.cena_bez_dph);
+                            pridajRiadokVolny(p);
+                        }
+                    } else {
+                        let found = false;
+                        $('#tbody-polozky tr').each(function() {
+                            let rowTyp = $(this).find('.i-typ').val();
+                            let rowNazov = $(this).find('.i-nazov').val();
+                            let rowMj = $(this).find('.i-mj').val();
+                            let rowCena = parseFloat($(this).find('.i-cena').val()) || 0;
+                            let rowZlava = parseFloat($(this).find('.i-zlava').val()) || 0;
+                            let rowZariadenie = $(this).find('.i-zariadenie').val() || '';
+                            let pZariadenie = p.zariadenie_id || '';
+
+                            // 🛡️ ISAS FIX: Zlúči položky IBA ak patria k rovnakému zariadeniu!
+                            if (rowTyp === p.typ && rowNazov === p.nazov && rowMj === p.jednotka && rowCena === pCena && rowZlava === pZlava && rowZariadenie === pZariadenie) {
+                                let currentMnozstvo = parseFloat($(this).find('.i-mnozstvo').val()) || 0;
+                                let zdroje = JSON.parse($(this).find('.i-zdroje').val() || '{}');
+                                
+                                zdroje[ponuka_id] = (zdroje[ponuka_id] || 0) + pMnozstvo; // Zápis do pamäte
+                                
+                                $(this).find('.i-mnozstvo').val((currentMnozstvo + pMnozstvo).toFixed(2));
+                                $(this).find('.i-zdroje').val(JSON.stringify(zdroje));
+                                $(this).find('.i-mnozstvo').trigger('input');
+                                found = true;
+                                return false;
+                            }
+                        });
+
+                        if (!found) {
+                            p.zdroje = {}; p.zdroje[ponuka_id] = pMnozstvo;
+                            pridajRiadokVolny(p); 
+                        }
+                    }
+                });
+
+                // 🧠 ISAS SMART PANEL: Uloženie metadát ponuky do pamäte
+                SOURCE_METADATA[ponuka_id] = {
+                    zakaznik_id: data.zakaznik_id, // 🚀 PRIDANÝ ZÁKAZNÍK
+                    zariadenie_id: data.zariadenie_id,
+                    typ_prace_ids: data.typ_prace_ids || [],
+                    prenos_dph: data.prenos_dph,
+                    technici_ids: data.metadata?.technici_ids || [],
+                    vozidlo_id: data.metadata?.vozidlo_id || '',
+                    start_trasy: data.metadata?.start_trasy || '',
+                    strategia_prace: data.metadata?.strategia_prace || '',
+                    strategia_dopravy: data.metadata?.strategia_dopravy || '',
+                    havarijny_rezim: data.metadata?.havarijny_rezim || false
+                };
+
+                // Prepočítame celý ľavý panel na základe novej pamäte
+                aktualizujLavyPanel();
+                
+                return true;
+            } else {
+                throw new Error(data.message);
+            }
+        } catch (err) {
+            console.error("Chyba importu ponuky:", err);
+            throw err;
+        }
+    }
+
+    // 🧠 ISAS SMART REMOVE: Univerzálna funkcia na odpočítanie položiek konkrétnej ponuky
+    function odstranPolozkyPonukyZTabulky(ponuka_id) {
+        ponuka_id = String(ponuka_id);
+        $('#tbody-polozky tr').each(function() {
+            let row = $(this);
+            let typ = row.find('.i-typ').val();
+            let zdrojeInput = row.find('.i-zdroje');
+            let zdroje = JSON.parse(zdrojeInput.val() || '{}');
+
+            if (zdroje[ponuka_id] !== undefined) {
+                if (typ === 'DOPRAVA') {
+                    let odobratCenu = parseFloat(zdroje[ponuka_id]);
+                    let currentCena = parseFloat(row.find('.i-cena').val()) || 0;
+                    let novaCena = currentCena - odobratCenu;
+                    delete zdroje[ponuka_id];
+
+                    if (novaCena <= 0.01) row.remove();
+                    else { row.find('.i-cena').val(novaCena.toFixed(2)); zdrojeInput.val(JSON.stringify(zdroje)); }
+                } else {
+                    let odobratMnozstvo = parseFloat(zdroje[ponuka_id]);
+                    let currentMnozstvo = parseFloat(row.find('.i-mnozstvo').val()) || 0;
+                    let noveMnozstvo = currentMnozstvo - odobratMnozstvo;
+                    delete zdroje[ponuka_id];
+
+                    if (noveMnozstvo <= 0.01) row.remove();
+                    else { row.find('.i-mnozstvo').val(noveMnozstvo.toFixed(2)); zdrojeInput.val(JSON.stringify(zdroje)); }
+                }
+            }
+        });
+    }
+
+    // 🧠 ISAS SMART PANEL: Ultimátna aktualizácia ľavého panelu
+    function aktualizujLavyPanel() {
+        let activeQuotes = $('#sel-import-ponuka').val() || [];
+        
+        // =================================================================
+        // 1. SCENÁR: Všetko je vymazané -> ÚPLNÝ RESET PANELU
+        // =================================================================
+        if (activeQuotes.length === 0) {
+            // Vyčistenie Select2 polí
+            $('#sel-zakaznik').val(null).trigger('change.select2');
+            $('#sel-zariadenie').val(null).trigger('change.select2');
+            $('#sel-technici').val(null).trigger('change.select2');
+            $('#sel-praca').val(null).trigger('change.select2');
+            $('#sel-vozidlo').val(null).trigger('change.select2');
+            $('#sel-start-trasy').val('HQ_CENTRAL').trigger('change.select2');
+            
+            // Vyčistenie závislých AJAX polí (Úlohy a Záznamy)
+            $('#sel-link-uloha').empty().append('<option></option>').trigger('change.select2');
+            $('#sel-link-zaznam').empty().trigger('change.select2');
+            
+            // Reset rádiových tlačidiel
+            $('input[name="strategia_prace"][value="hodinovka"]').prop('checked', true);
+            $('input[name="strategia_dopravy"][value="kalkulacka"]').prop('checked', true);
+            
+            // Reset prepínačov a zľavy
+            $('#chk-prenos-dph').prop('checked', false).trigger('change');
+            $('#chk-havaria').prop('checked', false);
+            $('#inp-global-zlava').val('0.00').trigger('input');
+            
+            // Spustenie kaskády pre uzamknutie zariadenia
+            $('#sel-zakaznik').trigger('change'); 
+            return;
+        }
+
+        // =================================================================
+        // 2. SCENÁR: Agregácia dát zo zvyšných aktívnych ponúk
+        // =================================================================
+        let allTechs = new Set();
+        let allPrace = new Set();
+        let anyPrenosDph = false;
+        let anyHavaria = false;
+        
+        let firstZakaznik = null;
+        let firstZariadenie = null;
+        let firstVozidlo = null;
+        let firstStart = null;
+        let firstStratPraca = null;
+        let firstStratDoprava = null;
+
+        activeQuotes.forEach(qid => {
+            let meta = SOURCE_METADATA[qid];
+            if (!meta) return;
+
+            if (!firstZakaznik && meta.zakaznik_id) firstZakaznik = meta.zakaznik_id;
+            if (!firstZariadenie && meta.zariadenie_id) firstZariadenie = meta.zariadenie_id;
+            if (!firstVozidlo && meta.vozidlo_id) firstVozidlo = meta.vozidlo_id;
+            if (!firstStart && meta.start_trasy) firstStart = meta.start_trasy;
+            if (!firstStratPraca && meta.strategia_prace) firstStratPraca = meta.strategia_prace;
+            if (!firstStratDoprava && meta.strategia_dopravy) firstStratDoprava = meta.strategia_dopravy;
+
+            if (meta.prenos_dph) anyPrenosDph = true;
+            if (meta.havarijny_rezim) anyHavaria = true;
+
+            if (meta.technici_ids) meta.technici_ids.forEach(t => allTechs.add(t));
+            if (meta.typ_prace_ids) meta.typ_prace_ids.forEach(p => allPrace.add(p));
+        });
+
+        // =================================================================
+        // 3. Aplikovanie vypočítaných dát do UI (S ohľadom na kaskády)
+        // =================================================================
+        
+        // A. Zákazník a Zariadenie (Kaskádové načítavanie)
+        let currentZakaznik = $('#sel-zakaznik').val();
+        if (firstZakaznik && currentZakaznik != firstZakaznik) {
+            $('#sel-zakaznik').val(firstZakaznik).trigger('change.select2');
+            $('#sel-zakaznik').trigger('change'); // Spustí načítanie zariadení
+        }
+
+        let currentZariadenie = $('#sel-zariadenie').val();
+        if (firstZariadenie && currentZariadenie != firstZariadenie) {
+            // Dáme tomu 500ms, aby stihol dobehnúť AJAX na načítanie zariadení (ak sa menil zákazník)
+            setTimeout(() => {
+                $('#sel-zariadenie').val(firstZariadenie).trigger('change.select2');
+                // Toto spustí tvoj existujúci AJAX na načítanie Úloh a Záznamov pre dané zariadenie!
+                $('#sel-zariadenie').trigger({ type: 'select2:select' }); 
+            }, 500);
+        }
+
+        // B. Ostatné polia
+        $('#sel-technici').val(Array.from(allTechs)).trigger('change.select2');
+        $('#sel-praca').val(Array.from(allPrace)).trigger('change.select2');
+        
+        if (firstVozidlo) $('#sel-vozidlo').val(firstVozidlo).trigger('change.select2');
+        if (firstStart) $('#sel-start-trasy').val(firstStart).trigger('change.select2');
+        
+        if (firstStratPraca) $(`input[name="strategia_prace"][value="${firstStratPraca}"]`).prop('checked', true);
+        if (firstStratDoprava) $(`input[name="strategia_dopravy"][value="${firstStratDoprava}"]`).prop('checked', true);
+
+        $('#chk-prenos-dph').prop('checked', anyPrenosDph).trigger('change');
+        $('#chk-havaria').prop('checked', anyHavaria);
+        
+        // Globálna zľava sa pri zbernej faktúre rozpúšťa do položiek, takže na faktúre musí byť 0
+        if (activeQuotes.length > 1) {
+            $('#inp-global-zlava').val('0.00').trigger('input');
+        }
+        
+        // 🚀 ISAS FIX: Po importe a prepočítaní panelu aktualizujeme aj dostupné Úlohy a Záznamy
+        aktualizujDokladyPreFakturu();
+    }
+
+    // 1. Zmena Objednávky -> Auto-výber VŠETKÝCH Ponúk a Import
+    $('#sel-import-objednavka').on('select2:select', function(e) {
+        if (isCrossFilling) return;
+        let obj_id = e.params.data.id;
+        
+        if (obj_id && MAPA_OBJ_PONUKA[obj_id]) {
+            let ponuky_ids = MAPA_OBJ_PONUKA[obj_id]; // Toto je teraz POLE IDčiek
+            let current_ponuky = $('#sel-import-ponuka').val() || [];
+            let ponuky_na_import = [];
+            
+            // Zistíme, ktoré ponuky ešte nie sú vybrané
+            ponuky_ids.forEach(pid => {
+                if (!current_ponuky.includes(pid)) {
+                    ponuky_na_import.push(pid);
+                    current_ponuky.push(pid);
+                }
+            });
+
+            if (ponuky_na_import.length > 0) {
+                isCrossFilling = true;
+                $('#sel-import-ponuka').val(current_ponuky).trigger('change.select2');
+                isCrossFilling = false;
+
+                let textUpozornenia = ponuky_na_import.length > 1 
+                    ? `Táto objednávka obsahuje ${ponuky_na_import.length} spárované ponuky (Zberná objednávka). Chcete natiahnuť všetky ich položky do faktúry?`
+                    : `Chcete natiahnuť položky zo spárovanej ponuky do faktúry?`;
+
+                window.showGlobalConfirmModal('Pridať položky z objednávky?', textUpozornenia, async () => {
+                    showISASToast('⏳ Importujem dáta z objednávky...', '⏳', 'warning');
+                    try {
+                        for (let pid of ponuky_na_import) {
+                            await importujPonukuDoTabulky(pid);
+                        }
+                        prepoctiSumy();
+                        showISASToast('Dáta z objednávky boli úspešne importované.', '✅', 'success');
+                    } catch (err) {
+                        showISASToast(String(err && err.message ? err.message : err), '❌', 'error');
+                        showISASToast("Chyba spojenia so serverom. Skontrolujte pripojenie.", "🔌", "error");
+                    }
+                });
+            }
+        }
+    });
+
+    // 🗑️ ISAS SMART REMOVE: Odznačenie Objednávky (M:N Ochrana)
+    $('#sel-import-objednavka').on('select2:unselect', function(e) {
+        if (isCrossFilling) return;
+        let obj_id = String(e.params.data.id);
+
+        if (MAPA_OBJ_PONUKA[obj_id]) {
+            let ponuky_tejto_objednavky = MAPA_OBJ_PONUKA[obj_id];
+            let current_ponuky = $('#sel-import-ponuka').val() || [];
+            let remaining_objs = $('#sel-import-objednavka').val() || []; // Zvyšné označené objednávky
+
+            let ponuky_na_zmazanie = [];
+
+            // 🧠 ISAS CROSS-CHECK: Zistíme, či ponuku nepotrebuje iná, stále označená objednávka
+            ponuky_tejto_objednavky.forEach(pid => {
+                if (current_ponuky.includes(pid)) {
+                    let orders_for_this_quote = MAPA_PONUKA_OBJ[pid] || [];
+                    let has_other_orders = orders_for_this_quote.some(o_id => remaining_objs.includes(o_id));
+
+                    // Ak ponuku nevyžaduje žiadna iná objednávka, môžeme ju bezpečne zmazať
+                    if (!has_other_orders) {
+                        ponuky_na_zmazanie.push(pid);
+                    }
+                }
+            });
+
+            if (ponuky_na_zmazanie.length > 0) {
+                let nove_ponuky = current_ponuky.filter(id => !ponuky_na_zmazanie.includes(id));
+
+                // 1. Odznačíme ponuky v roletke
+                isCrossFilling = true;
+                $('#sel-import-ponuka').val(nove_ponuky).trigger('change.select2');
+                isCrossFilling = false;
+
+                // 2. Fyzicky odstránime ich položky z tabuľky
+                ponuky_na_zmazanie.forEach(pid => {
+                    odstranPolozkyPonukyZTabulky(pid);
+                });
+                prepoctiSumy();
+                
+                // 🧠 ISAS SMART PANEL: Prepočítame ľavý panel po odstránení objednávky (a jej ponúk)
+                aktualizujLavyPanel();
+            }
+        }
+    });
+
+    // 2. Zmena Ponuky -> Auto-výber Objednávok + Import
+    $('#sel-import-ponuka').on('select2:select', function(e) {
+        let ponuka_id = e.params.data.id;
+        
+        // Cross-filling Objednávok (Pridanie do poľa)
+        if (!isCrossFilling && ponuka_id && MAPA_PONUKA_OBJ[ponuka_id]) {
+            let obj_ids = MAPA_PONUKA_OBJ[ponuka_id]; // Toto je teraz POLE IDčiek
+            let current_objs = $('#sel-import-objednavka').val() || [];
+            let zmena = false;
+            
+            obj_ids.forEach(oid => {
+                if (!current_objs.includes(oid)) {
+                    current_objs.push(oid);
+                    zmena = true;
+                }
+            });
+            
+            if (zmena) {
+                isCrossFilling = true;
+                $('#sel-import-objednavka').val(current_objs).trigger('change.select2');
+                isCrossFilling = false;
+            }
+        }
+
+        window.ISASModalEngine({
+            maxWidth: "420px",
+            icon: "📄",
+            title: "Pridať položky z ponuky?",
+            text: "Chcete natiahnuť položky z tejto ponuky do faktúry? (Položky sa pridajú na koniec zoznamu)",
+            buttons: [
+                {
+                    id: "btn-confirm-import-quote",
+                    text: "➕ Áno, pridať",
+                    style: "flex:1;background:linear-gradient(135deg,#3b82f6 0%,#1d4ed8 100%);color:white;border:none;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;text-transform:uppercase;transition:all 0.2s;",
+                    onClick: async (e, m) => {
+                        m.close();
+                        showISASToast('⏳ Importujem položky...', '⏳', 'warning');
+                        try {
+                            await importujPonukuDoTabulky(ponuka_id);
+                            prepoctiSumy();
+                            showISASToast('Dáta boli úspešne importované.', '✅', 'success');
+                        } catch (err) {
+                            showISASToast(String(err && err.message ? err.message : err), '❌', 'error');
+                            showISASToast("Chyba spojenia so serverom. Skontrolujte pripojenie.", "🔌", "error");
+                        }
+                    }
+                },
+                {
+                    id: "btn-cancel-import-quote",
+                    text: "Zrušiť",
+                    style: "flex:1;background:transparent;color:#64748b;border:1px solid #cbd5e1;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;",
+                    onClick: (e, m) => {
+                        m.close();
+                        let current_ponuky = $('#sel-import-ponuka').val() || [];
+                        current_ponuky = current_ponuky.filter(id => id !== ponuka_id);
+                        $('#sel-import-ponuka').val(current_ponuky).trigger('change.select2');
+                    }
+                }
+            ],
+            onClose: () => {
+                let current_ponuky = $('#sel-import-ponuka').val() || [];
+                if (!SOURCE_METADATA[ponuka_id]) {
+                    current_ponuky = current_ponuky.filter(id => id !== ponuka_id);
+                    $('#sel-import-ponuka').val(current_ponuky).trigger('change.select2');
+                }
+            }
+        });
+    });
+
+    // 🗑️ ISAS SMART REMOVE: Odznačenie Ponuky
+    $('#sel-import-ponuka').on('select2:unselect', function(e) {
+        if (isCrossFilling) return;
+        let ponuka_id = String(e.params.data.id);
+
+        // 1. Odstránime položky z tabuľky
+        odstranPolozkyPonukyZTabulky(ponuka_id);
+        prepoctiSumy();
+
+        // 2. Skontrolujeme, či netreba vymazať aj nadradenú Objednávku
+        if (MAPA_PONUKA_OBJ[ponuka_id]) {
+            let obj_ids = MAPA_PONUKA_OBJ[ponuka_id];
+            let current_objs = $('#sel-import-objednavka').val() || [];
+            let current_ponuky = $('#sel-import-ponuka').val() || []; // Zvyšné označené ponuky
+            let zmena = false;
+
+            obj_ids.forEach(oid => {
+                if (current_objs.includes(oid)) {
+                    // Zistíme, či má táto objednávka ešte nejaké iné označené ponuky
+                    let quotes_for_this_order = MAPA_OBJ_PONUKA[oid] || [];
+                    let has_other_quotes = quotes_for_this_order.some(q_id => current_ponuky.includes(q_id));
+
+                    // Ak nemá, vymažeme objednávku z výberu
+                    if (!has_other_quotes) {
+                        current_objs = current_objs.filter(id => id !== oid);
+                        zmena = true;
+                    }
+                }
+            });
+
+            if (zmena) {
+                isCrossFilling = true;
+                $('#sel-import-objednavka').val(current_objs).trigger('change.select2');
+                isCrossFilling = false;
+            }
+        }
+        
+        // 🧠 ISAS SMART PANEL: Prepočítame ľavý panel po odstránení ponuky
+        aktualizujLavyPanel();
+    });
+
+    // 🎨 1. INICIALIZÁCIA HLAVNÝCH ROLETIEK (S vyhľadávaním)
+    $('.select2-main').select2({ 
+        width: '100%',
+        language: { noResults: function() { return "❌ Žiadne výsledky"; } }
+    });
+
+    // 🛡️ ISAS ARCHITECT FIX: Logika pre Dobropis, Zálohu a STRICT MODE
+    $('#sel-typ-dokladu').on('change', function() {
+        let typ = $(this).val();
+        let isDobropis = (typ === 'DOBROPIS');
+        let isZaloha = (typ === 'ZALOHA');
+        
+        // 1. Zobrazenie pôvodnej faktúry pre Dobropis
+        if (isDobropis) {
+            $('#box-povodna-faktura').slideDown();
+        } else {
+            $('#box-povodna-faktura').slideUp();
+            $('#sel-povodna-faktura').val(null).trigger('change.select2');
+        }
+
+        // 2. Uzamknutie skladu pre Zálohu a Dobropis
+        let $skladBox = $('#chk-odpis-sklad').closest('.form-group');
+        if (isDobropis || isZaloha) {
+            $('#chk-odpis-sklad').prop('checked', false).prop('disabled', true);
+            $skladBox.css({'opacity': '0.5', 'pointer-events': 'none'});
+            if ($('#sklad-warning').length === 0) {
+                $skladBox.append('<div id="sklad-warning" style="margin-top: 15px; padding-top: 10px; border-top: 1px dashed #fca5a5; color: #b91c1c; font-size: 11px; font-weight: 800;">⚠️ Pri zálohovej faktúre a dobropise je automatický pohyb skladu zablokovaný.</div>');
+            }
+        } else {
+            $('#chk-odpis-sklad').prop('disabled', false);
+            $skladBox.css({'opacity': '1', 'pointer-events': 'auto'});
+            $('#sklad-warning').remove();
+        }
+
+        // 3. STRICT MODE: Množstvá do mínusu pre Dobropis
+        if (isDobropis) {
+            $('.i-mnozstvo').each(function() {
+                if (!$(this).prop('readonly')) {
+                    let val = parseFloat($(this).val()) || 0;
+                    $(this).attr('max', '-0.01').removeAttr('min');
+                    if (val > 0) $(this).val(-Math.abs(val));
+                }
+            });
+        } else {
+            $('.i-mnozstvo').each(function() {
+                if (!$(this).prop('readonly')) {
+                    let val = parseFloat($(this).val()) || 0;
+                    $(this).attr('min', '0.01').removeAttr('max');
+                    if (val < 0) $(this).val(Math.abs(val));
+                }
+            });
+        }
+        prepoctiSumy();
+    });
+
+    // 🚀 ISAS FIX: Spustenie kontroly pri načítaní (ak editujeme DRAFT)
+    setTimeout(function() { $('#sel-typ-dokladu').trigger('change'); }, 600);
+
+    // 💎 VIVID SELECT2: DYNAMICKÝ ZÁKAZNÍK (S Google Favicon)
+    function formatZakaznik(state) {
+        if (!state.id) return state.text;
+        let $el = $(state.element);
+        let domena = $el.attr('data-domena') || '';
+        let vyzadujeVstup = $el.attr('data-vstup') === 'true';
+        let imgTag = '<div style="font-size: 16px; background: #f8fafc; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 6px; border: 1px solid #e2e8f0; flex-shrink: 0;">🏢</div>';
+        
+        if (domena && domena.trim() !== 'None') {
+            let cleanDomain = domena.toLowerCase().replace('http://', '').replace('https://', '').replace('www.', '').split('/')[0].trim();
+            if (cleanDomain.includes('@')) cleanDomain = cleanDomain.split('@')[1];
+            if (cleanDomain.includes('.')) {
+                imgTag = `<img src="https://www.google.com/s2/favicons?sz=64&domain=${encodeURIComponent(cleanDomain)}" style="width: 24px; height: 24px; background: white; border-radius: 6px; object-fit: contain; border: 1px solid rgba(0,0,0,0.05); flex-shrink: 0;" onerror="this.style.display='none';"/>`;
+            }
+        }
+        
+        let badge = vyzadujeVstup ? '<span style="font-size: 8px; font-weight: 800; color: #d97706; background: #fffbeb; padding: 2px 4px; border-radius: 4px; border: 1px solid #fde68a; margin-left: 8px;">🚧 VSTUP</span>' : '';
+        return $(`<div style="display: flex; align-items: center; gap: 10px;">${imgTag} <span style="font-weight: 700; color: var(--slate-800);">${escapeHTML(state.text)}</span> ${badge}</div>`);
+    }
+
+    $('#sel-zakaznik').select2({
+        width: '100%',
+        language: { noResults: function() { return "❌ Žiadne výsledky"; } },
+        templateResult: formatZakaznik,
+        templateSelection: formatZakaznik
+    });
+
+    // 🛡️ ISAS BIZNIS LOGIKA: Automatické natiahnutie B2B zľavy pri MANUÁLNOM výbere zákazníka
+    $('#sel-zakaznik').on('select2:select', function(e) {
+        let zlavaZakaznika = parseFloat(e.params.data.element.getAttribute('data-zlava')) || 0.00;
+        
+        $('#inp-global-zlava').val(zlavaZakaznika.toFixed(2));
+        GLOBALNA_ZLAVA = zlavaZakaznika;
+        prepoctiSumy();
+        
+        if (zlavaZakaznika > 0 && typeof showISASToast === 'function') {
+            showISASToast(`Aplikovaná B2B zľava zákazníka: ${zlavaZakaznika}%`, "💰", "info");
+        }
+    });
+
+    $('#sel-zakaznik').on('select2:clear', function(e) {
+        $('#inp-global-zlava').val('0.00');
+        GLOBALNA_ZLAVA = 0.00;
+        prepoctiSumy();
+    });
+
+    // 💎 VIVID SELECT2: DYNAMICKÍ ZAMESTNANCI
+    function formatTechnik(state) {
+        if (!state.id) return state.text;
+        let $el = $(state.element);
+        let rola = $el.attr('data-rola');
+        let pomer = $el.attr('data-pomer');
+        
+        let emoji = ROLA_AVATARS[rola] || '👨‍💼';
+        let bg = BG_COLORS[pomer] || '#f8fafc';
+        // Na čistenie "👷‍♂️ " z pôvodného textu, aby sme ho mohli pekne nastylovať:
+        let cleanText = state.text.replace('👷‍♂️ ', '');
+
+        return $(`
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <div style="font-size: 14px; background: ${bg}; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border-radius: 6px; border: 1px solid rgba(0,0,0,0.05); flex-shrink: 0;">${emoji}</div>
+                <span style="font-weight: 700;">${escapeHTML(cleanText)}</span>
+            </div>
+        `);
+    }
+
+    $('#sel-technici').select2({
+        width: '100%',
+        language: { noResults: function() { return "❌ Žiadne výsledky"; } },
+        templateResult: formatTechnik,
+        templateSelection: formatTechnik
+    });
+
+    // 💎 VIVID SELECT2: DYNAMICKÉ ZARIADENIE SO ZÁRUČNÝM BADGEOM
+    function formatZariadenie(state) {
+        if (!state.id) return $('#sel-zariadenie').attr('data-placeholder') || state.text;
+        let $el = $(state.element);
+        let kategoriaRaw = $el.attr('data-kategoria') || '⚙️ Neznáme';
+        let parts = kategoriaRaw.split(' ');
+        let emoji = parts[0]; 
+        let nazovKat = parts.slice(1).join(' ');
+        
+        let hasEmoji = false;
+        try {
+            hasEmoji = /\p{Emoji}/u.test(emoji);
+        } catch (e) {
+            hasEmoji = /[\u{1F300}-\u{1F9FF}]/u.test(emoji);
+        }
+        if (!hasEmoji) { emoji = '⚙️'; nazovKat = kategoriaRaw; }
+
+        // 🛡️ DYNAMICKÝ ODZNAK ZÁRUKY
+        let zarukaDo = $el.attr('data-zaruka-do');
+        let predlzenaDo = $el.attr('data-predlzena-do');
+        let jeVZaruke = $el.attr('data-je-v-zaruke') === 'true';
+
+        let badgeHtml = '';
+        if (predlzenaDo && jeVZaruke) {
+            badgeHtml = `<span style="font-size: 9px; font-weight: 800; color: #7c3aed; background: #f3e8ff; border: 1px solid #ddd6fe; padding: 2px 6px; border-radius: 6px; white-space: nowrap;">💎 PREDĹŽENÁ (do ${escapeHTML(predlzenaDo)})</span>`;
+        } else if (zarukaDo && jeVZaruke) {
+            badgeHtml = `<span style="font-size: 9px; font-weight: 800; color: #059669; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 2px 6px; border-radius: 6px; white-space: nowrap;">🛡️ V ZÁRUKE (do ${escapeHTML(zarukaDo)})</span>`;
+        } else if (zarukaDo || predlzenaDo) {
+            badgeHtml = `<span style="font-size: 9px; font-weight: 700; color: #64748b; background: #f1f5f9; border: 1px solid #e2e8f0; padding: 2px 6px; border-radius: 6px; white-space: nowrap;">⚪ PO ZÁRUKE</span>`;
+        }
+
+        return $(`
+            <div style="display: flex; flex-direction: column; width: 100%; min-width: 0; line-height: 1.25; padding: 2px 0;">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-width: 0;">
+                    <span style="font-weight: 800; color: var(--slate-800); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1 1 auto; min-width: 0;" title="${escapeHTML(state.text)}">${escapeHTML(state.text)}</span>
+                    ${badgeHtml}
+                </div>
+                <span style="font-size: 10px; font-weight: 700; color: var(--slate-500); display: flex; align-items: center; gap: 4px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    ${emoji} ${escapeHTML(nazovKat)}
+                </span>
+            </div>
+        `);
+    }
+
+    $('#sel-zariadenie').select2({
+        width: '100%',
+        language: { noResults: function() { return "❌ Žiadne výsledky"; } },
+        templateResult: formatZariadenie,
+        templateSelection: formatZariadenie
+    });
+
+    // 🎨 2. INICIALIZÁCIA ŠPECIFICKÝCH ROLETIEK (BEZ VYHĽADÁVANIA - INFINITY)
+    $('.select2-no-search').select2({ 
+        width: '100%',
+        minimumResultsForSearch: Infinity // 🪄 Toto spoľahlivo zablokuje search box!
+    });
+
+    // 🏠 3. DYNAMICKÉ PRIDÁVANIE ADRESY TECHNIKA
+    $('#sel-technici').on('change', function() {
+        let selected_ids = $(this).val() || [];
+        let $startSelect = $('#sel-start-trasy');
+        
+        // Bezpečne odstránime starú skupinu
+        $startSelect.find('optgroup.dyn-tech-group').remove();
+
+        if (selected_ids.length > 0) {
+            let $optgroup = $('<optgroup label="🏠 Výjazd priamo od technika" class="dyn-tech-group"></optgroup>');
+            
+            selected_ids.forEach(id => {
+                let text = $('#sel-technici').find(`option[value="${id}"]`).text().replace('👷‍♂️ ', '');
+                let adresa = TECHNICI_ADRESY_MAP[id] || '';
+                let safeId = escapeHTML(id);
+                let safeText = escapeHTML(text);
+                
+                if (adresa && adresa.trim() !== "") {
+                    let kratkaAdresa = adresa.length > 30 ? adresa.substring(0, 30) + "..." : adresa;
+                    let safeAdresa = escapeHTML(adresa);
+                    let safeKratkaAdresa = escapeHTML(kratkaAdresa);
+                    $optgroup.append(`<option value="TECHNIK_${safeId}" data-adresa="${safeAdresa}">🏡 Z domu: ${safeText} (${safeKratkaAdresa})</option>`);
+                } else {
+                    $optgroup.append(`<option value="" disabled>🚫 ${safeText} (Chýba adresa)</option>`);
+                }
+            });
+
+            $startSelect.append($optgroup);
+        }
+        $startSelect.trigger('change.select2'); // 🪄 Dôležité pre prekreslenie!
+    });
+
+    // --- Kaskádové načítanie zariadení pri zmene Zákazníka ---
+    $('#sel-zakaznik').on('change', function() {
+        let zak_id = $(this).val();
+        let $zariadenia = $('#sel-zariadenie');
+        
+        if(zak_id) {
+            // Zobrazíme načítavanie a donútime Select2 prekresliť sa
+            $zariadenia.attr('data-placeholder', '⏳ Načítavam zariadenia...');
+            $zariadenia.empty().append('<option></option>').val(null).trigger('change.select2');
+            $zariadenia.prop('disabled', true);
+
+            fetch(`${URL_GET_ZARIADENIA}?zakaznik_id=${zak_id}`)
+            .then(r => r.ok ? r.json() : Promise.reject())
+            .then(data => {
+                if(data.zariadenia && data.zariadenia.length > 0) {
+                    
+                    // ÚSPECH: Vložíme správny text, dáta a odomkneme
+                    $zariadenia.attr('data-placeholder', '⚙️ Vyberte zariadenie pre ťahák...');
+                    $zariadenia.empty().append('<option></option>');
+                    
+                    data.zariadenia.forEach(z => {
+                        let opt = new Option(z.text, z.id);
+                        $(opt).attr('data-kategoria', z.kategoria_display || '⚙️ Servisované zariadenie'); 
+                        $(opt).attr('data-zaruka-do', z.zaruka_do || '');
+                        $(opt).attr('data-predlzena-do', z.predlzena_zaruka_do || '');
+                        $(opt).attr('data-je-v-zaruke', z.je_v_zaruke ? 'true' : 'false');
+                        $zariadenia.append(opt);
+                    });
+                    
+                    // FORCE RE-RENDER s novým placeholderom
+                    $zariadenia.prop('disabled', false).val(null).trigger('change.select2');
+                } else {
+                    $zariadenia.attr('data-placeholder', '❌ Žiadne evidované zariadenia');
+                    $zariadenia.empty().append('<option></option>').prop('disabled', true).val(null).trigger('change.select2');
+                }
+            }).catch(() => {
+                showISASToast("Chyba spojenia so serverom. Skontrolujte pripojenie.", "🔌", "error");
+                $zariadenia.attr('data-placeholder', '⚠️ Chyba spojenia');
+                $zariadenia.empty().append('<option></option>').prop('disabled', true).val(null).trigger('change.select2');
+            });
+            
+        } else {
+            // Zákazník bol zrušený, vrátime to na zámok
+            $zariadenia.attr('data-placeholder', '🔒 Najprv zvoľte zákazníka...');
+            $zariadenia.empty().append('<option></option>').prop('disabled', true).val(null).trigger('change.select2');
+        }
+    });
+
+    // --- 🧠 ISAS CORE: DYNAMICKÉ NAČÍTANIE ÚLOH A ZÁZNAMOV (AJAX) ---
+    function aktualizujDokladyPreFakturu() {
+        let zak_id = $('#sel-zakaznik').val();
+        let zariadenia_set = new Set();
+
+        // 1. Pridáme hlavné zariadenie z ľavého panela
+        let main_zar = $('#sel-zariadenie').val();
+        if (main_zar) zariadenia_set.add(main_zar);
+
+        // 2. Pridáme VŠETKY zariadenia z riadkov tabuľky
+        $('.i-zariadenie').each(function() {
+            let val = $(this).val();
+            if (val) zariadenia_set.add(val);
+        });
+
+        let $ulohy = $('#sel-link-uloha');
+        let $zaznamy = $('#sel-link-zaznam');
+
+        if (!zak_id && zariadenia_set.size === 0) {
+            $ulohy.empty().append('<option></option>').trigger('change.select2');
+            $zaznamy.empty().trigger('change.select2');
+            return;
+        }
+
+        $ulohy.empty().append('<option value="">⏳ Načítavam úlohy...</option>').trigger('change.select2');
+        $zaznamy.empty().trigger('change.select2');
+
+        // 🚀 Poskladáme URL s poľom zariadení
+        let queryParams = new URLSearchParams();
+        if (zak_id) queryParams.append('zakaznik_id', zak_id);
+        zariadenia_set.forEach(id => queryParams.append('zariadenia_ids[]', id));
+
+        fetch(`/evidencia/api/doklady-pre-fakturu/?${queryParams.toString()}`)
+        .then(r => r.json())
+        .then(data => {
+            if(data.status === 'success') {
+                // 🛡️ Zachováme už vybraté hodnoty, aby nezmizli pri prekreslení
+                let current_uloha = $ulohy.val();
+                let current_zaznamy = $zaznamy.val() || [];
+
+                $ulohy.empty().append('<option></option>');
+                data.ulohy.forEach(u => { $ulohy.append(new Option(u.text, u.id)); });
+                if (current_uloha) $ulohy.val(current_uloha);
+                $ulohy.trigger('change.select2');
+
+                $zaznamy.empty();
+                data.zaznamy.forEach(z => { $zaznamy.append(new Option(z.text, z.id)); });
+                if (current_zaznamy.length > 0) $zaznamy.val(current_zaznamy);
+                $zaznamy.trigger('change.select2');
+            }
+        })
+        .catch(err => {
+            showISASToast("Chyba spojenia so serverom. Skontrolujte pripojenie.", "🔌", "error");
+            $ulohy.empty().append('<option value="">⚠️ Chyba spojenia</option>').trigger('change.select2');
+            $zaznamy.empty().trigger('change.select2');
+        });
+    }
+
+    // 🚀 Naviažeme funkciu na všetky udalosti, ktoré menia zariadenia v UI
+    $('#sel-zakaznik, #sel-zariadenie').on('select2:select select2:clear', aktualizujDokladyPreFakturu);
+    $('#tbody-polozky').on('select2:select', '.i-zariadenie', aktualizujDokladyPreFakturu);
+    $('#tbody-polozky').on('click', '.btn-del-row', function() { setTimeout(aktualizujDokladyPreFakturu, 100); });
+
+    // --- GLOBAL SETTINGS LISTENERS ---
+    $('#chk-prenos-dph').on('change', function() {
+        PRENOS_DPH = $(this).is(':checked');
+        $('#lbl-dph-sadzba').text(PRENOS_DPH ? '0.00' : DPH_SADZBA);
+        prepoctiSumy();
+    });
+
+    $('#inp-global-zlava').on('input', function() {
+        let val = parseFloat($(this).val());
+        GLOBALNA_ZLAVA = (isNaN(val) || val < 0) ? 0 : (val > 100 ? 100 : val);
+        prepoctiSumy();
+    });
+
+    $('#inp-mena').on('input change', function() {
+        MENA_DOKLADU = ($(this).val() || String(BUILDER_DATA.mena || '')).trim();
+        prepoctiSumy();
+    });
+
+    $('#chk-havaria').on('change', function() {
+        let maPolozky = $('.ponuka-row').filter(function() {
+            let typ = $(this).find('.i-typ').val();
+            return typ === 'PRACA' || typ === 'DOPRAVA';
+        }).length > 0;
+
+        if (maPolozky && typeof showISASToast === 'function') {
+            showISASToast("Pre prepočet existujúcich prác a výjazdov použite tlačidlo 'Načítať dáta do rozpisu'", "ℹ️", "warning");
+        }
+    });
+
+    // 🗓️ Reaktivita dátumov: Automatický bezpečný posun splatnosti podľa nastavení bez UTC posunu
+    $('#inp-datum-vystavenia').on('change', function() {
+        let val = $(this).val();
+        if (val) {
+            let parts = val.split('-');
+            if (parts.length === 3) {
+                let d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+                d.setDate(d.getDate() + SPLATNOST_DNI);
+
+                let y = d.getFullYear();
+                let m = String(d.getMonth() + 1).padStart(2, '0');
+                let day = String(d.getDate()).padStart(2, '0');
+                $('#inp-datum-splatnosti').val(`${y}-${m}-${day}`);
+            }
+        }
+    });
+
+    // --- AI AUTOPILOT (SMART COMMAND CENTER) ---
+    $('#btn-ai-kalkulacia').on('click', function(e) {
+        e.preventDefault();
+        let zar_id = $('#sel-zariadenie').val();
+        let typ_ids = $('#sel-praca').val();
+        let voz_id = $('#sel-vozidlo').val();
+        
+        let rezim_prace = $('input[name="strategia_prace"]:checked').val();
+        let rezim_dopravy = $('input[name="strategia_dopravy"]:checked').val();
+        
+        let havarijny_rezim = $('#chk-havaria').is(':checked');
+        let technici_ids = $('#sel-technici').val() || [];
+        
+        if(!zar_id || !typ_ids || typ_ids.length === 0) {
+            window.showGlobalAlertModal('Chýbajúce údaje', 'Na načítanie ťaháku potrebujem vedieť minimálne Zariadenie a Typ práce.', 'warning');
+            return;
+        }
+
+        let $btn = $(this);
+        let origHtml = $btn.html();
+        $btn.html('⏳ Počítam a generujem ponuku...').prop('disabled', true);
+
+        let queryParams = new URLSearchParams();
+        queryParams.append('zariadenie_id', zar_id);
+        queryParams.append('rezim_prace', rezim_prace);
+        queryParams.append('rezim_dopravy', rezim_dopravy);
+        queryParams.append('havarijny_rezim', havarijny_rezim);
+        
+        // 🗺️ Vytiahnutie presnej adresy
+        let vybrany_start_opt = $('#sel-start-trasy').find('option:selected');
+        let start_adresa_hodnota = vybrany_start_opt.attr('data-adresa');
+        if (start_adresa_hodnota) {
+            queryParams.append('start_adresa', start_adresa_hodnota);
+        }
+        
+        if(voz_id) queryParams.append('vozidlo_id', voz_id);
+        typ_ids.forEach(id => queryParams.append('typ_prace_ids[]', id));
+        technici_ids.forEach(id => queryParams.append('technici_ids[]', id));
+
+        fetch(`/evidencia/api/cenove-ponuky/kalkulacia/?${queryParams.toString()}`)
+        .then(r => {
+            if (!r.ok) throw new Error('Nepodarilo sa spojiť so serverom.');
+            return r.json();
+        })
+        .then(data => {
+            if(data.status === 'success') {
+                DPH_SADZBA = parseFloat(data.dph) || DPH_SADZBA;
+                if(!PRENOS_DPH) $('#lbl-dph-sadzba').text((Number(DPH_SADZBA) || 0).toFixed(2));
+                
+                $('#tbody-polozky').empty();
+                data.polozky.forEach(p => pridajRiadokVolny(p));
+                prepoctiSumy();
+                showISASToast('Kalkulácia bola úspešne načítaná.', '🤖', 'success');
+            } else {
+                window.showGlobalAlertModal('Chyba kalkulácie', data.message || 'Nepodarilo sa vygenerovať kalkuláciu.', 'error');
+            }
+        })
+        .catch(error => {
+            showISASToast("Chyba spojenia so serverom. Skontrolujte pripojenie.", "🔌", "error");
+            window.showGlobalAlertModal('Zlyhanie požiadavky', error.message || 'Skontrolujte svoje internetové pripojenie.', 'error');
+        })
+        .finally(() => { 
+            $btn.html(origHtml).prop('disabled', false); 
+        });
+    });
+
+    // --- 🎛️ MANAŽMENT MENU "PRIDAŤ POLOŽKU" ---
+    $('#btn-add-mat').click(function(e) { e.preventDefault(); pridajRiadokSklad(); });
+    
+    $('#btn-add-mat-volny').click(function(e) { 
+        e.preventDefault(); 
+        pridajRiadokVolny({ typ: 'MAT', nazov: '', mnozstvo: '1.00', jednotka: 'ks', cena_bez_dph: '0.00', nakupna_cena: '0.00' }); 
+    });
+    
+    $('#btn-add-praca').click(function(e) { 
+        e.preventDefault(); 
+        let vybrane_prace = $('#sel-praca').val() || [];
+        let vybrani_technici = $('#sel-technici').val() || [];
+        let rezim_ui = $('input[name="strategia_prace"]:checked').val();
+        
+        let fallback_naklad_na_hodinu = 0;
+        if (vybrani_technici.length > 0) {
+            vybrani_technici.forEach(id => { fallback_naklad_na_hodinu += (TECHNICI_MAP[id] || 0); });
+            fallback_naklad_na_hodinu = fallback_naklad_na_hodinu / vybrani_technici.length; 
+        } else {
+            fallback_naklad_na_hodinu = NAKLAD_PRACA; 
+        }
+
+        if (vybrane_prace.length > 0) {
+            vybrane_prace.forEach(id => {
+                let p = PRACE_MAP[id];
+                if(!p) return; 
+                
+                let cena_predaj = 0.0;
+                let naklad_celkom = 0.0;
+                let mnozstvo = 0.0;
+                let mj = 'hod';
+
+                let aplikovat_fix = (rezim_ui === 'fix' || p.sposob_uctovania === 'FIX');
+
+                if (aplikovat_fix) {
+                    let fallback_predaj = (p.hod_predaj > 0 ? p.hod_predaj : SADZBA_PRACA) * p.hodiny;
+                    cena_predaj = (p.fix_predaj > 0) ? p.fix_predaj : fallback_predaj;
+                    
+                    let fallback_naklad = (p.hod_naklad > 0 ? p.hod_naklad : fallback_naklad_na_hodinu) * p.hodiny;
+                    naklad_celkom = (p.fix_naklad > 0) ? p.fix_naklad : fallback_naklad;
+                    
+                    mnozstvo = 1.0;
+                    mj = 'úkon';
+                } else {
+                    cena_predaj = (p.hod_predaj > 0) ? p.hod_predaj : SADZBA_PRACA;
+                    naklad_celkom = (p.hod_naklad > 0) ? p.hod_naklad : fallback_naklad_na_hodinu;
+                    mnozstvo = p.hodiny;
+                    mj = 'hod';
+                }
+
+                pridajRiadokVolny({
+                    typ: 'PRACA', 
+                    nazov: 'Odborná práca: ' + p.nazov, 
+                    mnozstvo: mnozstvo.toFixed(2),
+                    jednotka: mj, 
+                    cena_bez_dph: cena_predaj.toFixed(2), 
+                    nakupna_cena: naklad_celkom.toFixed(2) 
+                });
+            });
+        } else {
+            pridajRiadokVolny({ 
+                typ: 'PRACA', nazov: 'Odborná servisná práca', mnozstvo: '1.00', 
+                jednotka: 'hod', cena_bez_dph: SADZBA_PRACA.toFixed(2), nakupna_cena: fallback_naklad_na_hodinu.toFixed(2) 
+            }); 
+        }
+    });
+    
+    $('#btn-add-doprava').click(function(e) { 
+        e.preventDefault(); 
+        let vozidlo_id = $('#sel-vozidlo').val();
+        let rezim_dopravy = $('input[name="strategia_dopravy"]:checked').val();
+        let havarijny_rezim = $('#chk-havaria').is(':checked');
+        let priplatok_percento = POHOTOVOSTNY_PRIPLATOK;
+        let koeficient_priplatku = havarijny_rezim ? (1.0 + (priplatok_percento / 100.0)) : 1.0;
+        let prefix_nazvu = havarijny_rezim ? "🚨 EXPRES/HAVÁRIA: " : "";
+
+        // 🧠 ISAS TRUE-MARGIN: Ak ide posádka viacerých technikov, firma platí na ceste všetkých (zhodné s backendom)
+        let vybrani_technici = $('#sel-technici').val() || [];
+        let naklad_na_hodinu = NAKLAD_PRACA;
+        if (vybrani_technici.length > 0) {
+            let suma_nakladov = 0;
+            vybrani_technici.forEach(id => { suma_nakladov += (TECHNICI_MAP[id] || 0); });
+            naklad_na_hodinu = suma_nakladov;
+        }
+
+        let cena = SADZBA_DOPRAVA;
+        let naklad = 0.00;
+        let nazov = `${prefix_nazvu}${VYJAZD_LABEL}`;
+        let mj = VYJAZD_JEDNOTKA;
+
+        if (rezim_dopravy === 'pausal') {
+            let sadzba_pausal = SADZBA_DOPRAVA_PAUSAL || SADZBA_DOPRAVA;
+            cena = sadzba_pausal * koeficient_priplatku;
+            naklad = 0.00;
+            mj = VYJAZD_JEDNOTKA;
+            nazov = `${prefix_nazvu}${VYJAZD_LABEL} (Paušálna sadzba)`;
+        } else {
+            if (vozidlo_id && VOZIDLA_MAP[vozidlo_id]) {
+                let auto = VOZIDLA_MAP[vozidlo_id];
+                if (auto.sadzba !== null && auto.sadzba > 0) {
+                    cena = auto.sadzba * koeficient_priplatku;
+                    mj = 'km';
+                    nazov = `${prefix_nazvu}Prejazd (${auto.nazov})`;
+                    naklad = 0.00;
+                } else {
+                    cena = SADZBA_DOPRAVA * koeficient_priplatku;
+                    mj = VYJAZD_JEDNOTKA;
+                    nazov = `${prefix_nazvu}${VYJAZD_LABEL}: ${auto.nazov}`;
+                    naklad = naklad_na_hodinu;
+                }
+            } else {
+                cena = SADZBA_DOPRAVA * koeficient_priplatku;
+                mj = VYJAZD_JEDNOTKA;
+                nazov = `${prefix_nazvu}${VYJAZD_LABEL}`;
+                naklad = naklad_na_hodinu;
+            }
+        }
+        
+        pridajRiadokVolny({ 
+            typ: 'DOPRAVA', 
+            nazov: nazov, 
+            mnozstvo: '1.00', 
+            jednotka: mj, 
+            cena_bez_dph: (Number(cena) || 0).toFixed(2), 
+            nakupna_cena: (Number(naklad) || 0).toFixed(2) 
+        });
+
+        if (mj === 'km') {
+            let $poslednyRiadok = $('#tbody-polozky tr:last');
+            $poslednyRiadok.find('.i-mnozstvo').focus().select();
+            if (typeof showISASToast === 'function') {
+                showISASToast("Zadajte počet kilometrov prejazdu", "🚗", "info");
+            }
+        } 
+    });
+    
+    $('#btn-add-ine').click(function(e) { 
+        e.preventDefault(); 
+        pridajRiadokVolny({ typ: 'INE', nazov: '', mnozstvo: '1.00', jednotka: 'paušál', cena_bez_dph: '0.00', nakupna_cena: '0.00' }); 
+    });
+
+    // 📮 ISAS BIZNIS: Rýchle pridanie poštovného (Ukladá sa ako typ INE pre správne účtovníctvo)
+    $('#btn-add-posta').click(function(e) { 
+        e.preventDefault(); 
+        pridajRiadokVolny({ 
+            typ: 'INE', 
+            nazov: 'Poštovné a balné (Kuriér)', 
+            mnozstvo: '1.00', 
+            jednotka: 'ks', 
+            cena_bez_dph: '0.00', 
+            nakupna_cena: '0.00' 
+        }); 
+    });
+    
+    $('#btn-add-zlava').click(function(e) { 
+        e.preventDefault(); 
+        pridajRiadokVolny({ typ: 'ZLA', nazov: 'Mimoriadna zľava', mnozstvo: '1.00', jednotka: 'ks', cena_bez_dph: '0.00', nakupna_cena: '0.00' }); 
+    });
+
+    // --- ✏️ FUNKCIA PRE VOĽNÝ RIADOK / SLUŽBU / ZĽAVU ---
+    function pridajRiadokVolny(p) {
+
+        let ico = p.typ === 'PRACA' ? '👨‍🔧' : (p.typ === 'DOPRAVA' ? '🚗' : (p.typ === 'MAT' ? '📦' : (p.typ === 'ZLA' ? '📉' : '🔖')));
+        let stylCeny = p.typ === 'ZLA' ? 'color: var(--rose); background: #fee2e2;' : '';
+        
+        // Dynamický placeholder (textové pozadie) podľa typu položky
+        let placeholder = 'Zadajte názov...';
+        if (p.typ === 'MAT') placeholder = 'Zadajte názov položky...';
+        else if (p.typ === 'PRACA') placeholder = 'Zadajte názov vykonanej práce/služby...';
+        else if (p.typ === 'DOPRAVA') placeholder = 'Zadajte popis dopravy/výjazdu...';
+        else if (p.typ === 'INE') placeholder = 'Zadajte názov projektu alebo vlastnej služby...';
+        else if (p.typ === 'ZLA') placeholder = `Zadajte hodnotu zľavy (v ${MENA_DOKLADU})...`;
+        
+        let bezpecnyNazov = escapeHTML(p.nazov);
+        let bezpecnaJednotka = escapeHTML(p.jednotka);
+        let bezpecneZariadenieNazov = escapeHTML(p.zariadenie_nazov || '+ Priradiť zariadenie');
+        let bezpecneZariadenieId = escapeHTML(p.zariadenie_id || '');
+        let bezpecnyRawZarNazov = escapeHTML(p.zariadenie_nazov || '');
+        let bezpecnyTyp = escapeHTML(p.typ);
+        let bezpecneCtId = escapeHTML(p.ct_id || '');
+        let bezpecneObjId = escapeHTML(p.obj_id || '');
+        let bezpecnyNakup = escapeHTML(p.nakupna_cena || '0.00');
+        let bezpecneMnozstvo = escapeHTML(p.mnozstvo || '1.00');
+        let bezpecnaCena = escapeHTML(p.cena_bez_dph || '0.00');
+        let bezpecnaZlava = escapeHTML(p.zlava_percento || '0.00');
+        let bezpecnaMena = escapeHTML(MENA_DOKLADU);
+        let bezpecneZdroje = escapeHTML(JSON.stringify(p.zdroje || {"manual": parseFloat(p.mnozstvo) || 1}));
+        
+        let tr = `
+        <tr class="ponuka-row">
+            <td style="text-align:center; font-size:18px;">
+                ${ico}
+                <!-- 🧠 ISAS SMART MEMORY: Pamätá si, z ktorých ponúk pochádzajú kusy -->
+                <input type="hidden" class="i-zdroje" value="${bezpecneZdroje}">
+                <input type="hidden" class="i-typ" value="${bezpecnyTyp}">
+                <input type="hidden" class="i-ct" value="${bezpecneCtId}">
+                <input type="hidden" class="i-obj" value="${bezpecneObjId}">
+                <input type="hidden" class="i-nakupna" value="${bezpecnyNakup}">
+            </td>
+            <td>
+                <textarea class="row-input text-left i-nazov" placeholder="${placeholder}" rows="1">${bezpecnyNazov}</textarea>
+                ${p.typ !== 'DOPRAVA' && p.typ !== 'ZLA' ? `
+                <div class="device-badge-container" style="margin-top: 6px; text-align: left;">
+                    <div class="device-badge" style="cursor:pointer; display:inline-flex; align-items:center; gap:4px; font-size:10px; background:#f8fafc; color:#475569; padding:3px 8px; border-radius:6px; border:1px solid #e2e8f0; transition: 0.2s;" onmouseover="this.style.background='#f1f5f9'; this.style.borderColor='#cbd5e1';" onmouseout="this.style.background='#f8fafc'; this.style.borderColor='#e2e8f0';">
+                        ⚙️ <span class="device-name" style="font-weight: 700;">${bezpecneZariadenieNazov}</span>
+                    </div>
+                    <select class="i-zariadenie" style="display:none;">
+                        <option value="${bezpecneZariadenieId}" selected>${bezpecnyRawZarNazov}</option>
+                    </select>
+                </div>
+                ` : '<input type="hidden" class="i-zariadenie" value="">'}
+            </td>
+            <td><input type="number" class="row-input i-mnozstvo" value="${($('#sel-typ-dokladu').val() === 'DOBROPIS' ? -Math.abs(parseFloat(bezpecneMnozstvo) || 1.0) : Math.abs(parseFloat(bezpecneMnozstvo) || 1.0)).toFixed(2)}" ${$('#sel-typ-dokladu').val() === 'DOBROPIS' ? 'max="-0.01"' : 'min="0.01"'} step="0.01" ${p.typ === 'ZLA' ? 'readonly style="background:#f1f5f9;"' : ''}></td>
+            <td><input type="text" class="row-input i-mj" value="${bezpecnaJednotka}"></td>
+            <td><input type="number" class="row-input i-cena" value="${bezpecnaCena}" ${p.typ === 'ZLA' ? '' : 'min="0"'} step="0.01" style="${stylCeny}"></td>
+            <!-- 🚀 ISAS FIX: Musíme načítať uloženú zľavu, nie natvrdo 0.00 📉 -->
+            <td><input type="number" class="row-input i-zlava" value="${bezpecnaZlava}" min="0" max="100" step="0.5" ${p.typ === 'ZLA' ? 'readonly style="background:#f1f5f9;"' : ''}></td>
+            <td style="text-align:right; font-weight:900; color:var(--slate-900);" class="t-spolu">0.00 ${bezpecnaMena}</td>
+            <td style="text-align:center;">
+                <button class="btn-ghost btn-del-row" style="border:none; color:var(--rose); background:transparent; cursor:pointer; font-size:16px;">✖</button>
+            </td>
+        </tr>`;
+        $('#tbody-polozky').append(tr);
+        prepoctiSumy();
+    }
+
+    // --- 📦 FUNKCIA PRE SKLADOVÝ RIADOK (KASKÁDA) ---
+    function pridajRiadokSklad() {
+        rowCounter++;
+        let rid = rowCounter;
+        
+        // Select2 pre správny placeholder vyžaduje prvý prázdny <option></option>
+        let mainCatOptions = '<option></option>';
+        for (let cat in CATEGORY_MAP) { 
+            // Dynamické priradenie názvu s Emoji (ak neexistuje, použije sa holý názov ako fallback)
+            let displayCat = CATEGORY_EMOJIS[cat] ? CATEGORY_EMOJIS[cat] : cat;
+            mainCatOptions += `<option value="${escapeHTML(cat)}">${escapeHTML(displayCat)}</option>`; 
+        }
+
+        let tr = `
+        <tr class="ponuka-row" id="row-${rid}">
+            <td style="text-align:center; font-size:18px;">📦<input type="hidden" class="i-zdroje" value='{"manual": 1}'><input type="hidden" class="i-typ" value="MAT"></td>
+            <td>
+                <div style="display: flex; flex-direction: column; gap: 5px;">
+                    <select class="row-input text-left sel-main-cat select2-kaskada" data-rid="${rid}" data-placeholder="🗂️ Vyberte kategóriu...">${mainCatOptions}</select>
+                    <select class="row-input text-left sel-sub-cat select2-kaskada" data-rid="${rid}" data-placeholder="🔒 Pre odomknutie vyberte kategóriu" disabled><option></option></select>
+                    <select class="row-input text-left sel-diel select2-kaskada" data-rid="${rid}" data-placeholder="🔒 Uzamknuté..." disabled><option></option></select>
+                </div>
+                <input type="hidden" class="i-ct" id="ct-${rid}" value="">
+                <input type="hidden" class="i-obj" id="obj-${rid}" value="">
+                <input type="hidden" class="i-nazov" id="nazov-${rid}" value="">
+                <input type="hidden" class="i-nakupna" id="nakup-${rid}" value="0.00">
+                <div class="device-badge-container" style="margin-top: 6px; text-align: left;">
+                    <div class="device-badge" style="cursor:pointer; display:inline-flex; align-items:center; gap:4px; font-size:10px; background:#f8fafc; color:#475569; padding:3px 8px; border-radius:6px; border:1px solid #e2e8f0; transition: 0.2s;">
+                        ⚙️ <span class="device-name" style="font-weight: 700;">+ Priradiť zariadenie</span>
+                    </div>
+                    <select class="i-zariadenie" style="display:none;"><option value=""></option></select>
+                </div>
+            </td>
+            <td><input type="number" class="row-input i-mnozstvo" value="${$('#sel-typ-dokladu').val() === 'DOBROPIS' ? '-1.00' : '1.00'}" ${$('#sel-typ-dokladu').val() === 'DOBROPIS' ? 'max="-0.01"' : 'min="0.01"'} step="0.01"></td>
+            <td><input type="text" class="row-input i-mj" id="mj-${rid}" value="ks" readonly style="background:#f1f5f9;"></td>
+            <td><input type="number" class="row-input i-cena" id="cena-${rid}" value="0.00" min="0" step="0.01"></td>
+            <td><input type="number" class="row-input i-zlava" value="0.00" min="0" max="100" step="0.5"></td>
+            <td style="text-align:right; font-weight:900; color:var(--slate-900);" class="t-spolu">0.00 ${escapeHTML(MENA_DOKLADU)}</td>
+            <td style="text-align:center; vertical-align: top; padding-top: 25px;">
+                <button class="btn-ghost btn-del-row" style="border:none; color:var(--rose); background:transparent; cursor:pointer; font-size:16px;">✖</button>
+            </td>
+        </tr>`;
+        $('#tbody-polozky').append(tr);
+        $(`#row-${rid} .select2-kaskada`).select2({ width: '100%' });
+        prepoctiSumy();
+    }
+
+    // --- 🔗 LOGIKA KASKÁDY V TABUĽKE ---
+    $('#tbody-polozky').on('change', '.sel-main-cat', function() {
+        let rid = $(this).data('rid');
+        let selectedCat = $(this).val();
+        let $subSelect = $(`#row-${rid} .sel-sub-cat`);
+        let $dielSelect = $(`#row-${rid} .sel-diel`);
+
+        if ($subSelect.hasClass("select2-hidden-accessible")) { $subSelect.select2('destroy'); }
+        if ($dielSelect.hasClass("select2-hidden-accessible")) { $dielSelect.select2('destroy'); }
+
+        // 🪄 ULTIMATE FIX: Vymažeme HTML placeholder, vložíme prázdny option a text podhodíme JS konfigurácii
+        $subSelect.removeAttr('data-placeholder');
+        $dielSelect.removeAttr('data-placeholder');
+
+        $subSelect.empty().append('<option></option>');
+        $dielSelect.empty().append('<option></option>');
+        $dielSelect.prop('disabled', true).select2({ placeholder: "🔒 Pre odomknutie vyberte podkategóriu...", width: '100%' });
+        
+        if (selectedCat && CATEGORY_MAP[selectedCat]) {
+            $subSelect.prop('disabled', false);
+            for (let subName in CATEGORY_MAP[selectedCat]) {
+                let modelName = CATEGORY_MAP[selectedCat][subName];
+                $subSelect.append(new Option(subName, modelName));
+            }
+        } else {
+            $subSelect.prop('disabled', true);
+        }
+        $subSelect.select2({ placeholder: "📂 Vyberte podkategóriu...", width: '100%' });
+    });
+
+    $('#tbody-polozky').on('change', '.sel-sub-cat', function() {
+        let rid = $(this).data('rid');
+        let modelName = $(this).val();
+        let $dielSelect = $(`#row-${rid} .sel-diel`);
+
+        // 🧠 ISAS INTELIGENCIA: Vytiahneme Emoji priamo zo zvolenej podkategórie (CATEGORY_MAP)
+        let textPodkategorie = $(this).find('option:selected').text() || '';
+        let dynamickaIkona = textPodkategorie.trim().split(' ')[0];
+        let hasSubEmoji = false;
+        try {
+            hasSubEmoji = /\p{Emoji}/u.test(dynamickaIkona);
+        } catch (e) {
+            hasSubEmoji = /[\u{1F300}-\u{1F9FF}]/u.test(dynamickaIkona);
+        }
+        if (!hasSubEmoji) { dynamickaIkona = '📦'; } // Fallback, ak emoji chýba
+
+        if ($dielSelect.hasClass("select2-hidden-accessible")) { $dielSelect.select2('destroy'); }
+        
+        $dielSelect.removeAttr('data-placeholder');
+        $dielSelect.empty().append('<option></option>');
+        $dielSelect.prop('disabled', true).select2({ placeholder: "⏳ Načítavam dáta...", width: '100%' });
+
+        if (modelName) {
+            $.getJSON(URL_GET_DIELY, { model_name: modelName }, function(data) {
+                if ($dielSelect.hasClass("select2-hidden-accessible")) { $dielSelect.select2('destroy'); }
+                
+                $dielSelect.removeAttr('data-placeholder');
+                $dielSelect.empty().append('<option></option>'); // 🛡️ Nedotknutá magická logika
+        
+                if (data.results && data.results.length > 0) {
+                    data.results.forEach(item => {
+                        let opt = new Option(item.text, item.id);
+                        $(opt).attr('data-unit', item.unit || 'ks');
+                        $dielSelect.append(opt);
+                    });
+                    
+                    // 💎 VIVID UI: Aplikujeme dizajn na vnútorné položky
+                    $dielSelect.prop('disabled', false).select2({ 
+                        placeholder: "🔍 Vyberte položku...", 
+                        width: '100%',
+                        templateResult: function(state) {
+                            if (!state.id) return state.text; // Ochrana placeholderu pred nastylovaním
+                            return $(`
+                                <div style="display: flex; align-items: center; gap: 12px; padding: 4px 2px;">
+                                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); flex-shrink: 0;">
+                                        ${dynamickaIkona}
+                                    </div>
+                                    <span style="font-weight: 800; color: #1e293b; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHTML(state.text)}</span>
+                                </div>
+                            `);
+                        },
+                        templateSelection: function(state) {
+                            if (!state.id) return state.text; // Ochrana placeholderu pred nastylovaním
+                            return $(`
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span style="font-size: 15px; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.1));">${dynamickaIkona}</span>
+                                    <span style="font-weight: 800; color: #1e293b; font-size: 14px;">${escapeHTML(state.text)}</span>
+                                </div>
+                            `);
+                        }
+                    });
+                } else {
+                    $dielSelect.prop('disabled', true).select2({ placeholder: "❌ Sklad je prázdny", width: '100%' });
+                }
+            }).fail(function() {
+                showISASToast("Chyba spojenia so serverom. Skontrolujte pripojenie.", "🔌", "error");
+                if ($dielSelect.hasClass("select2-hidden-accessible")) { $dielSelect.select2('destroy'); }
+                $dielSelect.removeAttr('data-placeholder');
+                $dielSelect.empty().append('<option></option>');
+                $dielSelect.prop('disabled', true).select2({ placeholder: "⚠️ Chyba siete", width: '100%' });
+            });
+        }
+    });
+
+    $('#tbody-polozky').on('change', '.sel-diel', function() {
+        let rid = $(this).data('rid');
+        let obj_id = $(this).val();
+        let modelName = $(`#row-${rid} .sel-sub-cat`).val();
+        let $selectedOption = $(this).find('option:selected');
+        
+        let nazov = $selectedOption.text();
+        let unit = $selectedOption.attr('data-unit') || 'ks';
+
+        $(`#obj-${rid}`).val(obj_id);
+        $(`#nazov-${rid}`).val(nazov);
+        $(`#mj-${rid}`).val(unit);
+
+        let $cenaInput = $(`#cena-${rid}`);
+        $cenaInput.val('...').prop('disabled', true);
+
+        fetch(`${URL_GET_CENA}?model_name=${encodeURIComponent(modelName)}&diel_id=${encodeURIComponent(obj_id)}`)
+        .then(r => r.json())
+        .then(data => {
+            if(data.status === 'success') {
+                $cenaInput.val(data.cena);
+                $(`#nakup-${rid}`).val(data.nakupna_cena); 
+                $(`#ct-${rid}`).val(data.ct_id);
+                prepoctiSumy();
+            } else {
+                $cenaInput.val('0.00');
+                $(`#nakup-${rid}`).val('0.00');
+            }
+        })
+        .catch(() => { 
+            showISASToast("Chyba spojenia so serverom. Skontrolujte pripojenie.", "🔌", "error");
+            $cenaInput.val('0.00'); 
+            $(`#nakup-${rid}`).val('0.00');
+        })
+        .finally(() => { $cenaInput.prop('disabled', false); });
+    });
+
+    // --- 🧮 LIVE KALKULAČKA ---
+    $('#tbody-polozky').on('input', '.i-mnozstvo, .i-cena, .i-zlava, .i-nakupna', function() {
+        prepoctiSumy();
+    });
+
+    $('#tbody-polozky').on('click', '.btn-del-row', function() {
+        let $row = $(this).closest('tr');
+        // 🛡️ ISAS ARCHITECT FIX: Absolútne bezpečné uvoľnenie všetkých Select2 inštancií ošetrené voči race-condition
+        $row.find('.select2-hidden-accessible').each(function() {
+            try {
+                $(this).select2('destroy');
+            } catch (err) {
+                // Tichý odchyt, ak už bola inštancia čiastočne deinštalovaná
+            }
+        });
+        $row.remove();
+        prepoctiSumy();
+    });
+
+    // 🧹 ISAS FIX: Po odkliknutí z textarey vymažeme manuálne roztiahnutú výšku, aby sa pole pekne zbalilo
+    $('#tbody-polozky').on('blur', '.i-nazov', function() {
+        $(this).css('height', '');
+    });
+
+    // 🪄 ISAS AUTO-RESIZE: Pri kliknutí (focus) a pri písaní (input) sa pole samo roztiahne podľa textu
+    $('#tbody-polozky').on('focus input', '.i-nazov', function() {
+        let el = this;
+        // Malý timeout (10ms) zabezpečí, že prehliadač najprv aplikuje CSS (zalomí text) a až potom počítame výšku
+        setTimeout(function() {
+            $(el).css('height', 'auto'); // Reset výšky, aby sa pole vedelo aj zmenšiť, ak používateľ maže text
+            $(el).css('height', (el.scrollHeight + 2) + 'px'); // Nastavenie presnej výšky podľa reálneho obsahu (+2px pre okraje)
+        }, 10);
+    });
+
+    function prepoctiSumy() {
+        let sumBezDphPredZlavou = 0.0;
+        let sumBezDphPoRiadkovych = 0.0;
+        let totalNakupNaklady = 0.0;
+
+        $('.ponuka-row').each(function() {
+            let m = parseFloat($(this).find('.i-mnozstvo').val()) || 0;
+            let c = parseFloat($(this).find('.i-cena').val()) || 0;
+            let z = parseFloat($(this).find('.i-zlava').val()) || 0;
+            let nakup = parseFloat($(this).find('.i-nakupna').val()) || 0;
+            let typ = $(this).find('.i-typ').val();
+
+            // 🛡️ ISAS ARCHITECT FIX: Zľava musí rešpektovať znamienko množstva (Faktúra = mínus, Dobropis = plus)
+            let riadokZaklad = m * c;
+            if (typ === 'ZLA') { 
+                // Backend ukladá cenu zľavy vždy ako zápornú. Takže m * (-c)
+                riadokZaklad = m * (-Math.abs(c)); 
+            }
+            
+            let riadokZlavaKoef = 1 - (z / 100);
+            let riadokPoZlave = riadokZaklad * riadokZlavaKoef;
+
+            $(this).find('.t-spolu').text((Number(riadokPoZlave) || 0).toFixed(2) + ' ' + MENA_DOKLADU);
+
+            sumBezDphPredZlavou += riadokZaklad;
+            sumBezDphPoRiadkovych += riadokPoZlave;
+
+            if (typ !== 'ZLA') {
+                totalNakupNaklady += (m * nakup);
+            }
+        });
+
+        let koeficientGlobal = 1 - (GLOBALNA_ZLAVA / 100);
+        let finalBezDph = sumBezDphPoRiadkovych * koeficientGlobal;
+        let hodnotaZlavyCelkom = sumBezDphPredZlavou - finalBezDph;
+
+        let finalDph = PRENOS_DPH ? 0.0 : (finalBezDph * (DPH_SADZBA / 100));
+        let finalSpolu = finalBezDph + finalDph;
+
+        let celkovyZisk = finalBezDph - totalNakupNaklady;
+        let marzaPercent = (finalBezDph > 0) ? (celkovyZisk / finalBezDph) * 100 : 0;
+        let prirazkaPercent = (totalNakupNaklady > 0) ? (celkovyZisk / totalNakupNaklady) * 100 : ((finalBezDph > 0) ? 100 : 0);
+
+        $('#tot-bez-dph').text((Number(finalBezDph) || 0).toFixed(2) + ' ' + MENA_DOKLADU);
+        $('#tot-dph').text((Number(finalDph) || 0).toFixed(2) + ' ' + MENA_DOKLADU);
+        $('#tot-s-dph').text((Number(finalSpolu) || 0).toFixed(2) + ' ' + MENA_DOKLADU);
+        
+        $('#tot-zisk').text((Number(celkovyZisk) || 0).toFixed(2) + ' ' + MENA_DOKLADU);
+        $('#tot-marza').text((Number(marzaPercent) || 0).toFixed(1) + '%');
+        $('#tot-prirazka').text((Number(prirazkaPercent) || 0).toFixed(1) + '%');
+
+        if(hodnotaZlavyCelkom > 0) {
+            $('#tot-zľava-info').text('Ušetrené zákazníkom: ' + (Number(hodnotaZlavyCelkom) || 0).toFixed(2) + ' ' + MENA_DOKLADU).show();
+        } else {
+            $('#tot-zľava-info').hide();
+        }
+    }
+
+    // --- 💾 FINÁLNE ULOŽENIE FAKTÚRY (PODPORA: DRAFT / NACHYSTANÁ / ODOSLANÁ) ---
+    function vykonajUlozenieFaktury(akciaTyp, $clickedBtn) {
+        let zak_id = $('#sel-zakaznik').val();
+        if(!zak_id) { window.showGlobalAlertModal('Zákazník chýba', 'Musíte zvoliť zákazníka pre uloženie faktúry.', 'error'); return; }
+
+        let polozky = [];
+        $('.ponuka-row').each(function() {
+            let nazov = $(this).find('.i-nazov').val();
+            if(!nazov) return; 
+            
+            let typ = $(this).find('.i-typ').val();
+            let c = parseFloat($(this).find('.i-cena').val()) || 0;
+            if (typ === 'ZLA') c = -Math.abs(c);
+
+            polozky.push({
+                typ: typ,
+                ct_id: $(this).find('.i-ct').val() || null,
+                obj_id: $(this).find('.i-obj').val() || null,
+                zariadenie_id: $(this).find('.i-zariadenie').val() || null,
+                nazov: nazov,
+                mnozstvo: $(this).find('.i-mnozstvo').val(),
+                jednotka: $(this).find('.i-mj').val(),
+                cena_bez_dph: c,
+                zlava_percento: $(this).find('.i-zlava').val(),
+                sadzba_dph: DPH_SADZBA,
+                zdroje: (() => { try { return JSON.parse($(this).find('.i-zdroje').val() || '{}'); } catch(e) { return {}; } })()
+            });
+        });
+
+        if(polozky.length === 0) {
+            window.showGlobalAlertModal('Prázdna faktúra', 'Faktúra musí obsahovať aspoň jednu platnú položku.', 'warning'); return;
+        }
+
+        // 🛡️ ISAS ARCHITECT FIX: Validácia Dobropisu pred odoslaním (Vrátane kontroly sumy)
+        let typDokladu = $('#sel-typ-dokladu').val();
+        let povodnaFaId = $('#sel-povodna-faktura').val();
+        let totalS_Dph = parseFloat($('#tot-s-dph').text().replace(/[^0-9.-]+/g,"")) || 0;
+        
+        if (typDokladu === 'DOBROPIS') {
+            if (!povodnaFaId) {
+                window.showGlobalAlertModal('Chýba pôvodná faktúra', 'Pre vystavenie Dobropisu musíte vybrať pôvodnú faktúru. Vyžaduje to legislatíva eFaktúry.', 'error');
+                return;
+            }
+            if (totalS_Dph > 0) {
+                window.showGlobalAlertModal('Chybná suma Dobropisu', 'Dobropis (opravný doklad) musí mať celkovú sumu zápornú alebo nulovú, keďže vraciate peniaze.', 'error');
+                return;
+            }
+        }
+
+        // 🛡️ Klientska validácia dátumov
+        let datumVyst = $('#inp-datum-vystavenia').val();
+        let datumSplat = $('#inp-datum-splatnosti').val();
+        if (datumVyst && datumSplat && datumSplat < datumVyst) {
+            window.showGlobalAlertModal('Chyba v dátumoch', 'Dátum splatnosti nesmie byť skorší ako dátum vystavenia.', 'error');
+            return;
+        }
+
+        // 🛡️ ISAS ARCHITECT FIX: Validácia priradenia skladu pri požiadavke na skladový odpis
+        if ($('#chk-odpis-sklad').is(':checked') && !$('#sel-zdrojovy-sklad').val()) {
+            window.showGlobalAlertModal('Chýba zdrojový sklad', 'Ak ste aktivovali fyzický odpis zo skladu, musíte v sekcii skladu zvoliť konkrétny zdrojový sklad pre výdajku.', 'warning');
+            return;
+        }
+
+        let payload = {
+            faktura_id: FAKTURA_ID ? parseInt(FAKTURA_ID) : null,
+            typ_dokladu: typDokladu,
+            povodna_faktura_id: povodnaFaId || null,
+            zakaznik_id: zak_id,
+            zariadenie_id: $('#sel-zariadenie').val() || null,
+            typ_prace_ids: $('#sel-praca').val() || [],
+            prenos_danovej_povinnosti: PRENOS_DPH,
+            globalna_zlava_percento: GLOBALNA_ZLAVA,
+            polozky: polozky,
+            akcia_faktury: akciaTyp, // 🚀 Tri stavy: 'draft', 'nachystat', 'odoslat'
+            as_draft: (akciaTyp === 'draft'),
+
+            // 💰 Nové platobné a dátumové parametre
+            sposob_uhrady: $('#sel-sposob-uhrady').val() || 'PREVOD',
+            mena: ($('#inp-mena').val() || MENA_DOKLADU).trim().toUpperCase(),
+            datum_vystavenia: datumVyst,
+            datum_dodania: $('#inp-datum-dodania').val(),
+            datum_splatnosti: datumSplat,
+            poznamka_pre_klienta: $('#inp-poznamka-klient').val() || '',
+            
+            zdrojove_ponuky_ids: $('#sel-import-ponuka').val() || [],
+            zdrojove_objednavky_ids: $('#sel-import-objednavka').val() || [],
+            zdrojova_uloha_id: $('#sel-link-uloha').val() || null,
+            zdrojove_zaznamy_ids: $('#sel-link-zaznam').val() || [],
+
+            technici_ids: $('#sel-technici').val() || [],
+            strategia_prace: $('input[name="strategia_prace"]:checked').val(),
+            vozidlo_id: $('#sel-vozidlo').val() || '',
+            start_trasy: $('#sel-start-trasy').val() || '',
+            strategia_dopravy: $('input[name="strategia_dopravy"]:checked').val(),
+            havarijny_rezim: $('#chk-havaria').is(':checked'),
+
+            zdrojovy_sklad_id: $('#sel-zdrojovy-sklad').val() || null,
+            odpisat_zo_skladu: $('#chk-odpis-sklad').is(':checked'),
+            notif_odpis_tg: $('#chk-odpis-tg').is(':checked'),
+            notif_odpis_mail: $('#chk-odpis-mail').is(':checked'),
+            notif_odpis_discord: $('#chk-odpis-discord').is(':checked'),
+            notif_majitel_tg: $('#chk-notif-tg').is(':checked'),
+            notif_majitel_mail: $('#chk-notif-mail').is(':checked'),
+            notif_majitel_discord: $('#chk-notif-discord').is(':checked')
+        };
+
+        let origHtml = $clickedBtn.html();
+        let confirmTitle = 'Potvrdenie akcie';
+        let confirmText = '';
+
+        if (akciaTyp === 'draft') {
+            confirmTitle = 'Uložiť ako koncept (Draft)';
+            confirmText = 'Doklad bude uložený v rozpracovanom stave bez pridelenia čísla a bez zmeny skladu. Môžete sa k nemu kedykoľvek vrátiť.';
+        } else if (akciaTyp === 'nachystat') {
+            confirmTitle = 'Vystaviť doklad (Bez odoslania)';
+            confirmText = 'Faktúra dostane oficiálne číslo, odpíše položky zo skladu a vygeneruje PDF/XML. Zákazníkovi ani do Peppolu sa zatiaľ nič neodošle (vhodné pre tlač do ruky).';
+        } else {
+            confirmTitle = 'Vystaviť a odoslať doklad';
+            confirmText = 'Faktúra bude oficiálne vystavená, položky odpísané, vygeneruje sa PDF a okamžite sa odošle zákazníkovi, účtovníčke a do siete Peppol.';
+        }
+
+        window.showGlobalConfirmModal(confirmTitle, confirmText, () => {
+            if ($clickedBtn) {
+                $clickedBtn.prop('disabled', true).css('pointer-events', 'none').html('⏳ Ukladám...');
+            }
+            const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]') ? document.querySelector('[name=csrfmiddlewaretoken]').value : '{{ csrf_token }}';
+
+            fetch(`/evidencia/api/faktury/ulozit-builder/`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrftoken},
+                body: JSON.stringify(payload)
+            })
+
+            .then(response => {
+                return response.json().catch(() => {
+                    throw new Error('Komunikácia so serverom zlyhala (Server error).');
+                }).then(data => {
+                    if (!response.ok) throw new Error(data.message || 'Komunikácia s databázou zlyhala.');
+                    return data;
+                });
+            })
+
+            .then(data => {
+                if(data.status === 'success') {
+                    showISASToast(data.message || 'Operácia prebehla úspešne.', '✅', 'success');
+                    setTimeout(() => {
+                        window.location.href = BACK_URL;
+                    }, 1000);
+                } else {
+                    window.showGlobalAlertModal('Chyba pri ukladaní', data.message || 'Nepodarilo sa uložiť doklad.', 'error');
+                    if ($clickedBtn) {
+                        $clickedBtn.prop('disabled', false).css('pointer-events', 'auto').html(origHtml);
+                    }
+                }
+            })
+            .catch(error => {
+                showISASToast(error.message || "Nastala chyba pri ukladaní dokladu.", "⚠️", "error");
+                window.showGlobalAlertModal('Chyba pri ukladaní', error.message || 'Skontrolujte pripojenie do siete.', 'error');
+                if ($clickedBtn) {
+                    $clickedBtn.prop('disabled', false).css('pointer-events', 'auto').html(origHtml);
+                }
+            });
+        });
+    }
+
+    $('#btn-ulozit-koncept').on('click', function(e) {
+        e.preventDefault();
+        vykonajUlozenieFaktury('draft', $(this));
+    });
+
+    $('#btn-ulozit-nachystat').on('click', function(e) {
+        e.preventDefault();
+        vykonajUlozenieFaktury('nachystat', $(this));
+    });
+
+    $('#btn-ulozit-odoslat').on('click', function(e) {
+        e.preventDefault();
+        vykonajUlozenieFaktury('odoslat', $(this));
+    });
+    // --- ⚙️ SMART BADGE LOGIKA PRE ZARIADENIA NA ÚROVNI RIADKU ---
+    
+    // 1. Otvorenie Select2 po kliknutí na Badge
+    $('#tbody-polozky').on('click', '.device-badge', function() {
+        let $badge = $(this);
+        let $container = $badge.closest('.device-badge-container');
+        let $select = $container.find('.i-zariadenie');
+
+        $badge.hide();
+
+        // Bezpečné naklonovanie možností z hlavného výberu (ak tam ešte nie sú)
+        if ($select.find('option').length <= 1) {
+            $select.html($('#sel-zariadenie').html());
+            // 🛡️ FIX: Ak bol hlavný select zamknutý, musíme tento odomknúť!
+            $select.prop('disabled', false); 
+        }
+
+        // Inicializujeme Select2
+        $select.show().select2({
+            width: '100%',
+            placeholder: '⚙️ Vyberte zariadenie...',
+            dropdownCssClass: 'isas-row-dropdown' // 🛡️ FIX: Aplikuje naše bezpečné CSS pre zalamovanie textu
+            // ZÁMERNE ODSTRÁNENÉ: dropdownParent (toto robilo ten zaseknutý scroll na mobile!)
+        });
+
+        // Otvoríme dropdown
+        $select.select2('open');
+    });
+
+    // 2. Spracovanie VÝBERU zariadenia
+    $('#tbody-polozky').on('select2:select', '.i-zariadenie', function(e) {
+        let $select = $(this);
+        let $container = $select.closest('.device-badge-container');
+        
+        // 🛡️ Získame plný text (už neorezávame S/N)
+        let text = e.params.data.text || '+ Priradiť zariadenie';
+
+        // Aktualizujeme text v odznaku
+        $container.find('.device-name').text(text);
+        
+        // 🛡️ FIX: Explicitne nastavíme hodnotu do skrytého selectu, aby sa to správne uložilo
+        $select.val(e.params.data.id);
+
+        // Zničíme Select2 a vrátime Badge
+        $select.select2('destroy');
+        $select.hide();
+        $container.find('.device-badge').show();
+    });
+
+    // 3. Spracovanie ZATVORENIA bez výberu (Ak užívateľ klikne mimo)
+    $('#tbody-polozky').on('select2:close', '.i-zariadenie', function() {
+        let $select = $(this);
+        let $container = $select.closest('.device-badge-container');
+
+        // Timeout zabraňuje konfliktu s eventom select2:select
+        setTimeout(function() { 
+            if ($select.hasClass("select2-hidden-accessible")) {
+                $select.select2('destroy');
+                $select.hide();
+                $container.find('.device-badge').show();
+            }
+        }, 50);
+    });
+});
+</script>
+{% endblock %}

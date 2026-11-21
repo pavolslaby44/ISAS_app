@@ -1,0 +1,4274 @@
+<!-- ISAS 2048 STEALTH EASTER EGG & LEADERBOARD (Dynamické URL) -->
+<div id="isas-2048-modal" class="isas-ee-overlay" style="display: none;" role="dialog" aria-modal="true" aria-label="ISAS 2048" data-csrf="{{ csrf_token }}" data-api-url="{% url 'api_easter_egg_2048' %}" data-daily-seed="{% now 'Y-m-d' %}">
+  <div class="isas-ee-container">
+    
+    <!-- Hlavička modálu -->
+    <div class="isas-ee-header">
+      <div class="isas-ee-title-wrap">
+        <h2 class="isas-ee-title">ISAS 2048</h2>
+        <span class="isas-ee-subtitle">Firemná strategická výzva</span>
+      </div>
+      
+      <div class="isas-ee-scores">
+        <div class="isas-ee-score-box">
+          <span class="isas-ee-label">SKÓRE</span>
+          <span id="isas-2048-current-score" class="isas-ee-val">0</span>
+          <div id="isas-2048-score-add-wrap" class="isas-ee-score-add-wrap"></div>
+        </div>
+        <!-- 📦 Predpoveď naskladnenia 1 + 1 (Next Tile & Buffer Queue) -->
+        <div class="isas-ee-score-box isas-ee-next-box" title="Pripravené naskladnenie: Príjem ➔ Zásobník linky">
+          <span class="isas-ee-label">PRÍJEM / ZÁSOBNÍK</span>
+          <div class="isas-ee-next-queue-wrap">
+            <span id="isas-2048-next-tile" class="isas-ee-val isas-ee-val-next" title="Nasledujúca položka">2</span>
+            <span class="isas-ee-next-arrow">➔</span>
+            <span id="isas-2048-queue-tile" class="isas-ee-val isas-ee-val-queue" title="Pripravené v zásobníku">2</span>
+          </div>
+        </div>
+        <div class="isas-ee-score-box isas-ee-best">
+          <span class="isas-ee-label">FIREMNÝ REKORD</span>
+          <span id="isas-2048-best-score" class="isas-ee-val">0</span>
+        </div>
+        <div class="isas-ee-win-ctrls">
+          <button id="isas-2048-btn-theme" type="button" class="isas-ee-wbtn" title="Zmeniť vizuálny profil (Slate / Amber / SCADA)">🖥️</button>
+          <button id="isas-2048-btn-min" class="isas-ee-wbtn" title="Minimalizovať (Do lišty)">&#8212;</button>
+          <button id="isas-2048-btn-max" class="isas-ee-wbtn" title="Maximalizovať / Obnoviť">&#9634;</button>
+          <button id="isas-2048-btn-close" class="isas-ee-wbtn isas-ee-wclose" title="Zavrieť (ESC)">&times;</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Telo: Hracia plocha + Rebríček -->
+    <div class="isas-ee-body">
+      
+      <!-- Ľavá časť: Hracia plocha 4x4 -->
+      <div class="isas-ee-game-pane">
+        <!-- Prepínač herného režimu: Štandard vs. Denná výzva -->
+        <div class="isas-ee-mode-switch">
+          <button type="button" id="isas-2048-mode-std" class="isas-ee-mode-btn active">🎮 Voľná hra</button>
+          <button type="button" id="isas-2048-mode-daily" class="isas-ee-mode-btn">🎯 Denná výzva</button>
+        </div>
+        <div id="isas-2048-daily-mod-badge" class="isas-ee-daily-mod-badge" style="display: none;" title="Prevádzková anomália dňa">
+          <span id="isas-2048-daily-mod-icon">⚙️</span>
+          <span id="isas-2048-daily-mod-text">Štandardná linka</span>
+        </div>
+        <!-- 🎯 Smenová úloha dňa (Daily Shift Bounty) -->
+        <div id="isas-2048-daily-bounty-badge" class="isas-ee-daily-bounty-badge" style="display: none;" title="Blesková smenová zákazka dňa">
+          <span id="isas-2048-bounty-icon">🎯</span>
+          <span id="isas-2048-bounty-text">Zákazka: Vyhodnocujem...</span>
+          <span id="isas-2048-bounty-status" class="isas-ee-bounty-status">0%</span>
+        </div>
+
+        <!-- 📈 Progresová lišta kariérneho postupu (Industry-Agnostic Level Bar) -->
+        <div class="isas-ee-level-progress-wrap" title="Postup k odomknutiu nasledujúcej úrovne">
+          <div class="isas-ee-level-info">
+            <span class="isas-ee-level-lbl">CIEĽ:</span>
+            <span id="isas-2048-next-level-title" class="isas-ee-level-target">...</span>
+            <span id="isas-2048-level-pct" class="isas-ee-level-pct">0%</span>
+          </div>
+          <div class="isas-ee-level-bar-track">
+            <div id="isas-2048-level-bar-fill" class="isas-ee-level-bar-fill" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <!-- 🎯 Tieň súpera v reálnom čase (Live Ghost Rival) -->
+        <div id="isas-2048-rival-tracker" class="isas-ee-rival-wrap" style="display: none;" title="Najbližší kolega v rebríčku na dosah">
+          <span class="isas-ee-rival-icon">🎯</span>
+          <span id="isas-2048-rival-text" class="isas-ee-rival-text">Vyhodnocujem súperov...</span>
+        </div>
+
+        <div class="isas-ee-board-wrapper">
+          <div id="isas-2048-board" class="isas-ee-board">
+            <!-- Vizuálny Canvas pre oslavné mikro-častice a Combo odznak -->
+            <canvas id="isas-2048-fx-canvas" class="isas-ee-fx-canvas"></canvas>
+            <div id="isas-2048-combo-badge" class="isas-ee-combo-badge" style="display: none;"></div>
+            <!-- 16 buniek mriežky -->
+            <div class="isas-ee-cell"></div><div class="isas-ee-cell"></div><div class="isas-ee-cell"></div><div class="isas-ee-cell"></div>
+            <div class="isas-ee-cell"></div><div class="isas-ee-cell"></div><div class="isas-ee-cell"></div><div class="isas-ee-cell"></div>
+            <div class="isas-ee-cell"></div><div class="isas-ee-cell"></div><div class="isas-ee-cell"></div><div class="isas-ee-cell"></div>
+            <div class="isas-ee-cell"></div><div class="isas-ee-cell"></div><div class="isas-ee-cell"></div><div class="isas-ee-cell"></div>
+            <div id="isas-2048-tiles" class="isas-ee-tiles-container"></div>
+
+            <!-- Game Over / Výhra moderné prekrytie priamo na ploche s izoláciou dlaždíc -->
+            <div id="isas-2048-overlay-msg" class="isas-ee-game-msg" style="display: none;">
+              <div class="isas-ee-game-msg-card">
+                <div class="isas-ee-msg-icon-badge">🏁</div>
+                <h3 id="isas-2048-msg-text" class="isas-ee-msg-title">Koniec hry!</h3>
+                <div class="isas-ee-msg-score-box">
+                  <span class="isas-ee-msg-score-lbl">Dosiahnuté skóre</span>
+                  <span id="isas-2048-msg-score-val" class="isas-ee-msg-score-val">0</span>
+                </div>
+                <!-- 📊 Procesná telemetria (Audit partie) -->
+                <div class="isas-ee-msg-telemetry">
+                  <div class="isas-ee-telem-item">
+                    <span class="isas-ee-telem-lbl">⏱️ Čas</span>
+                    <span id="isas-2048-telem-time" class="isas-ee-telem-val">00:00</span>
+                  </div>
+                  <div class="isas-ee-telem-item">
+                    <span class="isas-ee-telem-lbl">🔄 Ťahy</span>
+                    <span id="isas-2048-telem-moves" class="isas-ee-telem-val">0</span>
+                  </div>
+                  <div class="isas-ee-telem-item">
+                    <span class="isas-ee-telem-lbl">🎯 Efektivita</span>
+                    <span id="isas-2048-telem-eff" class="isas-ee-telem-val">0.0</span>
+                  </div>
+                  <div class="isas-ee-telem-item" title="Maximálny počet za sebou idúcich ťahov so zlúčením">
+                    <span class="isas-ee-telem-lbl">⚡ Max Flow</span>
+                    <span id="isas-2048-telem-flow" class="isas-ee-telem-val">0</span>
+                  </div>
+                  <div id="isas-2048-telem-bounty-box" class="isas-ee-telem-item" style="display: none;" title="Plnenie smenovej zákazky">
+                    <span class="isas-ee-telem-lbl">📋 Zákazka</span>
+                    <span id="isas-2048-telem-bounty" class="isas-ee-telem-val">-</span>
+                  </div>
+                </div>
+
+                <!-- 🗺️ Post-Game Taktická Heatmapa a Štýl Hry -->
+                <div class="isas-ee-audit-heatmap-wrap">
+                  <div class="isas-ee-heatmap-header">
+                    <span class="isas-ee-heatmap-title">Taktika: <strong id="isas-2048-style-title">-</strong></span>
+                  </div>
+                  <div class="isas-ee-heatmap-body">
+                    <div id="isas-2048-heatmap-grid" class="isas-ee-heatmap-grid"></div>
+                    <span class="isas-ee-heatmap-desc" id="isas-2048-style-desc">Analýza hernej taktiky...</span>
+                  </div>
+                </div>
+
+                <p id="isas-2048-msg-sub" class="isas-ee-msg-sub">Hracia plocha je plná.</p>
+                <div style="display: flex; gap: 8px; justify-content: center; width: 100%;">
+                  <button id="isas-2048-btn-restart" type="button" class="isas-ee-btn-restart">
+                    <span>🔄</span> Znova
+                  </button>
+                  <button id="isas-2048-btn-share" type="button" class="isas-ee-btn-restart" style="background: linear-gradient(135deg, #059669 0%, #047857 100%); border-color: rgba(16, 185, 129, 0.4);" title="Vytvoriť vizitku a zvoliť kanál zdieľania">
+                    <span>📤</span> Zdieľať
+                  </button>
+                </div>
+
+                <!-- 📑 Oficiálny digitálny odovzdávací protokol zmeny (Technické tlačivo) -->
+                <div id="isas-2048-share-card-box" class="isas-ee-share-card-box" style="display: none;">
+                  <div class="isas-ee-protocol-sheet">
+                    <!-- Hlavička tlačiva -->
+                    <div class="isas-ee-protocol-head">
+                      <div class="isas-ee-proto-brand">
+                        <span class="isas-ee-proto-seal">🛡️</span>
+                        <div class="isas-ee-proto-titles">
+                          <span class="isas-ee-proto-title">VÝKONNOSTNÝ PROTOKOL ZMENY</span>
+                          <span id="isas-proto-regime" class="isas-ee-proto-sub">ISAS CORE • AUDIT LINKY</span>
+                        </div>
+                      </div>
+                      <button id="isas-2048-btn-share-close" type="button" class="isas-ee-wbtn isas-proto-close" title="Zavrieť protokol">&times;</button>
+                    </div>
+
+                    <!-- Telo tlačiva: Technické parametre -->
+                    <div class="isas-ee-protocol-body">
+                      <div class="isas-proto-row-operator">
+                        <span class="isas-proto-lbl">OPERÁTOR:</span>
+                        <strong id="isas-proto-op" class="isas-proto-op-name">-</strong>
+                      </div>
+
+                      <div class="isas-proto-metrics-grid">
+                        <div class="isas-proto-mcell">
+                          <span class="isas-proto-lbl">VÝSLEDNÉ SKÓRE</span>
+                          <span id="isas-proto-score" class="isas-proto-val isas-proto-accent">0</span>
+                        </div>
+                        <div class="isas-proto-mcell">
+                          <span class="isas-proto-lbl">LEAN EFEKTIVITA</span>
+                          <span id="isas-proto-eff" class="isas-proto-val">0.0 b/ťah</span>
+                        </div>
+                        <!-- Finálna úroveň na celú šírku (span 2) s podporou plynulého scrollu bez orezania -->
+                        <div class="isas-proto-mcell isas-proto-mcell-wide">
+                          <span class="isas-proto-lbl">FINÁLNA ÚROVEŇ</span>
+                          <div class="isas-proto-scroll-wrap">
+                            <span id="isas-proto-tile" class="isas-proto-val isas-proto-val-tile">-</span>
+                          </div>
+                        </div>
+                        <div class="isas-proto-mcell">
+                          <span class="isas-proto-lbl">ČAS ZMENY / ŤAHY</span>
+                          <span id="isas-proto-time-moves" class="isas-proto-val">00:00 / 0</span>
+                        </div>
+                        <div class="isas-proto-mcell">
+                          <span class="isas-proto-lbl">KONTINUÁLNY FLOW</span>
+                          <span id="isas-proto-flow" class="isas-proto-val" style="color: #facc15;">⚡ 0</span>
+                        </div>
+                      </div>
+
+                      <!-- Vizuálna miniatúrna vzorka linky 4x4 -->
+                      <div class="isas-proto-matrix-section">
+                        <div class="isas-proto-matrix-head">
+                          <span class="isas-proto-lbl">ROZLOŽENIE LINKY 4×4:</span>
+                          <span id="isas-proto-tactic" class="isas-proto-tactic-badge">-</span>
+                        </div>
+                        <div id="isas-proto-mosaic-grid" class="isas-proto-mosaic-grid"></div>
+                      </div>
+                    </div>
+
+                    <!-- Pätka tlačiva: Verifikačná pečiatka s dynamickým ID -->
+                    <div class="isas-ee-protocol-foot">
+                      <span class="isas-proto-stamp">✓ VERIFIKOVANÉ SYSTÉMOM ISAS CORE</span>
+                      <span id="isas-proto-doc-id" class="isas-proto-doc-id">DOC-2048</span>
+                    </div>
+                  </div>
+
+                  <!-- Multikanálová expedícia protokolu -->
+                  <div class="isas-ee-share-channels-wrap">
+                    <a id="isas-share-tg" href="#" target="_blank" rel="noopener noreferrer" class="isas-ee-share-ch isas-ch-tg" title="Odoslať cez Telegram">✈️ Telegram</a>
+                    <a id="isas-share-wa" href="#" target="_blank" rel="noopener noreferrer" class="isas-ee-share-ch isas-ch-wa" title="Odoslať cez WhatsApp">💬 WhatsApp</a>
+                    <a id="isas-share-viber" href="#" target="_blank" rel="noopener noreferrer" class="isas-ee-share-ch isas-ch-viber" title="Odoslať cez Viber">💜 Viber</a>
+                    <a id="isas-share-gmail" href="#" target="_blank" rel="noopener noreferrer" class="isas-ee-share-ch isas-ch-gmail" title="Otvoriť nový e-mail v Gmail">✉️ Gmail</a>
+                    <button id="isas-share-discord" type="button" class="isas-ee-share-ch isas-ch-discord" title="Skopírovať formátovaný kód pre Discord">🎮 Discord</button>
+                    <button id="isas-share-copy" type="button" class="isas-ee-share-ch isas-ch-copy" title="Skopírovať text vizitky do schránky">📋 Schránka</button>
+                    <button id="isas-share-native" type="button" class="isas-ee-share-ch isas-ch-native" title="Systémový dialóg zariadenia">📱 Ďalšie možnosti (OS)</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 🛠️ ERP KRÍZOVÝ MANAŽMENT (Akčné firemné nástroje) -->
+        <div class="isas-ee-tools-bar">
+          <span class="isas-ee-tools-title">ERP Nástroje:</span>
+          <button type="button" id="isas-2048-tool-undo" class="isas-ee-tool-btn" title="Vrátiť posledný ťah späť (1x za hru)" disabled>
+            ↩️ Storno operácie <span id="isas-2048-undo-count" class="isas-ee-tool-badge">1/1</span>
+          </button>
+          <button type="button" id="isas-2048-tool-scrap" class="isas-ee-tool-btn" title="Odpísať zo skladu 1 nepodarok (dlaždicu 2) z plochy (1x za hru)">
+            🗑️ Odpis skladu <span id="isas-2048-scrap-count" class="isas-ee-tool-badge">1/1</span>
+          </button>
+          <button type="button" id="isas-2048-tool-hold" class="isas-ee-tool-btn isas-ee-tool-hold-btn" title="Karanténny medzisklad: Odložiť alebo vyložiť položku (Buffer 1 slot)">
+            <span>📦 Medzisklad:</span>
+            <div id="isas-2048-hold-slot-visual" class="isas-ee-hold-slot-visual">
+              <span id="isas-2048-hold-empty-lbl" class="isas-ee-hold-empty-lbl">Voľný</span>
+              <div id="isas-2048-hold-tile-preview" class="isas-ee-hold-tile-preview" style="display: none;">
+                <span id="isas-2048-hold-val"></span>
+                <span id="isas-2048-hold-sub" class="isas-ee-hold-sub"></span>
+              </div>
+            </div>
+          </button>
+        </div>
+
+        <div class="isas-ee-controls-hint">
+          <span id="isas-2048-hint-text">Ovládanie: <strong>Šípky / WASD</strong> na klávesnici alebo <strong>Swipe</strong> na mobile. Zavrieť: <strong>ESC</strong>.</span>
+        </div>
+
+        <!-- 🎖️ Firemné úspechy (Achievements) -->
+        <div class="isas-ee-achievements-bar" id="isas-2048-achievements-wrap" title="Odomknuté firemné úspechy">
+          <span class="isas-ee-ach-badge" id="ach-first" title="Prvá partia: Odohraj prvú hru">🎮</span>
+          <span class="isas-ee-ach-badge" id="ach-night" title="Nočná šichta: Hra po 20:00">🦉</span>
+          <span class="isas-ee-ach-badge" id="ach-early" title="Ranná zmena: Hra pred 07:30">☕</span>
+          <span class="isas-ee-ach-badge" id="ach-clean" title="Čistý proces: Dosiahni 512+ bez storna a odpisu">🛡️</span>
+          <span class="isas-ee-ach-badge" id="ach-combo" title="Sériová výroba: Reťazové Combo x3+">⚡</span>
+          <span class="isas-ee-ach-badge" id="ach-2048" title="Generálny riaditeľ: Dosiahni dlaždicu 2048">👑</span>
+        </div>
+      </div>
+
+      <!-- Pravá časť: Firemný Leaderboard (Sieň slávy) -->
+      <div class="isas-ee-leaderboard-pane">
+        <div class="isas-ee-lb-header">
+          <div class="isas-ee-lb-tabs">
+            <button type="button" id="isas-2048-tab-daily" class="isas-ee-tab-btn">🎯 Deň</button>
+            <button type="button" id="isas-2048-tab-season" class="isas-ee-tab-btn active">🏆 Kvartál</button>
+            <button type="button" id="isas-2048-tab-alltime" class="isas-ee-tab-btn">👑 Legendy</button>
+            <button type="button" id="isas-2048-tab-teams" class="isas-ee-tab-btn">🏢 Tímy</button>
+          </div>
+          <span id="isas-2048-my-rank" class="isas-ee-my-rank-badge">Tvoje poradie: -</span>
+        </div>
+
+        <!-- 🏢 Kvartálny firemný míľnik (Kooperatívny bar divízie) -->
+        <div id="isas-2048-milestone-wrap" class="isas-ee-milestone-wrap" style="display: none;" title="Spoločný kvartálny výkon všetkých divízií podniku">
+          <div class="isas-ee-milestone-head">
+            <span class="isas-ee-milestone-title">🏢 Spoločná kapacita firmy</span>
+            <span id="isas-2048-milestone-vals" class="isas-ee-milestone-vals">0 / 0 b.</span>
+          </div>
+          <div class="isas-ee-milestone-track">
+            <div id="isas-2048-milestone-fill" class="isas-ee-milestone-fill" style="width: 0%;"></div>
+          </div>
+          <div class="isas-ee-milestone-foot">
+            <span id="isas-2048-milestone-sezona" class="isas-ee-milestone-lbl">Aktuálny kvartál</span>
+            <span id="isas-2048-milestone-pct" class="isas-ee-milestone-pct">0%</span>
+          </div>
+        </div>
+
+        <div class="isas-ee-lb-list-wrap">
+          <table class="isas-ee-lb-table">
+            <thead>
+              <tr id="isas-2048-lb-thead-tr">
+                <th style="width: 12%; text-align: center;">#</th>
+                <th style="width: 44%;">Zamestnanec</th>
+                <th style="width: 22%;">Úroveň</th>
+                <th style="width: 22%; text-align: right;">Skóre</th>
+              </tr>
+            </thead>
+
+            <tbody id="isas-2048-lb-body">
+              <tr>
+                <td colspan="4" class="isas-ee-empty-td">
+                  <div class="isas-ee-empty-box">
+                    <span class="isas-ee-empty-icon">⏳</span>
+                    <span class="isas-ee-empty-title">Synchronizujem firemné rekordy...</span>
+                    <span class="isas-ee-empty-sub">Načítavam sieň slávy z databázy</span>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="isas-ee-lb-footer">
+          <button id="isas-2048-btn-new-game" class="isas-ee-btn-secondary">Nová hra</button>
+          <span id="isas-2048-save-status" class="isas-ee-save-status">Stav: Pripravený</span>
+        </div>
+
+        <!-- ⚙️ Odvetvový technologický kľúč (Postupnosť agregátov z industry_loader) -->
+        <div id="isas-2048-tech-tree-wrap" class="isas-ee-tech-tree-wrap">
+          <div class="isas-ee-tech-tree-head">
+            <span class="isas-ee-tech-tree-lbl">TECHNOLOGICKÝ STROM ODVETVIA</span>
+            <span id="isas-2048-tech-tree-apex" class="isas-ee-tech-tree-apex">Méta: 2048</span>
+          </div>
+          <div id="isas-2048-tech-tree-list" class="isas-ee-tech-tree-list"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<style>
+  /* ================= CSS ŠTÝLY (Dark Mode Industrial) ================= */
+  .isas-ee-overlay {
+    position: fixed; inset: 0; z-index: 999999;
+    background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px);
+    display: flex; align-items: center; justify-content: center;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: #f8fafc; padding: 12px;
+  }
+  /* 🔒 ZÁMOK SCROLLOVANIA POZADIA PRI OTVORENEJ HRE */
+  body.isas-2048-locked, html:has(body.isas-2048-locked) {
+    overflow: hidden !important;
+    height: 100vh !important;
+    touch-action: none !important;
+  }
+
+  .isas-ee-container {
+    background: #0f172a; border: 1px solid #334155; border-radius: 16px;
+    box-shadow: 0 25px 50px -12px rgba(0,0,0,0.85);
+    width: 100%; max-width: 820px; max-height: 92vh; display: flex; flex-direction: column;
+    overflow: hidden; animation: isasEeFadeIn 0.2s ease-out;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.6s ease, border-color 0.6s ease;
+  }
+
+  /* 💡 Ambientné reaktívne podsvietenie (Subtle Backlight Glow podľa dosiahnutej dlaždice) */
+  /* Tier 2: Dlaždica 512 / 1024 (Jantárové pulzujúce halo) */
+  .isas-ee-container.isas-glow-tier-amber {
+    border-color: rgba(245, 158, 11, 0.6) !important;
+    box-shadow: 0 25px 50px -12px rgba(0,0,0,0.85), 0 0 35px rgba(245, 158, 11, 0.28) !important;
+  }
+  /* Tier 3: Dlaždica 2048+ (Šampiónska zlatisto-ružová aura) */
+  .isas-ee-container.isas-glow-tier-champion {
+    border-color: rgba(250, 204, 21, 0.8) !important;
+    box-shadow: 0 25px 50px -12px rgba(0,0,0,0.85), 0 0 45px rgba(250, 204, 21, 0.35), 0 0 22px rgba(236, 72, 153, 0.25) !important;
+    animation: isasChampionAura 2.4s infinite alternate ease-in-out;
+  }
+  @keyframes isasChampionAura {
+    0%   { box-shadow: 0 25px 50px -12px rgba(0,0,0,0.85), 0 0 32px rgba(250, 204, 21, 0.25), 0 0 15px rgba(236, 72, 153, 0.2); }
+    100% { box-shadow: 0 25px 50px -12px rgba(0,0,0,0.85), 0 0 52px rgba(250, 204, 21, 0.45), 0 0 30px rgba(236, 72, 153, 0.35); }
+  }
+
+  /* 🔲 MAXIMALIZOVANÝ REŽIM (Plnohodnotný Full-Screen so skutočným zväčšením herného obsahu) */
+  .isas-ee-container.maximized {
+    max-width: min(1380px, 97vw) !important;
+    width: min(1380px, 97vw) !important;
+    height: 95vh !important;
+    max-height: 95vh !important;
+  }
+  .isas-ee-container.maximized .isas-ee-body {
+    gap: 20px !important;
+    padding: 10px 18px !important;
+    overflow: hidden !important;
+    min-height: 0 !important;
+  }
+  .isas-ee-container.maximized .isas-ee-game-pane {
+    flex: 0 0 clamp(300px, calc(95vh - 305px), 425px) !important;
+    width: clamp(300px, calc(95vh - 305px), 425px) !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    scrollbar-width: thin;
+    scrollbar-color: #38bdf8 rgba(15, 23, 42, 0.4);
+    gap: 4px !important;
+    align-items: stretch !important;
+    padding-right: 0 !important;
+    box-sizing: border-box !important;
+  }
+  /* 🎯 Zjednotená šírka všetkých herných komponentov na plnú dynamickú šírku zväčšenej dosky */
+  .isas-ee-container.maximized .isas-ee-board-wrapper,
+  .isas-ee-container.maximized .isas-ee-mode-switch,
+  .isas-ee-container.maximized .isas-ee-level-progress-wrap,
+  .isas-ee-container.maximized .isas-ee-rival-wrap,
+  .isas-ee-container.maximized .isas-ee-tools-bar,
+  .isas-ee-container.maximized .isas-ee-controls-hint,
+  .isas-ee-container.maximized .isas-ee-achievements-bar,
+  .isas-ee-container.maximized .isas-ee-daily-bounty-badge {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  .isas-ee-container.maximized .isas-ee-mode-switch {
+    display: flex !important;
+    padding: 3px !important;
+  }
+  .isas-ee-container.maximized .isas-ee-mode-btn {
+    flex: 1 !important;
+    font-size: 0.8rem !important;
+    padding: 5px 12px !important;
+    text-align: center !important;
+  }
+  .isas-ee-container.maximized .isas-ee-board {
+    width: 100% !important;
+    height: auto !important;
+    aspect-ratio: 1 / 1 !important;
+    max-height: calc(95vh - 305px) !important;
+  }
+  .isas-ee-container.maximized .isas-ee-tile {
+    font-size: clamp(1.2rem, 3.4vh, 1.65rem) !important;
+  }
+  .isas-ee-container.maximized .isas-ee-tile-sub {
+    font-size: clamp(0.48rem, 1.15vh, 0.68rem) !important;
+  }
+  .isas-ee-container.maximized .isas-ee-tools-bar {
+    min-height: 36px !important;
+    padding: 3px 6px !important;
+    gap: 8px !important;
+    flex-shrink: 0 !important;
+  }
+  .isas-ee-container.maximized .isas-ee-tool-btn {
+    font-size: 0.76rem !important;
+    padding: 3px 10px !important;
+  }
+  .isas-ee-container.maximized .isas-ee-achievements-bar {
+    justify-content: space-around !important;
+    padding: 5px 10px !important;
+  }
+  .isas-ee-container.maximized .isas-ee-ach-badge {
+    font-size: 1.25rem !important;
+  }
+  .isas-ee-container.maximized .isas-ee-leaderboard-pane {
+    flex: 1 1 540px !important;
+    width: auto !important;
+    min-height: 0 !important;
+  }
+  .isas-ee-container.maximized .isas-ee-lb-list-wrap {
+    max-height: 56vh !important;
+  }
+
+  /* ➖ MINIMALIZOVANÝ REŽIM (Kompaktný dock s garantovaným zobrazením tlačidla ▲ Obnoviť) */
+  .isas-ee-overlay.minimized {
+    background: transparent !important;
+    backdrop-filter: none !important;
+    pointer-events: none !important;
+    align-items: flex-end !important;
+    justify-content: center !important;
+    padding: 0 0 16px 0 !important;
+  }
+  .isas-ee-overlay.minimized .isas-ee-container {
+    pointer-events: auto !important;
+    max-width: 460px !important;
+    width: auto !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    border: 1.5px solid #38bdf8 !important;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.7), 0 0 18px rgba(56, 189, 248, 0.45) !important;
+    border-radius: 12px !important;
+    animation: none !important;
+    overflow: visible !important; /* 🛡️ Zamedzí orezaniu tlačidiel ovládania okna */
+  }
+  .isas-ee-overlay.minimized .isas-ee-header {
+    cursor: pointer !important;
+    padding: 8px 14px !important;
+    user-select: none !important;
+    gap: 12px !important;
+  }
+  /* V minimalizovanom docku skryjeme podtitul a rekord, aby tlačidlá mali dostatok priestoru a nikdy sa nedeformovali */
+  .isas-ee-overlay.minimized .isas-ee-subtitle,
+  .isas-ee-overlay.minimized .isas-ee-best {
+    display: none !important;
+  }
+  .isas-ee-overlay.minimized .isas-ee-body { display: none !important; }
+  .isas-ee-overlay.minimized #isas-2048-btn-max { display: none !important; }
+  .isas-ee-overlay.minimized #isas-2048-btn-theme { display: none !important; }
+  /* Zvýraznenie tlačidla na obnovenie okna */
+  .isas-ee-overlay.minimized #isas-2048-btn-min {
+    background: #0284c7 !important;
+    color: #ffffff !important;
+    border-color: #38bdf8 !important;
+    box-shadow: 0 0 8px rgba(56, 189, 248, 0.5) !important;
+  }
+  @keyframes isasEeFadeIn { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+  
+  .isas-ee-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 16px 20px; background: #1e293b; border-bottom: 1px solid #334155;
+  }
+  .isas-ee-title { margin: 0; font-size: 1.25rem; font-weight: 800; letter-spacing: -0.025em; color: #38bdf8; }
+  .isas-ee-subtitle { font-size: 0.75rem; color: #94a3b8; }
+  .isas-ee-scores { display: flex; gap: 8px; align-items: center; }
+  .isas-ee-score-box {
+    position: relative; overflow: visible;
+    background: #0f172a; border: 1px solid #334155; border-radius: 8px;
+    padding: 4px 12px; text-align: center; min-width: 65px;
+  }
+  .isas-ee-label { display: block; font-size: 0.6rem; font-weight: 700; color: #64748b; }
+  .isas-ee-val { font-size: 0.95rem; font-weight: 800; color: #f8fafc; font-variant-numeric: tabular-nums; display: inline-block; transition: color 0.15s; }
+  .isas-ee-best .isas-ee-val { color: #f59e0b; }
+
+  .isas-ee-score-add-wrap { position: absolute; top: -8px; right: 2px; pointer-events: none; }
+  .isas-ee-floating-score {
+    position: absolute; font-size: 0.82rem; font-weight: 900; color: #38bdf8;
+    animation: isasScoreFloat 0.7s ease-out forwards;
+    text-shadow: 0 0 8px rgba(56, 189, 248, 0.85); white-space: nowrap;
+  }
+  @keyframes isasScoreFloat {
+    0% { opacity: 1; transform: translateY(0) scale(1); }
+    100% { opacity: 0; transform: translateY(-26px) scale(1.2); }
+  }
+
+  @keyframes isasScoreBump {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.28); color: #38bdf8; text-shadow: 0 0 8px rgba(56, 189, 248, 0.6); }
+    100% { transform: scale(1); }
+  }
+  .isas-ee-val-bump { animation: isasScoreBump 0.22s ease-out; }
+
+  /* 🎆 Canvas vrstva častíc (neblokuje dotyky) */
+  .isas-ee-fx-canvas {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    pointer-events: none; z-index: 50; border-radius: 12px;
+  }
+
+  /* ⚡ Plávajúci Combo indikátor pri reťazovom zlúčení */
+  .isas-ee-combo-badge {
+    position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+    background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);
+    color: #ffffff; font-size: 0.75rem; font-weight: 900; letter-spacing: 0.05em;
+    padding: 3px 10px; border-radius: 20px; box-shadow: 0 0 14px rgba(245, 158, 11, 0.7);
+    pointer-events: none; z-index: 60; text-transform: uppercase;
+    animation: isasComboPop 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  @keyframes isasComboPop {
+    0% { opacity: 0; transform: translate(-50%, 10px) scale(0.6); }
+    30% { opacity: 1; transform: translate(-50%, -2px) scale(1.15); }
+    70% { opacity: 1; transform: translate(-50%, -4px) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -16px) scale(0.9); }
+  }
+
+  @keyframes isasTileSpawn {
+    0% { opacity: 0; transform: scale(0.2); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+  .isas-ee-tile-new { animation: isasTileSpawn 0.18s cubic-bezier(0.175, 0.885, 0.32, 1.275) backwards; }
+
+  @keyframes isasTileMerge {
+    0% { transform: scale(0.85); filter: brightness(1.35); }
+    50% { transform: scale(1.16); box-shadow: 0 0 22px rgba(56, 189, 248, 0.75); filter: brightness(1.2); }
+    100% { transform: scale(1); filter: brightness(1); }
+  }
+  .isas-ee-tile-merged { animation: isasTileMerge 0.22s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important; z-index: 10; }
+
+  .isas-ee-win-ctrls { display: flex; align-items: center; gap: 4px; margin-left: 6px; }
+  .isas-ee-wbtn {
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px;
+    color: #94a3b8; font-size: 0.95rem; width: 28px; height: 28px; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; transition: all 0.15s; line-height: 1; padding: 0;
+  }
+  .isas-ee-wbtn:hover { background: rgba(255,255,255,0.15); color: #f8fafc; }
+  .isas-ee-wclose:hover { background: #e11d48 !important; color: #ffffff !important; border-color: #e11d48 !important; }
+
+  .isas-ee-body { display: flex; flex-direction: row; padding: 16px; gap: 16px; overflow-y: auto; box-sizing: border-box; }
+
+  /* 🎯 OPRAVA DEFORMÁCIE: Hracia doska má stabilných 340px a nepretláča pravý panel */
+  .isas-ee-game-pane {
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    flex: 0 0 340px; width: 340px; max-width: 340px; box-sizing: border-box;
+  }
+  .isas-ee-game-pane > * { flex-shrink: 0; }
+  .isas-ee-board-wrapper { position: relative; max-width: 100%; display: flex; justify-content: center; }
+  .isas-ee-board {
+    width: 320px; height: 320px;
+    background: #0b1120; border: 2px solid #1e293b; border-radius: 14px;
+    padding: 3%; box-sizing: border-box; display: grid;
+    grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr); gap: 3%;
+    position: relative; touch-action: none; overflow: hidden;
+    box-shadow: inset 0 3px 12px rgba(0,0,0,0.7), 0 8px 24px rgba(0,0,0,0.45);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  /* 🌊 Smerový svetelný vlnový impulz pri ťahu (Directional Edge Ripple) */
+  .isas-ee-board.ripple-up    { border-top-color: #38bdf8 !important; box-shadow: inset 0 8px 16px -2px rgba(56, 189, 248, 0.75), 0 8px 24px rgba(0,0,0,0.45) !important; }
+  .isas-ee-board.ripple-down  { border-bottom-color: #38bdf8 !important; box-shadow: inset 0 -8px 16px -2px rgba(56, 189, 248, 0.75), 0 8px 24px rgba(0,0,0,0.45) !important; }
+  .isas-ee-board.ripple-left  { border-left-color: #38bdf8 !important; box-shadow: inset 8px 0 16px -2px rgba(56, 189, 248, 0.75), 0 8px 24px rgba(0,0,0,0.45) !important; }
+  .isas-ee-board.ripple-right { border-right-color: #38bdf8 !important; box-shadow: inset -8px 0 16px -2px rgba(56, 189, 248, 0.75), 0 8px 24px rgba(0,0,0,0.45) !important; }
+
+  /* 📳 Tichá kinetická fyzika: Mikrootras plochy bez zvuku pri masívnom zlúčení */
+  .isas-ee-board.is-shaking {
+    animation: isasMicroShake 0.15s cubic-bezier(0.36, 0.07, 0.19, 0.97) both !important;
+  }
+  @keyframes isasMicroShake {
+    0%, 100% { transform: translate3d(0, 0, 0); }
+    20%, 60% { transform: translate3d(-2px, 1.5px, 0); }
+    40%, 80% { transform: translate3d(2px, -1.5px, 0); }
+  }
+
+  /* ⚠️ Rizikový manažment: Patová situácia (Deadlock / Stress Warning) */
+  .isas-ee-board.is-stressed {
+    border-color: #ef4444 !important;
+    animation: isasStressPulse 1s infinite alternate ease-in-out !important;
+  }
+  @keyframes isasStressPulse {
+    0%   { box-shadow: inset 0 0 8px rgba(239, 68, 68, 0.3), 0 0 12px rgba(239, 68, 68, 0.4); border-color: rgba(239, 68, 68, 0.6); }
+    100% { box-shadow: inset 0 0 16px rgba(244, 63, 94, 0.5), 0 0 24px rgba(244, 63, 94, 0.85); border-color: #f43f5e; }
+  }
+  .isas-ee-tool-btn.is-recommended {
+    animation: isasToolRecPulse 0.9s infinite alternate ease-in-out !important;
+    border-color: #f59e0b !important; color: #fde047 !important;
+  }
+  @keyframes isasToolRecPulse {
+    0%   { transform: scale(1); box-shadow: 0 0 4px rgba(245, 158, 11, 0.3); }
+    100% { transform: scale(1.05); box-shadow: 0 0 12px rgba(245, 158, 11, 0.75); }
+  }
+
+  /* 📦 Štýl pre box naskladnenia 1 + 1 (Next Tile & Buffer Queue) */
+  .isas-ee-next-box { min-width: 86px !important; padding: 4px 8px !important; }
+  .isas-ee-next-queue-wrap { display: flex; align-items: center; justify-content: center; gap: 5px; }
+  .isas-ee-val-next { color: #38bdf8; font-size: 0.95rem; font-weight: 800; }
+  .isas-ee-next-arrow { font-size: 0.62rem; color: #64748b; line-height: 1; user-select: none; }
+  .isas-ee-val-queue { color: #94a3b8; font-size: 0.78rem; font-weight: 700; opacity: 0.75; }
+  .isas-ee-next-4 { color: #f59e0b !important; }
+  .isas-ee-queue-4 { color: #f59e0b !important; opacity: 0.95 !important; }
+
+  /* 🎯 Štýly pre Tieň súpera v reálnom čase (Live Ghost Rival) */
+  .isas-ee-rival-wrap {
+    width: 320px; max-width: 100%; display: flex; align-items: center; gap: 6px;
+    background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(56, 189, 248, 0.25);
+    border-radius: 6px; padding: 3px 8px; box-sizing: border-box; font-size: 0.65rem;
+    color: #94a3b8; transition: border-color 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
+  }
+  .isas-ee-rival-icon { font-size: 0.72rem; line-height: 1; flex-shrink: 0; }
+  .isas-ee-rival-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
+  .isas-ee-rival-text strong { color: #f8fafc; font-weight: 700; }
+  .isas-ee-rival-text span.diff { color: #38bdf8; font-family: ui-monospace, Menlo, monospace; font-weight: 800; }
+  .isas-ee-rival-overtake {
+    border-color: #10b981 !important; background: rgba(16, 185, 129, 0.18) !important;
+    box-shadow: 0 0 12px rgba(16, 185, 129, 0.45) !important;
+    animation: isasOvertakePulse 0.7s ease-out;
+  }
+  @keyframes isasOvertakePulse {
+    0%   { transform: scale(0.98); }
+    50%  { transform: scale(1.02); }
+    100% { transform: scale(1); }
+  }
+
+  /* 👑 Korunná aura pre najvyššiu dlaždicu (King Tile Glow) */
+  .isas-ee-tile-king {
+    box-shadow: 0 0 18px rgba(250, 204, 21, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
+    border: 1.5px solid #fde047 !important;
+    animation: isasKingPulse 1.8s infinite alternate ease-in-out;
+    z-index: 5;
+  }
+
+  /* 👻 Predikcia toku materiálu (Merge Ghosting Glow) */
+  .isas-ee-tile.isas-ee-tile-ghost {
+    outline: 2px dashed #ffffff !important;
+    box-shadow: 0 0 18px rgba(255, 255, 255, 0.95), inset 0 0 10px rgba(56, 189, 248, 0.7) !important;
+    transform: scale(1.05);
+    filter: brightness(1.25);
+    z-index: 15;
+    animation: isasGhostPulse 0.35s infinite alternate ease-in-out !important;
+  }
+  @keyframes isasGhostPulse {
+    0%   { box-shadow: 0 0 8px rgba(255, 255, 255, 0.6), inset 0 0 6px rgba(56, 189, 248, 0.4); }
+    100% { box-shadow: 0 0 20px rgba(56, 189, 248, 1), inset 0 0 12px rgba(255, 255, 255, 0.8); }
+  }
+
+  /* 🏢 Štýly pre Kvartálny firemný míľnik */
+  .isas-ee-milestone-wrap {
+    display: flex; flex-direction: column; gap: 4px;
+    background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(56, 189, 248, 0.28);
+    border-radius: 8px; padding: 6px 10px; margin-bottom: 8px; box-sizing: border-box;
+  }
+  .isas-ee-milestone-head, .isas-ee-milestone-foot {
+    display: flex; justify-content: space-between; align-items: center; font-size: 0.65rem;
+  }
+  .isas-ee-milestone-title { font-weight: 800; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.04em; }
+  .isas-ee-milestone-vals { font-family: ui-monospace, Menlo, monospace; font-weight: 800; color: #f8fafc; }
+  .isas-ee-milestone-track {
+    width: 100%; height: 6px; background: rgba(30, 41, 59, 0.9); border-radius: 4px; overflow: hidden;
+  }
+  .isas-ee-milestone-fill {
+    height: 100%; background: linear-gradient(90deg, #0284c7 0%, #10b981 70%, #facc15 100%);
+    border-radius: 4px; transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.65);
+  }
+  .isas-ee-milestone-lbl { font-size: 0.62rem; color: #94a3b8; }
+  .isas-ee-milestone-pct { font-family: ui-monospace, Menlo, monospace; font-weight: 800; color: #10b981; }
+  .isas-ee-tile-king::after {
+    content: "👑"; position: absolute; top: 1px; right: 3px;
+    font-size: clamp(0.5rem, 2vw, 0.68rem); line-height: 1; pointer-events: none;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.8));
+  }
+  @keyframes isasKingPulse {
+    0%   { filter: drop-shadow(0 0 3px rgba(250, 204, 21, 0.4)); }
+    100% { filter: drop-shadow(0 0 10px rgba(250, 204, 21, 0.85)); }
+  }
+
+  /* 📊 Štýly procesnej telemetrie (Audit partie) */
+  .isas-ee-msg-telemetry {
+    display: flex; gap: 6px; width: 100%; max-width: 250px; justify-content: space-between;
+    background: rgba(15, 23, 42, 0.7); border: 1px solid #334155; border-radius: 8px;
+    padding: 6px 8px; box-sizing: border-box;
+  }
+  .isas-ee-telem-item { display: flex; flex-direction: column; align-items: center; flex: 1; }
+  .isas-ee-telem-lbl { font-size: 0.58rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.04em; }
+  .isas-ee-telem-val { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.85rem; font-weight: 800; color: #f8fafc; }
+
+  /* 📈 Štýly pre Progresovú lištu kariérneho postupu */
+  .isas-ee-level-progress-wrap {
+    width: 320px; max-width: 100%; display: flex; flex-direction: column; gap: 3px;
+    background: rgba(15, 23, 42, 0.7); border: 1px solid #334155; border-radius: 8px;
+    padding: 4px 8px; box-sizing: border-box;
+  }
+  .isas-ee-level-info {
+    display: flex; justify-content: space-between; align-items: center; font-size: 0.65rem;
+  }
+  .isas-ee-level-lbl { font-weight: 800; color: #64748b; letter-spacing: 0.04em; }
+  .isas-ee-level-target {
+    font-weight: 700; color: #38bdf8; white-space: nowrap; overflow: hidden;
+    text-overflow: ellipsis; max-width: 190px; text-align: left; flex: 1; margin: 0 6px;
+  }
+  .isas-ee-level-pct { font-family: ui-monospace, Menlo, monospace; font-weight: 800; color: #f59e0b; }
+  .isas-ee-level-bar-track {
+    width: 100%; height: 4px; background: rgba(30, 41, 59, 0.9); border-radius: 4px; overflow: hidden;
+  }
+  .isas-ee-level-bar-fill {
+    height: 100%; background: linear-gradient(90deg, #0284c7 0%, #38bdf8 70%, #f59e0b 100%);
+    border-radius: 4px; transition: width 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
+  }
+
+  /* 🗺️ Štýly pre Post-Game Heatmapu */
+  .isas-ee-audit-heatmap-wrap {
+    display: flex; flex-direction: column; width: 100%; max-width: 250px;
+    background: rgba(15, 23, 42, 0.85); border: 1px solid #334155; border-radius: 8px;
+    padding: 6px 8px; box-sizing: border-box; gap: 4px;
+  }
+  .isas-ee-heatmap-header { display: flex; justify-content: space-between; align-items: center; }
+  .isas-ee-heatmap-title { font-size: 0.64rem; color: #94a3b8; }
+  .isas-ee-heatmap-title strong { color: #fde047; font-weight: 800; }
+  .isas-ee-heatmap-body { display: flex; align-items: center; gap: 8px; }
+  .isas-ee-heatmap-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px;
+    width: 48px; height: 48px; flex-shrink: 0; background: #0b1120;
+    padding: 2px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.06);
+  }
+  .isas-ee-heatmap-cell {
+    border-radius: 2px; background: #1e293b; transition: background-color 0.2s;
+  }
+  .isas-ee-heatmap-desc {
+    font-size: 0.58rem; color: #cbd5e1; line-height: 1.25; text-align: left; flex: 1;
+  }
+
+  .isas-ee-cell { background: rgba(30, 41, 59, 0.55); border-radius: 8px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.02); }
+  .isas-ee-tiles-container { position: absolute; inset: 3%; pointer-events: none; transition: opacity 0.2s ease, visibility 0.2s ease; }
+  .isas-ee-board.is-game-over .isas-ee-tiles-container { opacity: 0 !important; visibility: hidden !important; }
+  
+  /* ✨ OŽIVENIE DLAŽDÍC: 3D hĺbka, gradienty a svetelné odlesky */
+  .isas-ee-tile {
+    position: absolute; width: 22.75%; height: 22.75%; border-radius: 8px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-weight: 900; font-size: clamp(0.95rem, 3.8vw, 1.25rem); transition: transform 0.1s ease-in-out;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.25);
+    user-select: none; overflow: hidden; padding: 2px; box-sizing: border-box;
+  }
+  .isas-ee-tile-sub {
+    font-size: clamp(0.42rem, 1.8vw, 0.58rem); font-weight: 700; text-align: center;
+    line-height: 1.1; margin-top: 2px; opacity: 0.95;
+    max-width: 92%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  /* 🌈 Živé neónovo-kovové gradienty s hĺbkovým leskom */
+  .isas-ee-t-2    { background: linear-gradient(135deg, #475569 0%, #334155 100%); color: #f8fafc; border: 1px solid rgba(255,255,255,0.08); }
+  .isas-ee-t-4    { background: linear-gradient(135deg, #64748b 0%, #475569 100%); color: #f8fafc; border: 1px solid rgba(255,255,255,0.12); }
+  .isas-ee-t-8    { background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: #ffffff; box-shadow: 0 4px 14px rgba(2,132,199,0.55), inset 0 1px 0 rgba(255,255,255,0.35); }
+  .isas-ee-t-16   { background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); color: #ffffff; box-shadow: 0 4px 16px rgba(14,165,233,0.55), inset 0 1px 0 rgba(255,255,255,0.35); }
+  .isas-ee-t-32   { background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%); color: #ffffff; box-shadow: 0 4px 16px rgba(13,148,136,0.6), inset 0 1px 0 rgba(255,255,255,0.35); }
+  .isas-ee-t-64   { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; box-shadow: 0 4px 18px rgba(16,185,129,0.65), inset 0 1px 0 rgba(255,255,255,0.4); }
+  .isas-ee-t-128  { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #ffffff; font-size: 1.05rem; box-shadow: 0 5px 20px rgba(245,158,11,0.7), inset 0 1px 0 rgba(255,255,255,0.4); }
+  .isas-ee-t-256  { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); color: #ffffff; font-size: 1rem; box-shadow: 0 5px 22px rgba(249,115,22,0.75), inset 0 1px 0 rgba(255,255,255,0.4); }
+  .isas-ee-t-512  { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: #ffffff; font-size: 0.95rem; box-shadow: 0 6px 24px rgba(239,68,68,0.8), inset 0 1px 0 rgba(255,255,255,0.4); }
+  .isas-ee-t-1024 { background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: #ffffff; font-size: 0.9rem; box-shadow: 0 6px 26px rgba(139,92,246,0.85), inset 0 1px 0 rgba(255,255,255,0.45); }
+  .isas-ee-t-2048 { background: linear-gradient(135deg, #facc15 0%, #ca8a04 100%); color: #0f172a; font-size: 0.85rem; box-shadow: 0 0 30px rgba(250,204,21,0.95), inset 0 1px 0 rgba(255,255,255,0.6); }
+  .isas-ee-t-super{ background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); color: #ffffff; font-size: 0.8rem; box-shadow: 0 0 35px rgba(236,72,153,1), inset 0 1px 0 rgba(255,255,255,0.6); }
+
+  .isas-ee-game-msg {
+    position: absolute; inset: 0; z-index: 100;
+    background: rgba(11, 17, 32, 0.96); backdrop-filter: blur(10px);
+    border-radius: 12px; display: flex; flex-direction: column;
+    align-items: center; justify-content: flex-start; text-align: center; padding: 12px 8px;
+    animation: isasEeFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1); box-sizing: border-box;
+    overflow-y: auto; overflow-x: hidden; touch-action: pan-y; overscroll-behavior: contain;
+  }
+  .isas-ee-game-msg::-webkit-scrollbar { width: 4px; }
+  .isas-ee-game-msg::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.5); border-radius: 4px; }
+  .isas-ee-game-msg::-webkit-scrollbar-thumb { background: #38bdf8; border-radius: 4px; }
+  .isas-ee-game-msg-card {
+    display: flex; flex-direction: column; align-items: center;
+    width: 100%; max-width: 272px; gap: 5px; margin: auto 0;
+  }
+  .isas-ee-msg-icon-badge {
+    font-size: 1.6rem; line-height: 1; filter: drop-shadow(0 0 10px rgba(244, 63, 94, 0.5));
+    animation: isasToolPulse 1.2s infinite alternate;
+  }
+  .isas-ee-msg-title {
+    margin: 0; font-size: 1.35rem; font-weight: 900; letter-spacing: -0.02em;
+    background: linear-gradient(135deg, #f43f5e 0%, #fb7185 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 2px 8px rgba(244, 63, 94, 0.35));
+  }
+  .isas-ee-msg-score-box {
+    background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(56, 189, 248, 0.35);
+    border-radius: 10px; padding: 6px 14px; text-align: center; width: 85%;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+  .isas-ee-msg-score-lbl {
+    display: block; font-size: 0.62rem; font-weight: 700; color: #94a3b8;
+    text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 1px;
+  }
+  .isas-ee-msg-score-val {
+    font-family: ui-monospace, SFMono-Regular, "Roboto Mono", Menlo, Consolas, monospace;
+    font-size: 1.3rem; font-weight: 900; color: #38bdf8;
+    text-shadow: 0 0 12px rgba(56, 189, 248, 0.5);
+  }
+  .isas-ee-msg-sub {
+    margin: 0; font-size: 0.74rem; font-weight: 500; color: #cbd5e1;
+    line-height: 1.3; min-height: 1.8em;
+  }
+  .isas-ee-btn-restart {
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+    color: #ffffff; border: 1px solid rgba(56, 189, 248, 0.4);
+    padding: 8px 18px; border-radius: 8px; font-weight: 800; font-size: 0.82rem;
+    cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+    gap: 6px; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.45);
+    transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .isas-ee-btn-restart:hover {
+    background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+    transform: translateY(-1px) scale(1.02);
+    box-shadow: 0 6px 18px rgba(14, 165, 233, 0.6);
+  }
+  .isas-ee-controls-hint { font-size: 0.7rem; color: #64748b; text-align: center; }
+
+  /* 🏆 Pravá časť: Leaderboard (Plnohodnotná flexibilná šírka s vlastným minimom) */
+  .isas-ee-leaderboard-pane {
+    flex: 1 1 340px; display: flex; flex-direction: column; min-width: 280px; width: auto;
+    box-sizing: border-box; background: #1e293b; border-radius: 12px; border: 1px solid #334155; padding: 14px;
+  }
+
+  /* Prepínač režimu: Štandardná hra vs. Denná výzva */
+  .isas-ee-mode-switch {
+    display: flex; gap: 6px; background: #0b1120; padding: 3px; border-radius: 8px; border: 1px solid #334155; margin-bottom: 2px;
+  }
+  .isas-ee-mode-btn {
+    background: transparent; border: none; color: #94a3b8; font-size: 0.72rem; font-weight: 700;
+    padding: 4px 10px; border-radius: 6px; cursor: pointer; transition: all 0.15s;
+  }
+  .isas-ee-mode-btn.active {
+    background: #0284c7; color: #ffffff; box-shadow: 0 0 8px rgba(2, 132, 199, 0.4);
+  }
+
+  .isas-ee-lb-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 8px; }
+  .isas-ee-lb-tabs { display: flex; gap: 4px; background: #0f172a; padding: 2px; border-radius: 8px; border: 1px solid #334155; }
+  .isas-ee-tab-btn {
+    background: transparent; border: none; color: #94a3b8; font-size: 0.68rem; font-weight: 700;
+    padding: 3px 8px; border-radius: 6px; cursor: pointer; transition: all 0.15s;
+  }
+  .isas-ee-tab-btn.active { background: #334155; color: #38bdf8; }
+  .isas-ee-my-rank-badge {
+
+    font-size: 0.68rem; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(56, 189, 248, 0.5);
+    color: #38bdf8; padding: 3px 9px; border-radius: 12px; font-weight: 700; box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
+  }
+  .isas-ee-lb-list-wrap {
+    flex: 1; overflow-y: auto; max-height: 250px; padding-right: 4px;
+  }
+  .isas-ee-lb-list-wrap::-webkit-scrollbar { width: 5px; }
+  .isas-ee-lb-list-wrap::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.4); border-radius: 4px; }
+  .isas-ee-lb-list-wrap::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+  .isas-ee-lb-list-wrap::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+  /* 🛡️ Dôsledná izolácia od bielych štýlov Django Admina a fixný nerozpadavý layout */
+  .isas-ee-leaderboard-pane table,
+  .isas-ee-lb-table {
+    width: 100% !important; background: transparent !important;
+    border-collapse: separate !important; border-spacing: 0 4px !important;
+    border: none !important; margin: 0 !important; box-shadow: none !important;
+    table-layout: fixed !important; /* 🛡️ Garantuje fixné šírky stĺpcov bez stlačenia skóre */
+  }
+  .isas-ee-lb-table thead,
+  .isas-ee-lb-table thead tr,
+  .isas-ee-lb-table thead th {
+    background: transparent !important; border: none !important;
+    color: #64748b !important; font-size: 0.63rem !important; font-weight: 700 !important;
+    text-transform: uppercase !important; letter-spacing: 0.05em !important;
+    padding: 3px 6px 6px 6px !important; white-space: nowrap !important;
+  }
+  .isas-ee-lb-table tbody,
+  .isas-ee-lb-table tbody tr {
+    background: transparent !important; border: none !important;
+  }
+  /* 🪟 Kompaktné, opticky vycentrované riadky */
+  .isas-ee-lb-table tbody tr:not(.isas-ee-empty-tr) {
+    background: rgba(15, 23, 42, 0.7) !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
+    transition: all 0.15s ease !important;
+  }
+  .isas-ee-lb-table tbody tr:not(.isas-ee-empty-tr):hover {
+    background: rgba(30, 41, 59, 0.95) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.35) !important;
+  }
+  .isas-ee-lb-table td {
+    background: transparent !important; border: none !important;
+    padding: 5px 6px !important; color: #e2e8f0 !important; font-size: 0.74rem !important;
+    vertical-align: middle !important; white-space: nowrap !important;
+  }
+  .isas-ee-lb-table tbody tr td:first-child {
+    border-radius: 7px 0 0 7px !important;
+    padding-left: 8px !important;
+    text-align: center !important;
+  }
+  .isas-ee-lb-table tbody tr td:last-child {
+    border-radius: 0 7px 7px 0 !important;
+    padding-right: 8px !important;
+    text-align: right !important;
+  }
+
+  /* 🌟 Štýl pre môj vlastný profil (Zvýraznený riadok s bezpečným obrysom bez orezania) */
+  .isas-ee-lb-row-me {
+    background: linear-gradient(90deg, rgba(56, 189, 248, 0.18) 0%, rgba(14, 165, 233, 0.09) 100%) !important;
+    outline: 1px solid rgba(56, 189, 248, 0.5) !important;
+    outline-offset: -1px !important;
+    box-shadow: 0 0 12px rgba(56, 189, 248, 0.22) !important;
+  }
+  .isas-ee-lb-row-me td { color: #38bdf8 !important; }
+
+  /* 🥇 Pódiové odznaky poradia */
+  .isas-ee-rank-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px; border-radius: 6px; font-size: 0.85rem; font-weight: 800;
+  }
+  .isas-ee-rank-badge.rank-1 { background: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; }
+  .isas-ee-rank-badge.rank-2 { background: rgba(148, 163, 184, 0.2); border: 1px solid #cbd5e1; }
+  .isas-ee-rank-badge.rank-3 { background: rgba(217, 119, 6, 0.2); border: 1px solid #d97706; }
+  .isas-ee-rank-badge.rank-other { font-size: 0.7rem; color: #64748b; background: rgba(0,0,0,0.3); border: 1px solid #334155; }
+
+  /* Meno a profilová fotka zamestnanca (Plne fluidná responzivita) */
+  .isas-ee-player-wrap { display: flex; align-items: center; gap: 7px; min-width: 0; width: 100%; }
+  .isas-ee-avatar {
+    width: 22px; height: 22px; min-width: 22px; min-height: 22px;
+    border-radius: 50%; object-fit: cover; aspect-ratio: 1 / 1; display: block;
+    border: 1px solid rgba(56, 189, 248, 0.45); flex-shrink: 0;
+    box-shadow: 0 0 6px rgba(0, 0, 0, 0.4);
+  }
+  .isas-ee-avatar-placeholder {
+    width: 22px; height: 22px; min-width: 22px; min-height: 22px;
+    border-radius: 50%; aspect-ratio: 1 / 1;
+    background: #334155; border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #94a3b8; font-size: 0.6rem; font-weight: 800;
+    display: inline-flex; align-items: center; justify-content: center;
+    flex-shrink: 0; text-transform: uppercase; user-select: none;
+  }
+  .isas-ee-player-meta { display: flex; flex-direction: column; min-width: 0; flex: 1; overflow: hidden; }
+  .isas-ee-player-name { font-weight: 600; color: #f8fafc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; display: block; }
+  .isas-ee-lb-row-me .isas-ee-player-name { font-weight: 800; color: #38bdf8; }
+
+  /* 🎖️ Firemné úspechy (Odznaky) */
+  .isas-ee-achievements-bar {
+    display: flex; gap: 6px; justify-content: center; align-items: center;
+    padding: 4px 8px; background: rgba(15, 23, 42, 0.6); border: 1px solid #334155;
+    border-radius: 8px; margin-top: 2px;
+  }
+  .isas-ee-ach-badge {
+    font-size: 0.95rem; opacity: 0.25; filter: grayscale(1);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); cursor: help;
+  }
+  .isas-ee-ach-badge.unlocked {
+    opacity: 1 !important; filter: grayscale(0) !important;
+    transform: scale(1.1); filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.6)) !important;
+  }
+
+  /* 🏷️ Úroveň (ERP položka) - pilulkový čip s bezpečným zrezaním dlhého textu */
+  .isas-ee-level-chip {
+    display: inline-block; font-size: 0.62rem; font-weight: 600; color: #38bdf8;
+    background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.25);
+    border-radius: 10px; padding: 2px 6px; white-space: nowrap !important;
+    max-width: 100%; box-sizing: border-box;
+    overflow: hidden !important; text-overflow: ellipsis !important; vertical-align: middle;
+  }
+
+  /* 🔢 Skóre - striktne v jednom riadku bez zalamovania číslic */
+  .isas-ee-score-num {
+    font-family: ui-monospace, SFMono-Regular, "Roboto Mono", Menlo, Consolas, monospace;
+    font-size: 0.82rem; font-weight: 800; color: #f59e0b; text-align: right;
+    display: inline-block; letter-spacing: -0.01em; white-space: nowrap !important;
+  }
+  .isas-ee-lb-row-me .isas-ee-score-num { color: #38bdf8; text-shadow: 0 0 8px rgba(56, 189, 248, 0.5); }
+
+  /* 🎯 Estetický Empty Box */
+  .isas-ee-empty-td { background: transparent !important; border: none !important; padding: 20px 0 !important; }
+  .isas-ee-empty-box {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 20px 14px; gap: 4px; text-align: center;
+    background: rgba(15, 23, 42, 0.45); border: 1.5px dashed #334155; border-radius: 10px;
+  }
+  .isas-ee-empty-icon { font-size: 1.6rem; line-height: 1; margin-bottom: 2px; }
+  .isas-ee-empty-title { font-size: 0.78rem; font-weight: 700; color: #cbd5e1; }
+  .isas-ee-empty-sub { font-size: 0.67rem; color: #64748b; max-width: 210px; }
+  .isas-ee-lb-footer { display: flex; justify-content: space-between; align-items: center; margin-top: auto; padding-top: 8px; border-top: 1px solid #334155; }
+  .isas-ee-save-status { font-size: 0.68rem; color: #64748b; }
+
+  /* ⚙️ Odvetvový technologický kľúč (Postupnosť agregátov z industry_loader) */
+  .isas-ee-tech-tree-wrap {
+    margin-top: 8px; padding: 6px 8px; background: rgba(15, 23, 42, 0.65);
+    border: 1px solid #334155; border-radius: 8px; display: flex; flex-direction: column; gap: 4px; box-sizing: border-box;
+  }
+  .isas-ee-tech-tree-head { display: flex; justify-content: space-between; align-items: center; font-size: 0.6rem; }
+  .isas-ee-tech-tree-lbl { font-weight: 800; color: #64748b; letter-spacing: 0.05em; text-transform: uppercase; }
+  .isas-ee-tech-tree-apex { font-weight: 700; color: #f59e0b; font-family: ui-monospace, Menlo, monospace; font-size: 0.62rem; }
+  .isas-ee-tech-tree-list {
+    display: flex; align-items: center; gap: 4px; overflow-x: auto; overflow-y: hidden; padding-bottom: 2px;
+    scrollbar-width: thin; scrollbar-color: #38bdf8 rgba(15, 23, 42, 0.4);
+  }
+  .isas-ee-tech-tree-list::-webkit-scrollbar { height: 3px; }
+  .isas-ee-tech-tree-list::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+  .isas-ee-tech-step {
+    display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0;
+    background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 4px; padding: 2px 5px; font-size: 0.6rem; color: #94a3b8; white-space: nowrap;
+    transition: all 0.15s ease;
+  }
+  .isas-ee-tech-step.is-achieved {
+    border-color: rgba(56, 189, 248, 0.5); background: rgba(56, 189, 248, 0.12); color: #38bdf8;
+  }
+  .isas-ee-tech-step.is-max {
+    border-color: #f59e0b; background: rgba(245, 158, 11, 0.18); color: #fde047; font-weight: 800;
+    box-shadow: 0 0 6px rgba(245, 158, 11, 0.3);
+  }
+  .isas-ee-tech-step-val { font-weight: 800; font-family: ui-monospace, Menlo, monospace; font-size: 0.62rem; }
+  .isas-ee-tech-sep { color: #475569; font-size: 0.5rem; flex-shrink: 0; user-select: none; }
+
+  .isas-ee-btn-primary {
+    background: #0284c7; color: white; border: none; padding: 8px 16px; border-radius: 6px;
+    font-weight: 700; font-size: 0.85rem; cursor: pointer; transition: background 0.15s;
+  }
+  .isas-ee-btn-primary:hover { background: #0369a1; }
+  .isas-ee-btn-secondary {
+    background: #334155; color: #f8fafc; border: none; padding: 6px 12px; border-radius: 6px;
+    font-weight: 600; font-size: 0.75rem; cursor: pointer; transition: background 0.15s;
+  }
+  .isas-ee-btn-secondary:hover { background: #475569; }
+
+  /* 🛠️ ERP NÁSTROJE & ZAMERIAVACÍ REŽIM ODPISU (Horizontálne rolovateľné bez orezania) */
+  .isas-ee-tools-bar {
+    display: flex; align-items: center; justify-content: flex-start; gap: 6px;
+    width: 100%; max-width: 320px; padding: 3px 4px 5px 4px; font-size: 0.72rem;
+    overflow-x: auto; overflow-y: hidden; white-space: nowrap;
+    box-sizing: border-box; -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin; scrollbar-color: #38bdf8 rgba(15, 23, 42, 0.7);
+    flex-shrink: 0 !important; min-height: 36px !important;
+  }
+  .isas-ee-tools-bar::-webkit-scrollbar { height: 4px; }
+  .isas-ee-tools-bar::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.7); border-radius: 4px; }
+  .isas-ee-tools-bar::-webkit-scrollbar-thumb { background: #38bdf8; border-radius: 4px; }
+  .isas-ee-tools-bar::-webkit-scrollbar-thumb:hover { background: #0ea5e9; }
+
+  .isas-ee-tools-title {
+    font-weight: 800; color: #64748b; font-size: 0.65rem; text-transform: uppercase;
+    letter-spacing: 0.04em; flex-shrink: 0; padding-right: 2px;
+  }
+  .isas-ee-tool-btn {
+    background: #1e293b; border: 1px solid #334155; color: #e2e8f0; border-radius: 6px;
+    padding: 3px 8px; font-size: 0.72rem; font-weight: 600; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 5px; transition: all 0.15s ease;
+    flex-shrink: 0; white-space: nowrap;
+  }
+  .isas-ee-tool-btn:hover:not(:disabled) { background: #334155; border-color: #38bdf8; color: #38bdf8; }
+  .isas-ee-tool-btn:disabled { opacity: 0.4; cursor: not-allowed; border-color: #1e293b; }
+  .isas-ee-tool-btn.active {
+    background: #e11d48 !important; border-color: #fda4af !important; color: #ffffff !important;
+    box-shadow: 0 0 10px rgba(225, 29, 72, 0.6); animation: isasToolPulse 1s infinite alternate;
+  }
+  .isas-ee-tool-badge {
+    background: rgba(0,0,0,0.4); border-radius: 4px; padding: 1px 4px; font-size: 0.62rem; font-weight: 700; color: #38bdf8;
+  }
+  .isas-ee-tool-btn:disabled .isas-ee-tool-badge { color: #64748b; }
+  @keyframes isasToolPulse { 0% { transform: scale(1); } 100% { transform: scale(1.04); } }
+  @keyframes isasScrapGlow {
+    0% { box-shadow: 0 0 4px #f43f5e; transform: scale(1); }
+    100% { box-shadow: 0 0 16px #f43f5e; transform: scale(1.06); }
+  }
+  /* 🎯 Zameriavací režim: neaktívne dlaždice stmavnú, dlaždice 2 (nepodarky) pulzujú */
+  .isas-ee-overlay.scrap-active .isas-ee-tiles-container { pointer-events: auto !important; }
+  .isas-ee-overlay.scrap-active .isas-ee-tile { cursor: not-allowed; opacity: 0.35; transition: opacity 0.2s; }
+  .isas-ee-overlay.scrap-active .isas-ee-t-2 {
+    cursor: crosshair !important; opacity: 1 !important; outline: 2px dashed #f43f5e !important;
+    animation: isasScrapGlow 0.7s infinite alternate !important; z-index: 20;
+  }
+
+  /* ⚙️ Denná dispečerská anomália (Denný modifikátor) */
+  .isas-ee-daily-mod-badge {
+    display: inline-flex; align-items: center; gap: 5px; font-size: 0.65rem; font-weight: 700;
+    color: #f59e0b; background: rgba(245, 158, 11, 0.1); border: 1px dashed rgba(245, 158, 11, 0.35);
+    padding: 2px 8px; border-radius: 6px; margin-bottom: 2px;
+  }
+  /* 🎯 Smenová úloha dňa (Daily Shift Bounty) */
+  .isas-ee-daily-bounty-badge {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 0.65rem; font-weight: 700;
+    color: #38bdf8; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3);
+    padding: 3px 8px; border-radius: 6px; margin-bottom: 2px; max-width: 320px; box-sizing: border-box;
+    transition: all 0.25s ease;
+  }
+  .isas-ee-bounty-status {
+    margin-left: auto; font-family: ui-monospace, Menlo, monospace; font-size: 0.62rem;
+    background: rgba(0, 0, 0, 0.4); padding: 1px 5px; border-radius: 4px; color: #94a3b8;
+  }
+  .isas-ee-daily-bounty-badge.completed {
+    color: #10b981 !important; border-color: rgba(16, 185, 129, 0.6) !important;
+    background: rgba(16, 185, 129, 0.18) !important; box-shadow: 0 0 10px rgba(16, 185, 129, 0.35);
+  }
+  .isas-ee-daily-bounty-badge.completed .isas-ee-bounty-status {
+    background: #047857 !important; color: #ffffff !important;
+  }
+
+  /* 📦 Karanténny medzisklad (Hold Slot) - Vizuálna Buffer Paleta (Responzívne rozšírené) */
+  .isas-ee-tool-hold-btn { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; }
+  .isas-ee-hold-slot-visual {
+    min-width: 44px; height: 26px; padding: 0 5px; background: rgba(15, 23, 42, 0.95);
+    border: 1.5px dashed #475569; border-radius: 6px; box-sizing: border-box;
+    display: inline-flex; align-items: center; justify-content: center;
+    position: relative; overflow: hidden; vertical-align: middle;
+  }
+  .isas-ee-hold-empty-lbl {
+    font-size: 0.52rem; font-weight: 800; color: #94a3b8; text-transform: uppercase;
+    letter-spacing: 0.05em; white-space: nowrap; line-height: 1;
+  }
+  .isas-ee-hold-tile-preview {
+    width: 100%; height: 100%; min-width: 32px; border-radius: 4px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-size: 0.72rem; font-weight: 900; line-height: 1; padding: 0 4px; box-sizing: border-box;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  }
+
+  /* 📑 Štýly pre moderné technické tlačivo (Výkonnostný protokol SCADA Glass) */
+  .isas-ee-share-card-box {
+    width: 100%; max-width: 272px; margin-top: 6px;
+    animation: isasEeFadeIn 0.22s ease-out; box-sizing: border-box;
+  }
+  .isas-ee-protocol-sheet {
+    background: linear-gradient(165deg, rgba(15, 23, 42, 0.95) 0%, rgba(8, 14, 29, 0.98) 100%) !important;
+    border: 1px solid rgba(56, 189, 248, 0.45) !important;
+    border-radius: 10px !important;
+    box-shadow: 0 16px 36px -4px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 0 22px rgba(56, 189, 248, 0.22) !important;
+    backdrop-filter: blur(12px) !important;
+    padding: 10px 12px !important; margin-bottom: 8px !important; position: relative !important; overflow: hidden !important;
+  }
+  .isas-ee-protocol-sheet::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2.5px;
+    background: linear-gradient(90deg, #38bdf8 0%, #818cf8 35%, #10b981 70%, #f59e0b 100%) !important;
+  }
+  .isas-ee-protocol-head {
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 1px solid rgba(56, 189, 248, 0.25); padding-bottom: 6px; margin-bottom: 7px;
+  }
+  .isas-ee-proto-brand { display: flex; align-items: center; gap: 6px; }
+  .isas-ee-proto-seal { font-size: 1.15rem; line-height: 1; filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.6)); }
+  .isas-ee-proto-titles { display: flex; flex-direction: column; text-align: left; }
+  .isas-ee-proto-title { font-size: 0.64rem; font-weight: 900; color: #38bdf8; letter-spacing: 0.06em; line-height: 1.1; }
+  .isas-ee-proto-sub { font-size: 0.52rem; font-weight: 700; color: #94a3b8; letter-spacing: 0.04em; }
+  .isas-proto-close { width: 18px; height: 18px; font-size: 0.8rem; border-radius: 4px; }
+
+  .isas-ee-protocol-body { display: flex; flex-direction: column; gap: 5px; text-align: left; }
+  .isas-proto-row-operator {
+    display: flex; align-items: center; justify-content: space-between;
+    background: rgba(2, 6, 23, 0.75) !important; border: 1px solid rgba(56, 189, 248, 0.25) !important;
+    border-radius: 6px !important; padding: 4px 8px !important; font-size: 0.65rem !important;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4) !important;
+  }
+  .isas-proto-lbl { font-size: 0.55rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; }
+  .isas-proto-op-name { color: #f8fafc; font-weight: 800; font-size: 0.68rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 170px; }
+
+  .isas-proto-metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+  .isas-proto-mcell {
+    background: rgba(15, 23, 42, 0.75) !important; border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 6px !important; padding: 3px 6px !important; display: flex; flex-direction: column;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.4) !important; min-width: 0;
+  }
+  .isas-proto-mcell-wide {
+    grid-column: span 2 !important;
+    background: linear-gradient(90deg, rgba(15, 23, 42, 0.85) 0%, rgba(30, 41, 59, 0.7) 100%) !important;
+    border-color: rgba(56, 189, 248, 0.2) !important;
+  }
+  .isas-proto-scroll-wrap {
+    width: 100%; overflow-x: auto; overflow-y: hidden; white-space: nowrap;
+    scrollbar-width: none; -ms-overflow-style: none; display: flex; align-items: center;
+  }
+  .isas-proto-scroll-wrap::-webkit-scrollbar { display: none; }
+  .isas-proto-val {
+    font-family: ui-monospace, Menlo, monospace; font-size: 0.72rem; font-weight: 800;
+    color: #e2e8f0; white-space: nowrap;
+  }
+  .isas-proto-val-tile {
+    color: #38bdf8 !important; font-size: 0.76rem !important; letter-spacing: -0.01em;
+  }
+  .isas-proto-accent { color: #38bdf8 !important; font-size: 0.88rem !important; text-shadow: 0 0 10px rgba(56, 189, 248, 0.5) !important; }
+
+  .isas-proto-matrix-section {
+    background: rgba(2, 6, 23, 0.8) !important; border: 1px dashed rgba(56, 189, 248, 0.3) !important;
+    border-radius: 6px !important; padding: 5px 8px !important;
+  }
+  .isas-proto-matrix-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  .isas-proto-tactic-badge {
+    font-size: 0.55rem; font-weight: 800; color: #fde047;
+    background: rgba(245, 158, 11, 0.2); border: 1px solid rgba(245, 158, 11, 0.45);
+    padding: 1px 6px; border-radius: 4px; box-shadow: 0 0 8px rgba(245, 158, 11, 0.25);
+  }
+  .isas-proto-mosaic-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px;
+    width: 100%; max-width: 120px; margin: 0 auto;
+  }
+  .isas-proto-mosaic-cell {
+    aspect-ratio: 1 / 1; border-radius: 2px; font-size: 0.5rem;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.25);
+  }
+
+  .isas-ee-protocol-foot {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 6px; padding-top: 5px; border-top: 1px solid rgba(56, 189, 248, 0.2);
+    font-size: 0.52rem; font-family: ui-monospace, Menlo, monospace;
+  }
+  .isas-proto-stamp {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.35);
+    padding: 2px 6px; border-radius: 4px; color: #34d399 !important;
+    font-weight: 800; letter-spacing: 0.04em;
+  }
+  .isas-proto-doc-id { color: #64748b; font-weight: 700; }
+
+  /* 🔘 Multikanálová expedícia protokolu (Vysoko kontrastné tlačidlá s plnou izoláciou) */
+  .isas-ee-share-channels-wrap {
+    display: grid !important; grid-template-columns: repeat(3, 1fr) !important; gap: 5px !important;
+  }
+  .isas-ee-share-ch {
+    display: inline-flex !important; align-items: center !important; justify-content: center !important; gap: 4px !important;
+    padding: 6px 3px !important; border-radius: 6px !important; font-size: 0.65rem !important; font-weight: 800 !important;
+    text-decoration: none !important; color: #ffffff !important; border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    cursor: pointer !important; transition: all 0.16s ease-in-out !important; text-align: center !important;
+    line-height: 1 !important; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85) !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
+    user-select: none !important;
+  }
+  .isas-ee-share-ch:hover, .isas-ee-share-ch:focus {
+    transform: translateY(-1.5px) !important; filter: brightness(1.18) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.4) !important;
+    color: #ffffff !important;
+  }
+  .isas-ch-tg { background: linear-gradient(135deg, #0088cc 0%, #006699 100%) !important; border-color: rgba(0, 136, 204, 0.6) !important; }
+  .isas-ch-wa { background: linear-gradient(135deg, #16a34a 0%, #15803d 100%) !important; border-color: rgba(22, 163, 74, 0.6) !important; }
+  .isas-ch-viber { background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%) !important; border-color: rgba(124, 58, 237, 0.6) !important; }
+  .isas-ch-gmail { background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%) !important; border-color: rgba(220, 38, 38, 0.6) !important; }
+  .isas-ch-discord { background: linear-gradient(135deg, #5865f2 0%, #4752c4 100%) !important; border-color: rgba(88, 101, 242, 0.6) !important; }
+  .isas-ch-copy { background: linear-gradient(135deg, #475569 0%, #334155 100%) !important; border-color: rgba(148, 163, 184, 0.4) !important; }
+  .isas-ch-native { background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important; grid-column: span 3 !important; padding: 7px 4px !important; border-color: rgba(56, 189, 248, 0.5) !important; }
+  .isas-ee-hold-sub { font-size: 0.38rem; font-weight: 700; line-height: 1; max-width: 90%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 1px; }
+  .isas-ee-tool-btn.hold-active {
+    background: #0284c7 !important; border-color: #38bdf8 !important; color: #ffffff !important;
+    box-shadow: 0 0 12px rgba(56, 189, 248, 0.65); animation: isasToolPulse 0.9s infinite alternate;
+  }
+  .isas-ee-bounty-done-icon { font-size: 0.75rem; vertical-align: middle; margin-right: 3px; }
+  .isas-ee-overlay.hold-deposit-active .isas-ee-tiles-container { pointer-events: auto !important; }
+  .isas-ee-overlay.hold-deposit-active .isas-ee-tile {
+    cursor: copy !important; outline: 2px dashed #38bdf8 !important;
+    animation: isasHoldGlow 0.8s infinite alternate !important; z-index: 20;
+  }
+  @keyframes isasHoldGlow {
+    0% { box-shadow: 0 0 4px #38bdf8; transform: scale(1); }
+    100% { box-shadow: 0 0 14px #38bdf8; transform: scale(1.05); }
+  }
+  .isas-ee-overlay.hold-retrieve-active #isas-2048-board {
+    cursor: crosshair !important;
+  }
+  .isas-ee-overlay.hold-retrieve-active .isas-ee-cell {
+    cursor: pointer !important; transition: background 0.18s, border-color 0.18s;
+  }
+  .isas-ee-overlay.hold-retrieve-active .isas-ee-cell:hover {
+    background: rgba(56, 189, 248, 0.3) !important; border-color: #38bdf8 !important;
+    box-shadow: inset 0 0 8px rgba(56, 189, 248, 0.5) !important;
+  }
+
+  /* ⚡ Lean Flow State: Tečúci pulzujúci lem dosky pri sérii spojení */
+  .isas-ee-board.is-flowing {
+    border-color: #38bdf8 !important;
+    box-shadow: inset 0 0 16px rgba(56, 189, 248, 0.5), 0 0 22px rgba(56, 189, 248, 0.65) !important;
+    animation: isasFlowPulse 0.9s infinite alternate ease-in-out !important;
+  }
+  @keyframes isasFlowPulse {
+    0%   { box-shadow: inset 0 0 10px rgba(56, 189, 248, 0.3), 0 0 14px rgba(56, 189, 248, 0.4); }
+    100% { box-shadow: inset 0 0 22px rgba(56, 189, 248, 0.7), 0 0 30px rgba(14, 165, 233, 0.9); }
+  }
+
+  /* 📟 VIZUÁLNA TÉMA 2: Amber CRT Terminal (Jantárový monochróm) */
+  .isas-ee-overlay[data-theme="amber"] .isas-ee-container { background: #120c04 !important; border-color: #78350f !important; }
+  .isas-ee-overlay[data-theme="amber"] .isas-ee-header { background: #1c1106 !important; border-bottom-color: #78350f !important; }
+  .isas-ee-overlay[data-theme="amber"] .isas-ee-title { color: #f59e0b !important; }
+  .isas-ee-overlay[data-theme="amber"] .isas-ee-val-next { color: #f59e0b !important; }
+  .isas-ee-overlay[data-theme="amber"] .isas-ee-rival-wrap { border-color: rgba(245, 158, 11, 0.3) !important; background: rgba(28, 17, 6, 0.75) !important; }
+  .isas-ee-overlay[data-theme="amber"] .isas-ee-rival-text span.diff { color: #f59e0b !important; }
+  .isas-ee-overlay[data-theme="amber"] .isas-ee-board { background: #0a0602 !important; border-color: #451a03 !important; }
+  .isas-ee-overlay[data-theme="amber"] .isas-ee-leaderboard-pane { background: #1a0f05 !important; border-color: #78350f !important; }
+  .isas-ee-overlay[data-theme="amber"] .isas-ee-level-bar-fill { background: linear-gradient(90deg, #b45309 0%, #f59e0b 70%, #fde68a 100%) !important; box-shadow: 0 0 8px rgba(245, 158, 11, 0.6) !important; }
+  .isas-ee-overlay[data-theme="amber"] .isas-ee-mode-btn.active { background: #b45309 !important; box-shadow: 0 0 8px rgba(180, 83, 9, 0.5) !important; }
+  .isas-ee-overlay[data-theme="amber"] .isas-ee-board.is-flowing { border-color: #f59e0b !important; box-shadow: inset 0 0 16px rgba(245, 158, 11, 0.5), 0 0 22px rgba(245, 158, 11, 0.65) !important; }
+
+  /* 🟢 VIZUÁLNA TÉMA 3: SCADA Dispatcher (Fosforový zelený dispečing) */
+  .isas-ee-overlay[data-theme="scada"] .isas-ee-container { background: #04140e !important; border-color: #065f46 !important; }
+  .isas-ee-overlay[data-theme="scada"] .isas-ee-header { background: #062319 !important; border-bottom-color: #065f46 !important; }
+  .isas-ee-overlay[data-theme="scada"] .isas-ee-title { color: #10b981 !important; }
+  .isas-ee-overlay[data-theme="scada"] .isas-ee-val-next { color: #10b981 !important; }
+  .isas-ee-overlay[data-theme="scada"] .isas-ee-rival-wrap { border-color: rgba(16, 185, 129, 0.3) !important; background: rgba(6, 35, 25, 0.75) !important; }
+  .isas-ee-overlay[data-theme="scada"] .isas-ee-rival-text span.diff { color: #10b981 !important; }
+  .isas-ee-overlay[data-theme="scada"] .isas-ee-board { background: #020d09 !important; border-color: #044332 !important; }
+  .isas-ee-overlay[data-theme="scada"] .isas-ee-leaderboard-pane { background: #051d15 !important; border-color: #065f46 !important; }
+  .isas-ee-overlay[data-theme="scada"] .isas-ee-level-bar-fill { background: linear-gradient(90deg, #047857 0%, #10b981 70%, #6ee7b7 100%) !important; box-shadow: 0 0 8px rgba(16, 185, 129, 0.6) !important; }
+  .isas-ee-overlay[data-theme="scada"] .isas-ee-mode-btn.active { background: #059669 !important; box-shadow: 0 0 8px rgba(5, 150, 105, 0.5) !important; }
+  .isas-ee-overlay[data-theme="scada"] .isas-ee-board.is-flowing { border-color: #10b981 !important; box-shadow: inset 0 0 16px rgba(16, 185, 129, 0.5), 0 0 22px rgba(16, 185, 129, 0.65) !important; }
+
+  /* 📱 MOBILNÉ ROZHRANIE (Smartfóny do 768px) - 100% ukotvenie a vyriešenie rebríčka */
+  @media (max-width: 768px) { 
+    .isas-ee-overlay {
+      padding: 0 !important;
+      align-items: stretch !important;
+      justify-content: stretch !important;
+    }
+    .isas-ee-container,
+    .isas-ee-container.maximized {
+      width: 100vw !important;
+      max-width: 100vw !important;
+      height: 100dvh !important;
+      max-height: 100dvh !important;
+      border-radius: 0 !important;
+      border: none !important;
+      overflow-x: hidden !important;
+    }
+
+    /* 🛡️ 1. Hlavička: Názov vľavo, Tlačidlá pevne vpravo hore, Skóre pod nimi */
+    .isas-ee-header {
+      position: relative !important;
+      padding: 8px 10px !important;
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 6px !important;
+    }
+    .isas-ee-title-wrap {
+      width: 100% !important;
+      padding-right: 70px !important; /* Rezerva pre tlačidlá vpravo */
+      box-sizing: border-box !important;
+    }
+    .isas-ee-title { font-size: 1.05rem !important; }
+    .isas-ee-subtitle { display: none !important; }
+    
+    /* Pevné ukotvenie témy a krížika do pravého horného rohu */
+    .isas-ee-win-ctrls {
+      position: absolute !important;
+      top: 8px !important;
+      right: 10px !important;
+      margin: 0 !important;
+      gap: 4px !important;
+    }
+    #isas-2048-btn-min,
+    #isas-2048-btn-max {
+      display: none !important;
+    }
+    .isas-ee-wbtn {
+      width: 28px !important;
+      height: 28px !important;
+      font-size: 1rem !important;
+    }
+
+    /* 3 skóre boxy rovnomerne cez 100 % šírky */
+    .isas-ee-scores {
+      width: 100% !important;
+      display: grid !important;
+      grid-template-columns: 1fr 1fr 1fr !important;
+      gap: 4px !important;
+      margin: 0 !important;
+    }
+    .isas-ee-score-box {
+      min-width: 0 !important;
+      padding: 2px 4px !important;
+      width: auto !important;
+    }
+    .isas-ee-label { font-size: 0.52rem !important; }
+    .isas-ee-val { font-size: 0.82rem !important; }
+    .isas-ee-next-box { min-width: 0 !important; }
+
+    /* 🛡️ 2. Telo: Plynulý vertikálny posun prstom */
+    .isas-ee-body,
+    .isas-ee-container.maximized .isas-ee-body {
+      flex-direction: column !important;
+      align-items: center !important;
+      padding: 8px 6px 20px 6px !important;
+      gap: 12px !important;
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
+      -webkit-overflow-scrolling: touch !important;
+      flex: 1 1 auto !important;
+    }
+    .isas-ee-game-pane,
+    .isas-ee-container.maximized .isas-ee-game-pane {
+      width: 100% !important;
+      max-width: 100% !important;
+      flex: 0 0 auto !important;
+      align-items: center !important;
+      gap: 6px !important;
+    }
+
+    /* Doska má zaručené proporcie aj na úzkych displejoch */
+    .isas-ee-board-wrapper,
+    .isas-ee-board,
+    .isas-ee-mode-switch,
+    .isas-ee-level-progress-wrap,
+    .isas-ee-rival-wrap,
+    .isas-ee-tools-bar,
+    .isas-ee-achievements-bar,
+    .isas-ee-daily-bounty-badge,
+    .isas-ee-container.maximized .isas-ee-board-wrapper,
+    .isas-ee-container.maximized .isas-ee-board,
+    .isas-ee-container.maximized .isas-ee-mode-switch,
+    .isas-ee-container.maximized .isas-ee-level-progress-wrap,
+    .isas-ee-container.maximized .isas-ee-rival-wrap,
+    .isas-ee-container.maximized .isas-ee-tools-bar,
+    .isas-ee-container.maximized .isas-ee-achievements-bar,
+    .isas-ee-container.maximized .isas-ee-daily-bounty-badge {
+      width: min(320px, calc(100vw - 20px)) !important;
+      max-width: min(320px, calc(100vw - 20px)) !important;
+      box-sizing: border-box !important;
+    }
+    .isas-ee-board,
+    .isas-ee-container.maximized .isas-ee-board {
+      height: min(320px, calc(100vw - 20px)) !important;
+    }
+    .isas-ee-tile,
+    .isas-ee-container.maximized .isas-ee-tile {
+      font-size: clamp(1.05rem, 4.4vw, 1.35rem) !important;
+      padding: 2px !important;
+      overflow: hidden !important;
+      box-sizing: border-box !important;
+      line-height: 1 !important;
+    }
+    .isas-ee-tile-sub,
+    .isas-ee-container.maximized .isas-ee-tile-sub {
+      font-size: clamp(0.48rem, 2.2vw, 0.64rem) !important;
+      font-weight: 800 !important;
+      max-width: 96% !important;
+      white-space: nowrap !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      line-height: 1.1 !important;
+      margin-top: 2px !important;
+      opacity: 1 !important;
+    }
+
+    /* 🛡️ 3. Záchrana rebríčka pred kolapsom výšky */
+    .isas-ee-leaderboard-pane,
+    .isas-ee-container.maximized .isas-ee-leaderboard-pane {
+      width: min(340px, calc(100vw - 16px)) !important;
+      max-width: min(340px, calc(100vw - 16px)) !important;
+      min-width: 0 !important;
+      padding: 10px 8px !important;
+      flex: 0 0 auto !important;
+      box-sizing: border-box !important;
+    }
+    /* Záložky a odznak poradia na 2 riadky s bezpečným ukotvením a horizontálnym posunom */
+    .isas-ee-lb-header {
+      flex-direction: column !important;
+      align-items: stretch !important;
+      gap: 6px !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      box-sizing: border-box !important;
+    }
+    .isas-ee-lb-tabs {
+      display: flex !important;
+      flex-wrap: nowrap !important;
+      overflow-x: auto !important;
+      overflow-y: hidden !important;
+      gap: 4px !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      box-sizing: border-box !important;
+      scrollbar-width: none !important;
+      -webkit-overflow-scrolling: touch !important;
+      border-radius: 8px !important;
+      padding: 3px !important;
+    }
+    .isas-ee-lb-tabs::-webkit-scrollbar {
+      display: none !important;
+    }
+    .isas-ee-tab-btn {
+      flex: 1 0 auto !important;
+      min-width: fit-content !important;
+      padding: 5px 8px !important;
+      font-size: 0.65rem !important;
+      text-align: center !important;
+      white-space: nowrap !important;
+      box-sizing: border-box !important;
+    }
+    .isas-ee-my-rank-badge {
+      text-align: center !important;
+      width: 100% !important;
+      box-sizing: border-box !important;
+      font-size: 0.65rem !important;
+      padding: 3px 6px !important;
+      white-space: nowrap !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+    }
+
+    /* Garantovaná výška tabuľky: Zamedzí kolapsu na 0 px */
+    .isas-ee-lb-list-wrap,
+    .isas-ee-container.maximized .isas-ee-lb-list-wrap {
+      flex: 0 0 auto !important;
+      height: auto !important;
+      min-height: 160px !important;
+      max-height: 280px !important;
+      overflow-y: auto !important;
+    }
+    .isas-ee-lb-footer {
+      margin-top: 8px !important;
+      padding-top: 8px !important;
+    }
+  }
+</style>
+
+<script>
+(function() {
+  // 🎮 ENGINE ISAS 2048 S PERSISTENCIOU A LEADERBOARDOM
+  const MODAL = document.getElementById('isas-2048-modal');
+  if (!MODAL) return; // 🛡️ Defenzívny guard: okamžité ukončenie, ak modál nie je v DOM
+
+  const rawApiUrl = (MODAL.getAttribute('data-api-url') || '/api/easter-egg/2048/').trim();
+  const API_URL = rawApiUrl.startsWith('/') || rawApiUrl.startsWith('http') ? rawApiUrl : `/${rawApiUrl}`;
+  const TILES_CONTAINER = document.getElementById('isas-2048-tiles');
+  const SCORE_EL = document.getElementById('isas-2048-current-score');
+  const BEST_SCORE_EL = document.getElementById('isas-2048-best-score');
+  const OVERLAY_MSG = document.getElementById('isas-2048-overlay-msg');
+  const MSG_TEXT = document.getElementById('isas-2048-msg-text');
+  const MSG_SUB = document.getElementById('isas-2048-msg-sub');
+  const MSG_SCORE_VAL = document.getElementById('isas-2048-msg-score-val');
+  const LB_BODY = document.getElementById('isas-2048-lb-body');
+  const MY_RANK_EL = document.getElementById('isas-2048-my-rank');
+  const STATUS_EL = document.getElementById('isas-2048-save-status');
+  const SCORE_ADD_WRAP = document.getElementById('isas-2048-score-add-wrap');
+
+  let tileLabels = {};
+
+  let grid = [
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0]
+  ];
+  let score = 0;
+  let previousScore = 0;
+  let displayedScore = 0;
+  let odometerAnimId = null;
+  let currentBestScore = 0;
+  let previousGrid = [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];
+  let lastSpawnedCoord = null;
+  let isGameOver = false;
+  let isModalOpen = false;
+  let lastSyncedScore = -1;
+  let isSyncing = false;
+
+  // 📊 Telemetrické premenné partie a predpoveď skladu (Fronta 1 + 1)
+  let movesCount = 0;
+  let gameStartTime = null;
+  let accumulatedTimeMs = 0;
+  let nextSpawnVal = 2;
+  let queueSpawnVal = 2;
+  let undoMovesCount = 0;
+  let undoNextSpawnVal = 2;
+  let undoQueueSpawnVal = 2;
+  let lastTargetRivalScore = null;
+
+  // ⚡ Premenné pre Lean Flow Streak (séria spojení) a vizuálnu tému
+  let currentFlowStreak = 0;
+  let maxFlowStreak = 0;
+  let undoFlowStreak = 0;
+  let undoMaxFlowStreak = 0;
+  const THEMES = ['slate', 'amber', 'scada'];
+  let currentTheme = 'slate';
+
+  // 🗺️ Heatmapa zotrvania najvyššej dlaždice a taktický archetyp
+  let heatmapData = [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];
+  let heatmapSamples = 0;
+  let undoHeatmapData = null;
+  let undoHeatmapSamples = 0;
+  let tacticalArchetype = 'Vyvážený stratég';
+
+  // 🎯 Režim hry (standard vs. daily) a záložka rebríčka (season vs. alltime)
+  let currentGameMode = 'standard';
+  let activeLeaderboardTab = 'season';
+  let serverDailySeed = MODAL.getAttribute('data-daily-seed') || getClientLocalDateStr();
+  let seasonTitle = 'Aktuálny kvartál';
+  let cachedLeaderboardData = null;
+  let dailyPrngState = 0;
+
+  // Deterministický PRNG generátor Mulberry32 pre identické dlaždice všetkých hráčov v daný deň
+  function initDailyPRNG(seedStr) {
+    const s = String(seedStr || '');
+    let h = 2166136261 >>> 0;
+    for (let i = 0; i < s.length; i++) {
+      h = Math.imul(h ^ s.charCodeAt(i), 16777619);
+    }
+    dailyPrngState = h >>> 0;
+  }
+
+  // 🎯 Deterministická smenová zákazka dňa (14-dňový cyklus 1:1 s ISASHraLeaderboard.KATALOG_BOUNTIES)
+  function getDailyBountyInfo(seedStr) {
+    const s = String(seedStr || '');
+    let sum = 0;
+    for (let i = 0; i < s.length; i++) {
+      sum += s.charCodeAt(i);
+    }
+    const bounties = [
+      {
+        id: 'usporny_rezim',
+        name: 'Úsporný takt (Lean Operations)',
+        desc: 'Vyrob položku aspoň 128 pri max. 75 ťahoch linky',
+        icon: '⚡',
+        check: (s) => s.maxTile >= 128 && s.moves >= 35 && s.moves <= 75,
+        progress: (s) => s.maxTile >= 128 ? (s.moves <= 75 ? (s.moves >= 35 ? '100%' : `${s.moves}/35 ťahov`) : 'Prekročené') : `${s.moves}/75 ťahov`
+      },
+      {
+        id: 'jednosmerny_tok',
+        name: 'Jednosmerný tok (Gravitačný sklad)',
+        desc: 'Dosiahni 500 b. bez jediného pohybu smerom HORE',
+        icon: '⬇️',
+        check: (s) => s.score >= 500 && s.movesUp === 0 && s.moves >= 30,
+        progress: (s) => s.movesUp > 0 ? 'Porušené' : `${Math.min(100, Math.round((s.score / 500) * 100))}%`
+      },
+      {
+        id: 'seriova_homogenita',
+        name: 'Dávková homogenita (Šaržová výroba)',
+        desc: 'Maj na ploche súčasne aspoň tri položky s hodnotou 32 a vyššou',
+        icon: '🧱',
+        check: (s) => s.homogeneityAchieved && s.maxTile >= 32 && s.moves >= 25,
+        progress: (s) => s.homogeneityAchieved && s.moves >= 25 ? '100%' : `${Math.min(3, s.count32)}/3 položiek`
+      },
+      {
+        id: 'plynuly_takt',
+        name: 'Plynulý takt linky',
+        desc: 'Nazbieraj aspoň 1 200 bodov za menej ako 140 ťahov',
+        icon: '⏱️',
+        check: (s) => s.score >= 1200 && s.moves >= 50 && s.moves <= 140,
+        progress: (s) => s.score >= 1200 ? (s.moves <= 140 ? (s.moves >= 50 ? '100%' : `${s.moves}/50 ťahov`) : 'Prekročené') : `${Math.min(100, Math.round((s.score / 1200) * 100))}%`
+      },
+      {
+        id: 'bezodpadova_vyroba',
+        name: 'Čistá prevádzka (Zero Scrap)',
+        desc: 'Dosiahni 1 000 b. bez stornovania ťahu a bez odpisu nepodarku',
+        icon: '🛡️',
+        check: (s) => s.score >= 1000 && s.toolsUsed === 0 && s.moves >= 40,
+        progress: (s) => s.toolsUsed > 0 ? 'Porušené' : `${Math.min(100, Math.round((s.score / 1000) * 100))}%`
+      },
+      {
+        id: 'kontinualny_tok',
+        name: 'Kontinuálny tok (Flow State)',
+        desc: 'Dosiahni sériu aspoň 4 po sebe idúcich ťahov so zlúčením',
+        icon: '📈',
+        check: (s) => s.maxFlow >= 4 && s.moves >= 30 && s.score >= 300,
+        progress: (s) => (s.maxFlow >= 4 && s.moves >= 30 && s.score >= 300) ? '100%' : `${s.maxFlow}/4 séria`
+      },
+      {
+        id: 'vysoka_kapacita',
+        name: 'Vysoká kapacita (High Capacity)',
+        desc: 'Vytvor položku s hodnotou aspoň 512',
+        icon: '⚙️',
+        check: (s) => s.maxTile >= 512 && s.score >= 3584 && s.moves >= 90,
+        progress: (s) => (s.maxTile >= 512 && s.score >= 3584 && s.moves >= 90) ? '100%' : `${s.maxTile}/512`
+      },
+      {
+        id: 'expresna_expedicia',
+        name: 'Expresná expedícia (Rýchly štart)',
+        desc: 'Bleskový rozbeh: vytvor položku aspoň 64 do 35 ťahov',
+        icon: '🚀',
+        check: (s) => s.maxTile >= 64 && s.moves >= 18 && s.moves <= 35,
+        progress: (s) => s.maxTile >= 64 ? (s.moves <= 35 ? (s.moves >= 18 ? '100%' : `${s.moves}/18 ťahov`) : 'Prekročené') : `${s.moves}/35 ťahov`
+      },
+      {
+        id: 'vysoka_efektivita',
+        name: 'Vysoká efektivita (Lean Yield)',
+        desc: 'Dosiahni 800 b. s efektivitou min. 12.0 b./ťah',
+        icon: '📊',
+        check: (s) => s.moves >= 35 && s.score >= 800 && (s.score / s.moves) >= 12.0,
+        progress: (s) => {
+          const effNum = s.moves > 0 ? (s.score / s.moves) : 0;
+          const effStr = effNum.toFixed(1);
+          return s.score >= 800 ? (effNum >= 12.0 && s.moves >= 35 ? '100%' : `Slabá efektivita (${effStr})`) : `${Math.min(100, Math.round((s.score / 800) * 100))}% (${effStr})`;
+        }
+      },
+      {
+        id: 'dualna_montaz',
+        name: 'Duálny výkon (Paralelné línie)',
+        desc: 'Maj na ploche súčasne aspoň dve položky s hodnotou 64+',
+        icon: '📋',
+        check: (s) => s.dualAssemblyAchieved && s.maxTile >= 64 && s.moves >= 35,
+        progress: (s) => (s.dualAssemblyAchieved && s.moves >= 35) ? '100%' : `${Math.min(2, s.count64)}/2 položiek`
+      },
+      {
+        id: 'vytrvalostna_sichta',
+        name: 'Vytrvalostná šichta (Stabilný výkon)',
+        desc: 'Dlhodobé riadenie linky: nazbieraj aspoň 2 000 bodov',
+        icon: '🏆',
+        check: (s) => s.score >= 2000 && s.moves >= 85,
+        progress: (s) => `${Math.min(100, Math.round((s.score / 2000) * 100))}%`
+      },
+      {
+        id: 'dlhy_lean_flow',
+        name: 'Majstrovský tok (Deep Flow)',
+        desc: 'Dosiahni sériu aspoň 5 ťahov so zlúčením bez prerušenia',
+        icon: '🌊',
+        check: (s) => s.maxFlow >= 5 && s.moves >= 35 && s.score >= 350,
+        progress: (s) => (s.maxFlow >= 5 && s.moves >= 35 && s.score >= 350) ? '100%' : `${s.maxFlow}/5 séria`
+      },
+      {
+        id: 'striedma_montaz',
+        name: 'Úsporný postup (Optimalizácia zásob)',
+        desc: 'Vytvor položku aspoň 256 pri max. 110 ťahoch',
+        icon: '🎯',
+        check: (s) => s.maxTile >= 256 && s.moves >= 55 && s.moves <= 110,
+        progress: (s) => s.maxTile >= 256 ? (s.moves <= 110 ? (s.moves >= 55 ? '100%' : `${s.moves}/55 ťahov`) : 'Prekročené') : `${s.moves}/110 ťahov`
+      },
+      {
+        id: 'cisty_proces_plus',
+        name: 'Bezchybná akosť (Zero Defect Gold)',
+        desc: 'Dosiahni 1 500 b. bez použitia storna a odpisu zo skladu',
+        icon: '✨',
+        check: (s) => s.score >= 1500 && s.toolsUsed === 0 && s.moves >= 55,
+        progress: (s) => s.toolsUsed > 0 ? 'Porušené' : `${Math.min(100, Math.round((s.score / 1500) * 100))}%`
+      }
+    ];
+    const bountyIdx = sum % bounties.length;
+    return bounties[bountyIdx];
+  }
+
+  // ⚙️ Deterministické pravidlá dennej anomálie odvodené zo serverDailySeed
+  function getDailyModifierInfo(seedStr) {
+    const s = String(seedStr || '');
+    let hash = 0;
+    for (let i = 0; i < s.length; i++) {
+      hash = ((hash << 5) - hash) + s.charCodeAt(i);
+      hash |= 0;
+    }
+    const modType = Math.abs(hash) % 3;
+    if (modType === 0) {
+      return {
+        id: 'high_yield',
+        icon: '📦',
+        name: 'Vysoký prísun surovín',
+        desc: 'Zvýšený podiel 4-iek na vstupe (25 %)',
+        fourChance: 0.25,
+        initialTiles: 2,
+        strictTwosUntil: 0
+      };
+    } else if (modType === 1) {
+      return {
+        id: 'rapid_start',
+        icon: '⚡',
+        name: 'Rýchly rozbeh linky',
+        desc: 'Štart zmeny s 3 dlaždicami na ploche',
+        fourChance: 0.10,
+        initialTiles: 3,
+        strictTwosUntil: 0
+      };
+    } else {
+      return {
+        id: 'stable_flow',
+        icon: '🛡️',
+        name: 'Stabilné vstupné dodávky',
+        desc: 'Prvých 25 ťahov iba základné diely (2)',
+        fourChance: 0.10,
+        initialTiles: 2,
+        strictTwosUntil: 25
+      };
+    }
+  }
+
+  // 🖥️ Správa tichých vizuálnych tém (Slate / Amber / SCADA)
+  function applyTheme(theme) {
+    currentTheme = THEMES.includes(theme) ? theme : 'slate';
+    MODAL.setAttribute('data-theme', currentTheme);
+    setStorageItem('isas_2048_theme', currentTheme);
+    const btn = document.getElementById('isas-2048-btn-theme');
+    if (btn) {
+      const icons = { slate: '🖥️', amber: '📟', scada: '🟢' };
+      btn.textContent = icons[currentTheme] || '🖥️';
+    }
+  }
+
+  function getNextRandom() {
+    if (currentGameMode === 'daily') {
+      dailyPrngState = (dailyPrngState + 0x6D2B79F5) >>> 0;
+      let t = Math.imul(dailyPrngState ^ (dailyPrngState >>> 15), 1 | dailyPrngState);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    }
+    return Math.random();
+  }
+
+  // 🛠️ Stavové premenné pre ERP nástroje (1x za hru a Karanténny medzisklad)
+  let undoCharges = 1;
+  let scrapCharges = 1;
+  let undoGrid = null;
+  let undoScore = 0;
+  let undoPrngState = 0;
+  let canUndo = false;
+  let isScrapMode = false;
+  let hasCelebrated2048 = false;
+  let lastMoveMerges = 0;
+  let maxMergedThisMove = 0;
+
+  // 📦 Karanténny medzisklad (Hold Slot) a Smenové úlohy (Bounties)
+  let holdTileVal = 0;
+  let undoHoldTileVal = 0;
+  let holdMode = 'none'; // 'none' | 'deposit' | 'retrieve'
+  let holdLockedUntilNextMove = false; // 🛡️ Zamedzuje okamžitému vyloženiu (teleportu) bez ťahu linky
+  let undoHoldLockedUntilNextMove = false;
+  let dailyBountyCompleted = false;
+  let movesUpCount = 0;
+  let undoMovesUpCount = 0;
+  let homogeneityAchieved = false;
+  let undoHomogeneityAchieved = false;
+  let dualAssemblyAchieved = false;
+  let undoDualAssemblyAchieved = false;
+  let undoDailyBountyCompleted = false;
+
+  // 📟 SCADA Odometer: plynulé dorolovanie čísla bez prerušenia a skákania layoutu
+  function animateScoreOdometer(targetScore, immediate = false) {
+    if (!SCORE_EL) return;
+    if (odometerAnimId) {
+      cancelAnimationFrame(odometerAnimId);
+      odometerAnimId = null;
+    }
+    if (immediate || displayedScore === targetScore) {
+      displayedScore = targetScore;
+      SCORE_EL.textContent = targetScore.toLocaleString();
+      return;
+    }
+    const startVal = displayedScore;
+    const endVal = targetScore;
+    const startTime = performance.now();
+    const duration = 220; // 220 ms pre okamžitú odozvu bez zdržovania
+
+    function step(now) {
+      const elapsed = now - startTime;
+      const progress = Math.min(1, elapsed / duration);
+      // Plynulá kubická ease-out krivka
+      const easeProgress = 1 - Math.pow(1 - progress, 3);
+      displayedScore = Math.round(startVal + (endVal - startVal) * easeProgress);
+      SCORE_EL.textContent = displayedScore.toLocaleString();
+
+      if (progress < 1) {
+        odometerAnimId = requestAnimationFrame(step);
+      } else {
+        displayedScore = endVal;
+        SCORE_EL.textContent = endVal.toLocaleString();
+        odometerAnimId = null;
+      }
+    }
+    odometerAnimId = requestAnimationFrame(step);
+  }
+
+  // 💡 SCADA Ambientné podsvietenie kontajnera podľa najvyššej dosiahnutej dlaždice
+  function updateAmbientBacklight(maxVal) {
+    const containerEl = MODAL ? MODAL.querySelector('.isas-ee-container') : null;
+    if (!containerEl) return;
+    containerEl.classList.remove('isas-glow-tier-amber', 'isas-glow-tier-champion');
+    if (maxVal >= 2048) {
+      containerEl.classList.add('isas-glow-tier-champion');
+    } else if (maxVal >= 512) {
+      containerEl.classList.add('isas-glow-tier-amber');
+    }
+  }
+
+  // Bezpečný lokálny dátum (YYYY-MM-DD) bez posunu UTC okolo polnoci
+  function getClientLocalDateStr() {
+    const d = new Date();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${d.getFullYear()}-${m}-${day}`;
+  }
+
+  // 📳 Defenzívna mobilná haptika (bezpečná voči nepodporovaným prehliadačom)
+  function triggerHaptic(pattern = 10) {
+    try {
+      if (typeof window !== 'undefined' && window.navigator && typeof window.navigator.vibrate === 'function') {
+        window.navigator.vibrate(pattern);
+      }
+    } catch(e) {}
+  }
+
+  // 🎆 Odľahčený časticový efekt pri rekorde a míľnikoch (čistý Canvas bez externých knižníc)
+  function triggerConfettiBurst() {
+    const canvas = document.getElementById('isas-2048-fx-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    canvas.width = canvas.offsetWidth || 320;
+    canvas.height = canvas.offsetHeight || 320;
+
+    const colors = ['#38bdf8', '#f59e0b', '#10b981', '#ec4899', '#facc15'];
+    const particles = [];
+    for (let i = 0; i < 35; i++) {
+      particles.push({
+        x: canvas.width / 2,
+        y: canvas.height / 2,
+        vx: (Math.random() - 0.5) * 8,
+        vy: (Math.random() - 0.7) * 8,
+        size: Math.random() * 4 + 2,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        alpha: 1,
+        decay: Math.random() * 0.025 + 0.015
+      });
+    }
+
+    let animId = null;
+    function renderParticles() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      let alive = false;
+      for (let p of particles) {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.15; // Gravitácia
+        p.alpha -= p.decay;
+        if (p.alpha > 0) {
+          alive = true;
+          ctx.save();
+          ctx.globalAlpha = p.alpha;
+          ctx.fillStyle = p.color;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+      if (alive) animId = requestAnimationFrame(renderParticles);
+      else ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+    if (animId) cancelAnimationFrame(animId);
+    renderParticles();
+  }
+
+  // ⚡ Zobrazenie Combo indikátora
+  function showComboBadge(count) {
+    const badge = document.getElementById('isas-2048-combo-badge');
+    if (!badge) return;
+    badge.textContent = `COMBO x${count}!`;
+    badge.style.display = 'block';
+    badge.classList.remove('isas-ee-combo-badge');
+    void badge.offsetWidth; // Vynútenie reflow pre reštart animácie
+    badge.classList.add('isas-ee-combo-badge');
+    setTimeout(() => { badge.style.display = 'none'; }, 600);
+  }
+
+  const btnUndo = document.getElementById('isas-2048-tool-undo');
+  const btnScrap = document.getElementById('isas-2048-tool-scrap');
+  const btnHold = document.getElementById('isas-2048-tool-hold');
+  const undoCountEl = document.getElementById('isas-2048-undo-count');
+  const scrapCountEl = document.getElementById('isas-2048-scrap-count');
+  const holdEmptyLbl = document.getElementById('isas-2048-hold-empty-lbl');
+  const holdTilePreview = document.getElementById('isas-2048-hold-tile-preview');
+  const holdValEl = document.getElementById('isas-2048-hold-val');
+  const holdSubEl = document.getElementById('isas-2048-hold-sub');
+  const hintTextEl = document.getElementById('isas-2048-hint-text');
+
+  function updateToolsUi() {
+    if (undoCountEl) undoCountEl.textContent = `${undoCharges}/1`;
+    if (scrapCountEl) scrapCountEl.textContent = `${scrapCharges}/1`;
+    if (btnUndo) btnUndo.disabled = !(undoCharges > 0 && canUndo && undoGrid !== null);
+    if (btnScrap) {
+      btnScrap.disabled = (scrapCharges <= 0);
+      if (isScrapMode) btnScrap.classList.add('active');
+      else btnScrap.classList.remove('active');
+    }
+    if (holdTilePreview && holdEmptyLbl) {
+      if (holdTileVal > 0) {
+        holdEmptyLbl.style.display = 'none';
+        holdTilePreview.style.display = 'flex';
+        holdTilePreview.className = `isas-ee-hold-tile-preview isas-ee-t-${holdTileVal > 2048 ? 'super' : holdTileVal}`;
+        if (holdValEl) holdValEl.textContent = holdTileVal;
+        if (holdSubEl) holdSubEl.textContent = tileLabels[holdTileVal] || '';
+      } else {
+        holdTilePreview.style.display = 'none';
+        holdEmptyLbl.style.display = 'inline';
+      }
+    }
+    if (btnHold) {
+      btnHold.classList.toggle('hold-active', holdMode !== 'none');
+    }
+  }
+
+  function setHoldMode(mode) {
+    holdMode = mode;
+    MODAL.classList.remove('hold-deposit-active', 'hold-retrieve-active');
+    if (mode === 'deposit') {
+      MODAL.classList.add('hold-deposit-active');
+      if (hintTextEl) hintTextEl.innerHTML = '<span style="color:#38bdf8; font-weight:700;">📦 Zvoľte kliknutím položku na ploche pre presun do medziskladu. Zrušiť: ESC.</span>';
+    } else if (mode === 'retrieve') {
+      MODAL.classList.add('hold-retrieve-active');
+      if (hintTextEl) hintTextEl.innerHTML = `<span style="color:#38bdf8; font-weight:700;">📦 Zvoľte kliknutím prázdnu bunku na ploche pre vyskladnenie položky (${holdTileVal}). Zrušiť: ESC.</span>`;
+    } else {
+      if (!isScrapMode && hintTextEl) {
+        hintTextEl.innerHTML = 'Ovládanie: <strong>Šípky / WASD</strong> na klávesnici alebo <strong>Swipe</strong> na mobile. Zavrieť: <strong>ESC</strong>.';
+      }
+    }
+    updateToolsUi();
+  }
+
+  function checkAndEvaluateBounty() {
+    const badgeEl = document.getElementById('isas-2048-daily-bounty-badge');
+    if (!badgeEl) return;
+    if (currentGameMode !== 'daily') {
+      badgeEl.style.display = 'none';
+      return;
+    }
+    const seed = serverDailySeed || getClientLocalDateStr();
+    const bounty = getDailyBountyInfo(seed);
+    const textEl = document.getElementById('isas-2048-bounty-text');
+    const statusEl = document.getElementById('isas-2048-bounty-status');
+    const iconEl = document.getElementById('isas-2048-bounty-icon');
+
+    if (!badgeEl) return;
+    badgeEl.style.display = 'inline-flex';
+    if (iconEl) iconEl.textContent = bounty.icon;
+
+    let count32 = 0;
+    let count64 = 0;
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 4; c++) {
+        if (grid[r][c] >= 32) count32++;
+        if (grid[r][c] >= 64) count64++;
+      }
+    }
+    if (count32 >= 3) {
+      homogeneityAchieved = true;
+    }
+    if (count64 >= 2) {
+      dualAssemblyAchieved = true;
+    }
+
+    const state = {
+      score: score,
+      maxTile: getMaxTile(),
+      moves: movesCount,
+      movesUp: movesUpCount,
+      count32: count32,
+      count64: count64,
+      homogeneityAchieved: homogeneityAchieved,
+      dualAssemblyAchieved: dualAssemblyAchieved,
+      toolsUsed: (1 - undoCharges) + (1 - scrapCharges),
+      maxFlow: maxFlowStreak
+    };
+
+    if (!dailyBountyCompleted && bounty.check(state)) {
+      dailyBountyCompleted = true;
+      try { localStorage.setItem(`isas_2048_bounty_${seed}`, 'true'); } catch(e) {}
+      triggerConfettiBurst();
+      triggerHaptic([30, 50, 30]);
+      if (STATUS_EL) STATUS_EL.textContent = "🎯 Smenová zákazka dňa SPLNENÁ!";
+    }
+
+    badgeEl.classList.toggle('completed', dailyBountyCompleted);
+    if (textEl) textEl.textContent = `${bounty.name}: ${bounty.desc}`;
+    if (statusEl) statusEl.textContent = dailyBountyCompleted ? '🏆 SPLNENÁ' : bounty.progress(state);
+  }
+
+  function setScrapMode(active) {
+    isScrapMode = active;
+    if (active) {
+      MODAL.classList.add('scrap-active');
+      if (hintTextEl) hintTextEl.innerHTML = '<span style="color:#f43f5e; font-weight:700;">⚠️ Zvoľte kliknutím dlaždicu 2 (nepodarok) na hracej ploche pre odpis. Zrušiť: ESC.</span>';
+    } else {
+      MODAL.classList.remove('scrap-active');
+      if (hintTextEl) hintTextEl.innerHTML = 'Ovládanie: <strong>Šípky / WASD</strong> na klávesnici alebo <strong>Swipe</strong> na mobile. Zavrieť: <strong>ESC</strong>.';
+    }
+    updateToolsUi();
+  }
+
+  function showFloatingScore(val) {
+    if (!SCORE_ADD_WRAP) return;
+    const item = document.createElement('div');
+    item.className = 'isas-ee-floating-score';
+    item.textContent = `+${val}`;
+    SCORE_ADD_WRAP.appendChild(item);
+    setTimeout(() => {
+      if (item.parentNode) item.parentNode.removeChild(item);
+    }, 700);
+  }
+
+  // 🛡️ XSS Sanitizér pre bezpečné vkladanie dát z API
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  // 🛡️ Získanie CSRF s bezpečným fallbackom na HTML atribút pri HttpOnly cookies
+  function getCsrfToken() {
+    const fromAttr = MODAL ? MODAL.getAttribute('data-csrf') : null;
+    if (fromAttr && fromAttr.length > 10) return fromAttr;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, 10) === 'csrftoken=') {
+          return decodeURIComponent(cookie.substring(10));
+        }
+      }
+    }
+    return '';
+  }
+
+  // 1. Záchrana a obnova stavu (LocalStorage)
+  function getStorageKey() {
+    return currentGameMode === 'daily' ? `isas_2048_state_daily_${serverDailySeed}` : 'isas_2048_state';
+  }
+
+  function saveStateToLocal() {
+    try {
+      const elapsedMs = gameStartTime ? (Date.now() - gameStartTime) + accumulatedTimeMs : accumulatedTimeMs;
+      localStorage.setItem(getStorageKey(), JSON.stringify({
+        grid, score, isGameOver, undoCharges, scrapCharges, dailyPrngState,
+        movesCount, elapsedMs, nextSpawnVal, queueSpawnVal, heatmapData, heatmapSamples,
+        currentFlowStreak, maxFlowStreak, holdTileVal, holdLockedUntilNextMove, movesUpCount, homogeneityAchieved, dualAssemblyAchieved, dailyBountyCompleted
+      }));
+    } catch(e) {}
+  }
+
+  function loadStateFromLocal() {
+    try {
+      const saved = localStorage.getItem(getStorageKey());
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // 🛡️ Prísna defenzívna validácia štruktúry matice 4x4
+        if (Array.isArray(parsed.grid) && parsed.grid.length === 4 &&
+            parsed.grid.every(r => Array.isArray(r) && r.length === 4 && r.every(c => typeof c === 'number'))) {
+          grid = parsed.grid;
+          score = Number(parsed.score) || 0;
+          isGameOver = Boolean(parsed.isGameOver);
+          undoCharges = typeof parsed.undoCharges === 'number' ? parsed.undoCharges : 1;
+          scrapCharges = typeof parsed.scrapCharges === 'number' ? parsed.scrapCharges : 1;
+          if (typeof parsed.dailyPrngState === 'number') {
+            dailyPrngState = parsed.dailyPrngState;
+          }
+          movesCount = Number(parsed.movesCount) || 0;
+          accumulatedTimeMs = Number(parsed.elapsedMs) || 0;
+          nextSpawnVal = (parsed.nextSpawnVal === 4) ? 4 : 2;
+          queueSpawnVal = (parsed.queueSpawnVal === 4) ? 4 : 2;
+          if (Array.isArray(parsed.heatmapData) && parsed.heatmapData.length === 4 &&
+              parsed.heatmapData.every(r => Array.isArray(r) && r.length === 4 && r.every(c => typeof c === 'number' && Number.isFinite(c) && c >= 0))) {
+            heatmapData = parsed.heatmapData;
+            heatmapSamples = Number(parsed.heatmapSamples) || 0;
+          }
+          currentFlowStreak = Number(parsed.currentFlowStreak) || 0;
+          maxFlowStreak = Number(parsed.maxFlowStreak) || 0;
+          if (typeof parsed.holdTileVal === 'number') {
+            holdTileVal = parsed.holdTileVal;
+          }
+          holdLockedUntilNextMove = Boolean(parsed.holdLockedUntilNextMove);
+          movesUpCount = Number(parsed.movesUpCount) || 0;
+          homogeneityAchieved = Boolean(parsed.homogeneityAchieved);
+          dualAssemblyAchieved = Boolean(parsed.dualAssemblyAchieved);
+          dailyBountyCompleted = Boolean(parsed.dailyBountyCompleted);
+          previousScore = score;
+          displayedScore = score;
+          gameStartTime = Date.now();
+          return true;
+        }
+      }
+    } catch(e) {}
+    return false;
+  }
+
+  // 2. Logika hry
+  function updateNextTilePreview() {
+    const elNext = document.getElementById('isas-2048-next-tile');
+    const elQueue = document.getElementById('isas-2048-queue-tile');
+    if (elNext) {
+      elNext.textContent = nextSpawnVal;
+      if (nextSpawnVal === 4) elNext.classList.add('isas-ee-next-4');
+      else elNext.classList.remove('isas-ee-next-4');
+    }
+    if (elQueue) {
+      elQueue.textContent = queueSpawnVal;
+      if (queueSpawnVal === 4) elQueue.classList.add('isas-ee-queue-4');
+      else elQueue.classList.remove('isas-ee-queue-4');
+    }
+  }
+
+  function getNextSpawnValue() {
+    if (currentGameMode === 'daily') {
+      const mod = getDailyModifierInfo(serverDailySeed || getClientLocalDateStr());
+      if (mod.strictTwosUntil > 0 && movesCount < mod.strictTwosUntil) {
+        return 2;
+      }
+      return getNextRandom() < (1 - mod.fourChance) ? 2 : 4;
+    }
+    return getNextRandom() < 0.9 ? 2 : 4;
+  }
+
+  function spawnRandomTile() {
+    const emptyCells = [];
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 4; c++) {
+        if (grid[r][c] === 0) emptyCells.push({ r, c });
+      }
+    }
+    if (emptyCells.length === 0) return;
+    const rndIndex = Math.floor(getNextRandom() * emptyCells.length);
+    const spot = emptyCells[rndIndex];
+    // Použijeme diel z príjmu, posunieme zásobník na príjem a vygenerujeme nový zásobník (1 + 1)
+    grid[spot.r][spot.c] = nextSpawnVal;
+    nextSpawnVal = queueSpawnVal;
+    queueSpawnVal = getNextSpawnValue();
+    updateNextTilePreview();
+    lastSpawnedCoord = { r: spot.r, c: spot.c };
+  }
+
+  // ⚙️ Vizuálna synchronizácia štítku anomálie nezávislá od stavu uloženia hry
+  function updateDailyModifierUi() {
+    const modBadgeEl = document.getElementById('isas-2048-daily-mod-badge');
+    const modIconEl = document.getElementById('isas-2048-daily-mod-icon');
+    const modTextEl = document.getElementById('isas-2048-daily-mod-text');
+    if (!modBadgeEl) return;
+
+    if (currentGameMode === 'daily') {
+      const mod = getDailyModifierInfo(serverDailySeed || getClientLocalDateStr());
+      modBadgeEl.style.display = 'inline-flex';
+      if (modIconEl) modIconEl.textContent = mod.icon;
+      if (modTextEl) modTextEl.textContent = `${mod.name} (${mod.desc})`;
+    } else {
+      modBadgeEl.style.display = 'none';
+    }
+  }
+
+  function initGame(forceReset = false) {
+    OVERLAY_MSG.style.display = 'none';
+    const boardEl = document.getElementById('isas-2048-board');
+    if (boardEl) {
+      boardEl.classList.remove('is-game-over', 'is-stressed');
+    }
+    previousGrid = [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];
+    previousScore = 0;
+    lastSyncedScore = -1;
+    lastSpawnedCoord = null;
+    lastTargetRivalScore = null;
+    undoGrid = null;
+    undoScore = 0;
+    canUndo = false;
+    hasCelebrated2048 = false;
+    setScrapMode(false);
+    setHoldMode('none');
+
+    updateDailyModifierUi();
+    if (!forceReset && loadStateFromLocal()) {
+      updateNextTilePreview();
+      animateScoreOdometer(score, true); // Okamžité zobrazenie bez falošného rolovania od 0
+      renderBoard();
+      updateToolsUi();
+      checkAndEvaluateBounty();
+      if (isGameOver) checkGameOver();
+      return;
+    }
+
+    grid = [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];
+    score = 0;
+    displayedScore = 0;
+    animateScoreOdometer(0, true);
+    movesCount = 0;
+    accumulatedTimeMs = 0;
+    gameStartTime = Date.now();
+    isGameOver = false;
+    undoCharges = 1;
+    scrapCharges = 1;
+    holdTileVal = 0;
+    undoHoldTileVal = 0;
+    holdLockedUntilNextMove = false;
+    undoHoldLockedUntilNextMove = false;
+    movesUpCount = 0;
+    undoMovesUpCount = 0;
+    homogeneityAchieved = false;
+    undoHomogeneityAchieved = false;
+    dualAssemblyAchieved = false;
+    undoDualAssemblyAchieved = false;
+    undoDailyBountyCompleted = false;
+    currentFlowStreak = 0;
+    maxFlowStreak = 0;
+    heatmapData = [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];
+    heatmapSamples = 0;
+    undoHeatmapData = null;
+    undoHeatmapSamples = 0;
+
+    dailyBountyCompleted = false;
+
+    if (currentGameMode === 'daily') {
+      initDailyPRNG(serverDailySeed || getClientLocalDateStr());
+    }
+    updateDailyModifierUi();
+
+    const mod = (currentGameMode === 'daily') ? getDailyModifierInfo(serverDailySeed || getClientLocalDateStr()) : null;
+    const initTileCount = (mod && mod.initialTiles) ? mod.initialTiles : 2;
+
+    nextSpawnVal = getNextSpawnValue();
+    queueSpawnVal = getNextSpawnValue();
+    for (let i = 0; i < initTileCount; i++) {
+      spawnRandomTile();
+    }
+    updateNextTilePreview();
+    renderBoard();
+    updateToolsUi();
+    saveStateToLocal();
+  }
+
+  // 🎯 Logika Tieňa súpera v reálnom čase (Live Ghost Rival)
+  function updateLiveRivalTracker() {
+    const trackerEl = document.getElementById('isas-2048-rival-tracker');
+    const textEl = document.getElementById('isas-2048-rival-text');
+    if (!trackerEl || !textEl || !cachedLeaderboardData) return;
+
+    let zoznam = [];
+    if (currentGameMode === 'daily') {
+      zoznam = cachedLeaderboardData.rebricek_den || [];
+    } else {
+      zoznam = cachedLeaderboardData.rebricek_sezona && cachedLeaderboardData.rebricek_sezona.length > 0
+        ? cachedLeaderboardData.rebricek_sezona
+        : (cachedLeaderboardData.rebricek_all_time || []);
+    }
+
+    if (!zoznam || zoznam.length === 0) {
+      trackerEl.style.display = 'none';
+      return;
+    }
+
+    // Vyhľadanie najbližšieho hráča, ktorý má viac bodov než je aktuálne skóre
+    // Zoznam je zoradený zostupne; prechádzame od konca k začiatku
+    let targetRival = null;
+    for (let i = zoznam.length - 1; i >= 0; i--) {
+      if (zoznam[i].skore > score) {
+        targetRival = zoznam[i];
+        break;
+      }
+    }
+
+    trackerEl.style.display = 'inline-flex';
+
+    if (targetRival) {
+      const diff = targetRival.skore - score;
+      const rivalNazov = targetRival.je_moj_profil ? 'Tvoj osobný rekord' : escapeHtml(targetRival.meno);
+      textEl.innerHTML = `Cieľ: <strong>${rivalNazov}</strong> (${Number(targetRival.skore || 0).toLocaleString()} b.) — chýba <span class="diff">${diff.toLocaleString()} b.</span>`;
+      lastTargetRivalScore = targetRival.skore;
+    } else {
+      // Hráč prekonal všetkých v TOP 10 zozname
+      textEl.innerHTML = `<strong style="color: #facc15;">👑 Si na čele rebríčka!</strong> Držíš absolútne vedenie.`;
+      lastTargetRivalScore = null;
+    }
+  }
+
+  // Detekcia a oslavný tichý pulz pri prekonaní kolegu
+  function checkRivalOvertake(previousScoreVal, currentScoreVal) {
+    if (lastTargetRivalScore !== null && previousScoreVal < lastTargetRivalScore && currentScoreVal >= lastTargetRivalScore) {
+      const trackerEl = document.getElementById('isas-2048-rival-tracker');
+      if (trackerEl) {
+        trackerEl.classList.remove('isas-ee-rival-overtake');
+        void trackerEl.offsetWidth; // Vynútenie reflow
+        trackerEl.classList.add('isas-ee-rival-overtake');
+        setTimeout(() => { trackerEl.classList.remove('isas-ee-rival-overtake'); }, 900);
+      }
+      triggerHaptic(25); // Tichá mikro-haptika na mobile
+    }
+  }
+
+  function getMaxTile() {
+    let max = 2;
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 4; c++) {
+        if (grid[r][c] > max) max = grid[r][c];
+      }
+    }
+    return max;
+  }
+
+  // 📳 Tichý kinetický mikrootras dosky pri masívnom zlúčení (bez zvuku)
+  function triggerBoardShake() {
+    const boardEl = document.getElementById('isas-2048-board');
+    if (!boardEl) return;
+    boardEl.classList.remove('is-shaking');
+    void boardEl.offsetWidth; // Vynútenie reflow
+    boardEl.classList.add('is-shaking');
+    triggerHaptic([20, 40, 20]);
+    setTimeout(() => { boardEl.classList.remove('is-shaking'); }, 160);
+  }
+
+  // 📈 Aktualizácia kariérnej progresovej lišty (dynamický progres z prírastku bodov k ďalšiemu agregátu)
+  function updateLevelProgress() {
+    const maxVal = getMaxTile();
+    const targetTile = maxVal * 2;
+    const knownKeys = Object.keys(tileLabels).map(Number).filter(n => !isNaN(n));
+    const highestLabelKey = knownKeys.length > 0 ? Math.max(...knownKeys) : 2048;
+    const isApex = maxVal >= highestLabelKey && !tileLabels[targetTile];
+    const targetName = isApex ? (tileLabels[maxVal] || 'Méta dosiahnutá') : (tileLabels[targetTile] || `Úroveň ${targetTile}`);
+
+    let pct = 0;
+    if (isApex) {
+      pct = 100;
+    } else {
+      const k = Math.max(1, Math.round(Math.log2(maxVal)));
+      // Teoretické bodové hranice prechodu úrovňou: S(2^k) = (k - 1) * 2^k
+      const startScore = (k > 1) ? (k - 1) * maxVal : 0;
+      const targetScore = k * targetTile;
+      const range = Math.max(1, targetScore - startScore);
+
+      // Dynamický výpočet s fyzikálnou detekciou priamej zrážky (One-Swipe Mergeable)
+      const delta = Math.max(0, score - startScore);
+
+      // Overenie, či sú dve kľúčové dlaždice okamžite zlúčiteľné v 1 ťahu (vedľa seba alebo v línii bez prekážky)
+      let canMergeNow = false;
+      let countMax = 0;
+
+      // 1. Kontrola riadkov (line-of-sight bez prekážok)
+      for (let r = 0; r < 4; r++) {
+        const line = grid[r].filter(v => v !== 0);
+        for (let i = 0; i < line.length; i++) {
+          if (line[i] === maxVal) countMax++;
+          if (i < line.length - 1 && line[i] === maxVal && line[i + 1] === maxVal) {
+            canMergeNow = true;
+          }
+        }
+      }
+
+      // 2. Kontrola stĺpcov (line-of-sight bez prekážok)
+      if (!canMergeNow) {
+        for (let c = 0; c < 4; c++) {
+          const col = [grid[0][c], grid[1][c], grid[2][c], grid[3][c]].filter(v => v !== 0);
+          for (let i = 0; i < col.length - 1; i++) {
+            if (col[i] === maxVal && col[i + 1] === maxVal) {
+              canMergeNow = true;
+              break;
+            }
+          }
+          if (canMergeNow) break;
+        }
+      }
+
+      if (canMergeNow) {
+        // Presne 99 %: obe dlaždice sú pripravené na priamy zásah jedným ťahom
+        pct = 99;
+      } else if (countMax >= 2) {
+        // Hráč obe dlaždice vyrobil, ale rozdelil ich prekážkou alebo mimo línie – percentá klesnú
+        pct = 95;
+      } else if (delta < range) {
+        // Štandardná fáza nábehu bodov: plynule pokrýva rozsah 0 % až 89 %
+        pct = Math.floor((delta / range) * 89);
+      } else {
+        // Fáza taktického manévrovania s 1 hlavnou dlaždicou: plynulý nárast 90 % až 94 %
+        const extra = delta - range;
+        const asymptoticBoost = Math.floor(5 * (extra / (extra + range * 0.4)));
+        pct = Math.min(94, 90 + asymptoticBoost);
+      }
+    }
+
+    const targetEl = document.getElementById('isas-2048-next-level-title');
+    const pctEl = document.getElementById('isas-2048-level-pct');
+    const fillEl = document.getElementById('isas-2048-level-bar-fill');
+    if (targetEl) targetEl.textContent = targetName;
+    if (pctEl) pctEl.textContent = `${pct}%`;
+    if (fillEl) fillEl.style.width = `${pct}%`;
+  }
+
+  // 🗺️ Zaznamenanie pozície maxima pre taktickú heatmapu
+  function sampleHeatmap() {
+    const maxVal = getMaxTile();
+    let found = false;
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 4; c++) {
+        if (grid[r][c] === maxVal && !found) {
+          heatmapData[r][c]++;
+          heatmapSamples++;
+          found = true;
+          break;
+        }
+      }
+      if (found) break;
+    }
+  }
+
+  // 🗺️ Analýza a vykreslenie taktického profilu a 4x4 heatmapy
+  function evaluateAndRenderHeatmap() {
+    const gridEl = document.getElementById('isas-2048-heatmap-grid');
+    const titleEl = document.getElementById('isas-2048-style-title');
+    const descEl = document.getElementById('isas-2048-style-desc');
+    if (!gridEl) return;
+    if (heatmapSamples === 0) {
+      if (titleEl) titleEl.textContent = 'Prieskumník';
+      if (descEl) descEl.textContent = 'Nedostatok ťahov pre vyhodnotenie taktiky.';
+      gridEl.innerHTML = '';
+      return;
+    }
+
+    const corners = [
+      heatmapData[0][0], heatmapData[0][3],
+      heatmapData[3][0], heatmapData[3][3]
+    ];
+    const maxCornerShare = Math.max(...corners) / heatmapSamples;
+
+    let maxRowShare = 0;
+    for (let r = 0; r < 4; r++) {
+      const rowSum = heatmapData[r].reduce((a, b) => a + b, 0);
+      maxRowShare = Math.max(maxRowShare, rowSum / heatmapSamples);
+    }
+    let maxColShare = 0;
+    for (let c = 0; c < 4; c++) {
+      let colSum = 0;
+      for (let r = 0; r < 4; r++) colSum += heatmapData[r][c];
+      maxColShare = Math.max(maxColShare, colSum / heatmapSamples);
+    }
+
+    if (maxCornerShare >= 0.50) {
+      tacticalArchetype = 'Rohová kotva';
+      if (descEl) descEl.textContent = `Vysoká disciplína (${Math.round(maxCornerShare * 100)} % v rohu). Sústredenie najvyššej úrovne v kľúčovom bode.`;
+    } else if (maxRowShare >= 0.70 || maxColShare >= 0.70) {
+      tacticalArchetype = 'Riadkový stratég';
+      if (descEl) descEl.textContent = 'Pevná línia toku materiálu. Výborná kontrola radov.';
+    } else {
+      tacticalArchetype = 'Mobilný chaotik';
+      if (descEl) descEl.textContent = 'Dynamická hra po celej ploche s vyšším improvizačným rizikom.';
+    }
+    if (titleEl) titleEl.textContent = tacticalArchetype;
+
+    gridEl.innerHTML = '';
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 4; c++) {
+        const cell = document.createElement('div');
+        cell.className = 'isas-ee-heatmap-cell';
+        const intensity = heatmapData[r][c] / heatmapSamples;
+        if (intensity > 0.02) {
+          const alpha = Math.min(1, 0.2 + intensity * 0.8);
+          if (intensity >= 0.35) {
+            cell.style.background = `rgba(250, 204, 21, ${alpha.toFixed(2)})`;
+            cell.style.boxShadow = '0 0 4px rgba(250, 204, 21, 0.7)';
+          } else {
+            cell.style.background = `rgba(56, 189, 248, ${alpha.toFixed(2)})`;
+          }
+        }
+        gridEl.appendChild(cell);
+      }
+    }
+  }
+
+  // 🌊 Smerový svetelný impulz hrany pri platnom posune
+  function triggerEdgeRipple(direction) {
+    const boardEl = document.getElementById('isas-2048-board');
+    if (!boardEl) return;
+    const cls = `ripple-${direction.toLowerCase()}`;
+    boardEl.classList.remove('ripple-up', 'ripple-down', 'ripple-left', 'ripple-right');
+    void boardEl.offsetWidth; // Vynútenie reflow
+    boardEl.classList.add(cls);
+    setTimeout(() => { boardEl.classList.remove(cls); }, 180);
+  }
+
+  // ⚠️ Kontrola rizika patovej situácie (Deadlock / Stress Warning)
+  function updateStressStatus() {
+    const boardEl = document.getElementById('isas-2048-board');
+    if (!boardEl) return;
+    let emptyCount = 0;
+    let possibleMerges = 0;
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 4; c++) {
+        if (grid[r][c] === 0) {
+          emptyCount++;
+        } else {
+          if (c < 3 && grid[r][c] === grid[r][c + 1]) possibleMerges++;
+          if (r < 3 && grid[r][c] === grid[r + 1][c]) possibleMerges++;
+        }
+      }
+    }
+    // Patová situácia nastáva výhradne vtedy, keď na ploche nie je voľné miesto ani možnosť zlúčenia
+    const isStressed = !isGameOver && (emptyCount === 0 && possibleMerges === 0);
+    boardEl.classList.toggle('is-stressed', isStressed);
+
+    // Blikanie krízových nástrojov ako odporúčané riešenie
+    if (btnUndo) btnUndo.classList.toggle('is-recommended', isStressed && undoCharges > 0 && canUndo);
+    if (btnScrap) btnScrap.classList.toggle('is-recommended', isStressed && scrapCharges > 0 && !isScrapMode);
+    if (btnHold) btnHold.classList.toggle('is-recommended', isStressed && btnHold.style.display !== 'none' && holdTileVal === 0 && holdMode === 'none');
+  }
+
+  function renderBoard() {
+    TILES_CONTAINER.innerHTML = '';
+    
+    // 🔥 Herná odozva: pulz skóre + plávajúci prírastok bodov (+X)
+    const addedScore = score - previousScore;
+    if (addedScore > 0 && SCORE_EL) {
+      SCORE_EL.classList.remove('isas-ee-val-bump');
+      void SCORE_EL.offsetWidth; // Vynútenie reflow pre okamžitý reštart animácie
+      SCORE_EL.classList.add('isas-ee-val-bump');
+      showFloatingScore(addedScore);
+    }
+    checkRivalOvertake(previousScore, score);
+    previousScore = score;
+    animateScoreOdometer(score);
+
+    // 🏆 Dynamická aktualizácia firemného rekordu v reálnom čase počas hrania
+    if (BEST_SCORE_EL) {
+      if (currentBestScore === 0) {
+        const parsedDomBest = parseInt(BEST_SCORE_EL.textContent.replace(/[^\d]/g, ''), 10);
+        if (!isNaN(parsedDomBest) && parsedDomBest > 0) {
+          currentBestScore = parsedDomBest;
+        }
+      }
+      if (score > currentBestScore) {
+        const wasBelow = (currentBestScore > 0 && previousScore <= currentBestScore);
+        currentBestScore = score;
+        BEST_SCORE_EL.textContent = currentBestScore.toLocaleString();
+        if (wasBelow) {
+          BEST_SCORE_EL.classList.remove('isas-ee-val-bump');
+          void BEST_SCORE_EL.offsetWidth;
+          BEST_SCORE_EL.classList.add('isas-ee-val-bump');
+          triggerHaptic([30, 40, 50]);
+          if (STATUS_EL) STATUS_EL.textContent = "👑 NOVÝ FIREMNÝ REKORD!";
+        }
+      } else if (currentBestScore > 0) {
+        BEST_SCORE_EL.textContent = currentBestScore.toLocaleString();
+      }
+    }
+
+    const maxVal = getMaxTile();
+    updateAmbientBacklight(maxVal);
+
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 4; c++) {
+        const val = grid[r][c];
+        if (val > 0) {
+          const tile = document.createElement('div');
+          let colorClass = `isas-ee-t-${val}`;
+          if (val > 2048) colorClass = 'isas-ee-t-super';
+          
+          // Detekcia stavu dlaždice: nová verzus zlúčená
+          const wasMerged = previousGrid[r] && previousGrid[r][c] > 0 && val > previousGrid[r][c];
+          const isNew = lastSpawnedCoord && lastSpawnedCoord.r === r && lastSpawnedCoord.c === c && !wasMerged;
+          let animClass = '';
+          if (wasMerged) animClass = ' isas-ee-tile-merged';
+          else if (isNew) animClass = ' isas-ee-tile-new';
+
+          // 👑 Korunná aura pre najvyššiu dlaždicu na doske (od hodnoty 64+)
+          const isKing = (val === maxVal && maxVal >= 64);
+          const kingClass = isKing ? ' isas-ee-tile-king' : '';
+
+          tile.className = `isas-ee-tile ${colorClass}${animClass}${kingClass}`;
+          tile.setAttribute('data-r', String(r));
+          tile.setAttribute('data-c', String(c));
+          tile.setAttribute('data-val', String(val));
+          
+          // 📱 100% responzívne percentuálne umiestnenie
+          tile.style.top = `${r * 25.75}%`;
+          tile.style.left = `${c * 25.75}%`;
+
+          const numSpan = document.createElement('span');
+          numSpan.textContent = val;
+          const subSpan = document.createElement('span');
+          subSpan.className = 'isas-ee-tile-sub';
+          subSpan.textContent = tileLabels[val] || '';
+
+          tile.appendChild(numSpan);
+          tile.appendChild(subSpan);
+          TILES_CONTAINER.appendChild(tile);
+        }
+      }
+    }
+    lastSpawnedCoord = null;
+    previousGrid = grid.map(row => [...row]);
+    
+    // ⚡ Vizuálna indikácia Lean Flow State pri sérii spojení
+    const boardEl = document.getElementById('isas-2048-board');
+    if (boardEl) {
+      boardEl.classList.toggle('is-flowing', currentFlowStreak >= 3);
+    }
+
+    updateStressStatus();
+    updateLevelProgress();
+    updateLiveRivalTracker();
+    checkAndEvaluateBounty();
+    renderTechTree();
+  }
+
+  // ⚙️ Odvetvový technologický kľúč (Postupnosť agregátov priamo zo slovníka industry_loader)
+  function renderTechTree() {
+    const listEl = document.getElementById('isas-2048-tech-tree-list');
+    if (!listEl) return;
+    const keys = Object.keys(tileLabels)
+      .map(k => parseInt(k, 10))
+      .filter(k => !isNaN(k) && k >= 2 && k <= 2048)
+      .sort((a, b) => a - b);
+
+    if (keys.length === 0) return;
+    const currentMax = getMaxTile();
+
+    let html = '';
+    keys.forEach((val, idx) => {
+      const isAchieved = (currentMax >= val);
+      const isMax = (val === currentMax);
+      const label = tileLabels[val] || `Položka ${val}`;
+      const cls = isMax ? 'is-max' : (isAchieved ? 'is-achieved' : '');
+
+      html += `<div class="isas-ee-tech-step ${cls}" title="${escapeHtml(label)}">
+        <span class="isas-ee-tech-step-val">${val}</span>
+        <span>${escapeHtml(label)}</span>
+      </div>`;
+      if (idx < keys.length - 1) {
+        html += `<span class="isas-ee-tech-sep">➔</span>`;
+      }
+    });
+    listEl.innerHTML = html;
+  }
+
+  // 👻 Prediktívny algoritmus toku materiálu (Merge Ghosting Engine)
+  function getMergeCandidates(direction) {
+    const candidates = [];
+    if (!grid || isGameOver) return candidates;
+
+    if (direction === 'LEFT') {
+      for (let r = 0; r < 4; r++) {
+        const line = [];
+        for (let c = 0; c < 4; c++) if (grid[r][c] > 0) line.push({ r, c, val: grid[r][c] });
+        for (let i = 0; i < line.length - 1; i++) {
+          if (line[i].val === line[i + 1].val) {
+            candidates.push({ r: line[i].r, c: line[i].c }, { r: line[i + 1].r, c: line[i + 1].c });
+            i++;
+          }
+        }
+      }
+    } else if (direction === 'RIGHT') {
+      for (let r = 0; r < 4; r++) {
+        const line = [];
+        for (let c = 3; c >= 0; c--) if (grid[r][c] > 0) line.push({ r, c, val: grid[r][c] });
+        for (let i = 0; i < line.length - 1; i++) {
+          if (line[i].val === line[i + 1].val) {
+            candidates.push({ r: line[i].r, c: line[i].c }, { r: line[i + 1].r, c: line[i + 1].c });
+            i++;
+          }
+        }
+      }
+    } else if (direction === 'UP') {
+      for (let c = 0; c < 4; c++) {
+        const line = [];
+        for (let r = 0; r < 4; r++) if (grid[r][c] > 0) line.push({ r, c, val: grid[r][c] });
+        for (let i = 0; i < line.length - 1; i++) {
+          if (line[i].val === line[i + 1].val) {
+            candidates.push({ r: line[i].r, c: line[i].c }, { r: line[i + 1].r, c: line[i + 1].c });
+            i++;
+          }
+        }
+      }
+    } else if (direction === 'DOWN') {
+      for (let c = 0; c < 4; c++) {
+        const line = [];
+        for (let r = 3; r >= 0; r--) if (grid[r][c] > 0) line.push({ r, c, val: grid[r][c] });
+        for (let i = 0; i < line.length - 1; i++) {
+          if (line[i].val === line[i + 1].val) {
+            candidates.push({ r: line[i].r, c: line[i].c }, { r: line[i + 1].r, c: line[i + 1].c });
+            i++;
+          }
+        }
+      }
+    }
+    return candidates;
+  }
+
+  function highlightMergeCandidates(direction) {
+    clearMergeCandidates();
+    const matches = getMergeCandidates(direction);
+    if (!matches || matches.length === 0) return;
+    const tiles = TILES_CONTAINER.querySelectorAll('.isas-ee-tile');
+    tiles.forEach(tile => {
+      const r = parseInt(tile.getAttribute('data-r'), 10);
+      const c = parseInt(tile.getAttribute('data-c'), 10);
+      if (matches.some(m => m.r === r && m.c === c)) {
+        tile.classList.add('isas-ee-tile-ghost');
+      }
+    });
+  }
+
+  function clearMergeCandidates() {
+    const ghosts = TILES_CONTAINER.querySelectorAll('.isas-ee-tile-ghost');
+    ghosts.forEach(t => t.classList.remove('isas-ee-tile-ghost'));
+  }
+
+  function slide(row) {
+    let arr = row.filter(val => val !== 0);
+    let gained = 0;
+    let merges = 0;
+    let maxVal = 0;
+    for (let i = 0; i < arr.length - 1; i++) {
+      if (arr[i] === arr[i + 1]) {
+        arr[i] *= 2;
+        gained += arr[i];
+        if (arr[i] > maxVal) maxVal = arr[i];
+        arr[i + 1] = 0;
+        merges++;
+      }
+    }
+    arr = arr.filter(val => val !== 0);
+    while (arr.length < 4) arr.push(0);
+    return { line: arr, gained, merges, maxVal };
+  }
+
+  function rotateLeft(mat) {
+    const res = [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 4; c++) {
+        res[3 - c][r] = mat[r][c];
+      }
+    }
+    return res;
+  }
+
+  function rotateRight(mat) {
+    const res = [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 4; c++) {
+        res[c][3 - r] = mat[r][c];
+      }
+    }
+    return res;
+  }
+
+  function move(direction) {
+    clearMergeCandidates();
+    if (isGameOver || !isModalOpen || isScrapMode || holdMode !== 'none') return false;
+    let original = JSON.stringify(grid);
+    const preMoveGrid = grid.map(row => [...row]);
+    const preMoveScore = score;
+    const preMovesUpCount = movesUpCount;
+    const preHomogeneity = homogeneityAchieved;
+    const preDualAssembly = dualAssemblyAchieved;
+    const preHoldLocked = holdLockedUntilNextMove;
+    const preDailyBountyCompleted = dailyBountyCompleted;
+
+    let totalGained = 0;
+    let totalMerges = 0;
+    let stepMaxMerged = 0;
+
+    const processLine = (inputLine) => {
+      const res = slide(inputLine);
+      totalGained += res.gained;
+      totalMerges += res.merges;
+      if (res.maxVal > stepMaxMerged) stepMaxMerged = res.maxVal;
+      return res.line;
+    };
+
+    if (direction === 'LEFT') {
+      for (let r = 0; r < 4; r++) grid[r] = processLine(grid[r]);
+    } else if (direction === 'RIGHT') {
+      for (let r = 0; r < 4; r++) grid[r] = processLine([...grid[r]].reverse()).reverse();
+    } else if (direction === 'UP') {
+      grid = rotateLeft(grid);
+      for (let r = 0; r < 4; r++) grid[r] = processLine(grid[r]);
+      grid = rotateRight(grid);
+    } else if (direction === 'DOWN') {
+      grid = rotateRight(grid);
+      for (let r = 0; r < 4; r++) grid[r] = processLine(grid[r]);
+      grid = rotateLeft(grid);
+    }
+
+    if (JSON.stringify(grid) !== original) {
+      score += totalGained;
+      lastMoveMerges = totalMerges;
+      maxMergedThisMove = stepMaxMerged;
+      triggerEdgeRipple(direction);
+      movesCount++;
+      if (!gameStartTime) gameStartTime = Date.now();
+
+      // 🛡️ Zákazka 'Jednosmerný tok' sa poruší IBA vtedy, ak sa doska reálne pohla hore
+      if (currentGameMode === 'daily' && direction === 'UP') {
+        movesUpCount++;
+      }
+      // 📦 Platný posun linky odomyká možnosť vyskladnenia dielu z medziskladu
+      holdLockedUntilNextMove = false;
+
+      undoGrid = preMoveGrid;
+      undoScore = preMoveScore;
+      undoPrngState = dailyPrngState;
+      undoMovesCount = movesCount - 1;
+      undoNextSpawnVal = nextSpawnVal;
+      undoQueueSpawnVal = queueSpawnVal;
+      undoHoldTileVal = holdTileVal;
+      undoHoldLockedUntilNextMove = preHoldLocked;
+      undoMovesUpCount = preMovesUpCount;
+      undoHomogeneityAchieved = preHomogeneity;
+      undoDualAssemblyAchieved = preDualAssembly;
+      undoDailyBountyCompleted = preDailyBountyCompleted;
+      undoHeatmapData = heatmapData.map(r => [...r]);
+      undoHeatmapSamples = heatmapSamples;
+      undoFlowStreak = currentFlowStreak;
+      undoMaxFlowStreak = maxFlowStreak;
+      canUndo = (undoCharges > 0);
+
+      // ⚡ Vyhodnotenie plynulého toku (Lean Flow): aspoň jedno spojenie predlžuje streak
+      if (lastMoveMerges > 0) {
+        currentFlowStreak++;
+        if (currentFlowStreak > maxFlowStreak) maxFlowStreak = currentFlowStreak;
+      } else {
+        currentFlowStreak = 0;
+      }
+
+      // Vyhodnotenie Comba, mikrootrasu a haptiky pri reálnom zlúčení
+      if (lastMoveMerges >= 3 || maxMergedThisMove >= 1024) {
+        triggerBoardShake(); // 📳 Tichý mikrootras pri masívnom úspechu
+      }
+
+      if (lastMoveMerges > 1) {
+        showComboBadge(lastMoveMerges);
+        triggerHaptic([15, 30, 15]);
+      } else if (currentFlowStreak >= 3) {
+        // ⚡ Vizuálna spätná väzba pre plynulý tok (Lean Flow)
+        const badge = document.getElementById('isas-2048-combo-badge');
+        if (badge) {
+          badge.textContent = `⚡ FLOW x${currentFlowStreak}!`;
+          badge.style.display = 'block';
+          badge.classList.remove('isas-ee-combo-badge');
+          void badge.offsetWidth;
+          badge.classList.add('isas-ee-combo-badge');
+          setTimeout(() => { badge.style.display = 'none'; }, 600);
+        }
+        triggerHaptic(15);
+      } else if (lastMoveMerges === 1) {
+        triggerHaptic(10);
+      }
+
+      // Detekcia prvého dosiahnutia dlaždice 2048 v partii
+      if (!hasCelebrated2048 && getMaxTile() >= 2048) {
+        hasCelebrated2048 = true;
+        triggerConfettiBurst();
+        triggerHaptic([30, 50, 30, 50, 30]);
+      }
+
+      spawnRandomTile();
+      sampleHeatmap();
+      renderBoard();
+      updateToolsUi();
+      saveStateToLocal();
+      checkGameOver();
+      return true;
+    }
+    return false;
+  }
+
+  function checkGameOver() {
+    // Overenie, či sú voľné bunky
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 4; c++) {
+        if (grid[r][c] === 0) return;
+        if (c < 3 && grid[r][c] === grid[r][c + 1]) return;
+        if (r < 3 && grid[r][c] === grid[r + 1][c]) return;
+      }
+    }
+    // 🛡️ Ochrana pred predčasným koncom hry: Ak je možné odvrátiť pat pomocou ERP nástrojov (vrátane storna), hra nekončí
+    const holdBtnEl = document.getElementById('isas-2048-tool-hold');
+    const isHoldAvailable = Boolean(holdBtnEl && holdBtnEl.style.display !== 'none');
+    const canUndoSave = Boolean(undoCharges > 0 && canUndo && undoGrid !== null);
+    const canScrapSave = (scrapCharges > 0 && grid.some(row => row.includes(2)));
+    const canHoldSave = (isHoldAvailable && holdTileVal === 0);
+    if (canUndoSave || canScrapSave || canHoldSave) {
+      updateStressStatus();
+      if (STATUS_EL) {
+        const nastroje = [];
+        if (canUndoSave) nastroje.push("Storno operácie");
+        if (canScrapSave) nastroje.push("Odpis skladu");
+        if (canHoldSave) nastroje.push("Medzisklad");
+        STATUS_EL.textContent = `⚠️ Patová situácia: Použite ${nastroje.join(" alebo ")}!`;
+      }
+      return;
+    }
+    isGameOver = true;
+    saveStateToLocal();
+    const boardEl = document.getElementById('isas-2048-board');
+    if (boardEl) {
+      boardEl.classList.add('is-game-over');
+      boardEl.classList.remove('is-stressed');
+    }
+    if (btnUndo) btnUndo.classList.remove('is-recommended');
+    if (btnScrap) btnScrap.classList.remove('is-recommended');
+
+    if (MSG_SCORE_VAL) MSG_SCORE_VAL.textContent = Number(score || 0).toLocaleString();
+    if (MSG_TEXT) MSG_TEXT.textContent = "Koniec hry!";
+    if (MSG_SUB) MSG_SUB.textContent = "Hracia plocha je plná. Zapisujem rekord...";
+
+    // 📊 Výpočet a vykreslenie procesnej telemetrie (Audit partie)
+    const elapsedTotalMs = Math.max(0, accumulatedTimeMs + (gameStartTime ? (Date.now() - gameStartTime) : 0));
+    const totalSec = Math.floor(elapsedTotalMs / 1000);
+    const mm = String(Math.floor(totalSec / 60)).padStart(2, '0');
+    const ss = String(totalSec % 60).padStart(2, '0');
+    const timeFormatted = `${mm}:${ss}`;
+    const efficiency = movesCount > 0 ? (score / movesCount).toFixed(1) : '0.0';
+
+    const tTime = document.getElementById('isas-2048-telem-time');
+    const tMoves = document.getElementById('isas-2048-telem-moves');
+    const tEff = document.getElementById('isas-2048-telem-eff');
+    const tFlow = document.getElementById('isas-2048-telem-flow');
+    const tBountyBox = document.getElementById('isas-2048-telem-bounty-box');
+    const tBountyVal = document.getElementById('isas-2048-telem-bounty');
+    if (tTime) tTime.textContent = timeFormatted;
+    if (tMoves) tMoves.textContent = movesCount.toLocaleString();
+    if (tEff) tEff.textContent = efficiency;
+    if (tFlow) tFlow.textContent = maxFlowStreak;
+    if (tBountyBox && tBountyVal) {
+      if (currentGameMode === 'daily') {
+        tBountyBox.style.display = 'flex';
+        tBountyVal.textContent = dailyBountyCompleted ? '🏆 SPLNENÁ' : '❌ Nesplnená';
+        tBountyVal.style.color = dailyBountyCompleted ? '#10b981' : '#f43f5e';
+      } else {
+        tBountyBox.style.display = 'none';
+      }
+    }
+
+    evaluateAndRenderHeatmap(); // 🗺️ Vykreslenie taktického auditu a heatmapy
+
+    OVERLAY_MSG.style.display = 'flex';
+    syncScoreWithServer();
+  }
+
+  // 3. API Integrácia (Leaderboard a Zápis)
+  async function fetchLeaderboard() {
+    try {
+      const res = await fetch(API_URL, { method: 'GET' });
+      if (!res.ok) {
+        if (LB_BODY) {
+          if (res.status === 403) {
+            LB_BODY.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#94a3b8; padding:15px;">Sieň slávy je prístupná len pre interný personál.</td></tr>';
+            if (STATUS_EL) STATUS_EL.textContent = "Stav: Vyžaduje prihlásenie";
+          } else {
+            LB_BODY.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#f43f5e; padding:15px;">Chyba načítania rebríčka (HTTP ${res.status}).</td></tr>`;
+            if (STATUS_EL) STATUS_EL.textContent = `Stav: Chyba API (${res.status})`;
+          }
+        }
+        return;
+      }
+      const data = await res.json();
+      renderLeaderboard(data);
+    } catch(e) {
+      if (LB_BODY) {
+        LB_BODY.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#f43f5e; padding:15px;">Sieň slávy je nedostupná (Offline).</td></tr>';
+      }
+      if (STATUS_EL) STATUS_EL.textContent = "Stav: Offline";
+    }
+  }
+
+  async function syncScoreWithServer() {
+    if (score <= 0 || score === lastSyncedScore || isSyncing) return;
+    isSyncing = true;
+    if (STATUS_EL) STATUS_EL.textContent = "Stav: Ukladám...";
+    try {
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify({
+          skore: score,
+          max_dlazdica: getMaxTile(),
+          rezim: currentGameMode,
+          bounty_splnena: Boolean(dailyBountyCompleted),
+          telemetria: {
+            tahy: movesCount,
+            pohyby_hore: movesUpCount,
+            homogenita_splnena: Boolean(homogeneityAchieved),
+            dualna_montaz_splnena: Boolean(dualAssemblyAchieved),
+            nastroje_pouzite: (1 - undoCharges) + (1 - scrapCharges),
+            max_flow: maxFlowStreak
+          }
+        })
+      });
+      let data = {};
+      try {
+        data = await res.json();
+      } catch (_) {
+        data = {};
+      }
+
+      if (res.ok) {
+        lastSyncedScore = score;
+        renderLeaderboard(data);
+        const jeNovyAllTime = Boolean(data.prekonal_rekord);
+        const jeNovySezonny = Boolean(data.prekonal_sezonu);
+        const jeNovyDenny = Boolean(data.prekonal_den);
+
+        if (jeNovyAllTime || jeNovySezonny || jeNovyDenny) {
+          triggerConfettiBurst();
+          triggerHaptic([40, 60, 40, 60, 80]);
+        }
+
+        if (STATUS_EL) {
+          if (jeNovyDenny) STATUS_EL.textContent = "🎯 NOVÝ REKORD DŇA!";
+          else if (jeNovySezonny) STATUS_EL.textContent = "🏆 NOVÝ REKORD KVARTÁLU!";
+          else if (jeNovyAllTime) STATUS_EL.textContent = "👑 NOVÝ FIREMNÝ REKORD!";
+          else STATUS_EL.textContent = "Stav: Uložené";
+        }
+        if (isGameOver && MSG_SUB) {
+          if (jeNovyDenny) MSG_SUB.textContent = "🎯 Prekonaný osobný rekord v dnešnej výzve!";
+          else if (jeNovySezonny) MSG_SUB.textContent = "🏆 Prekonaný osobný rekord v tomto kvartáli!";
+          else if (jeNovyAllTime) MSG_SUB.textContent = "👑 Prekonaný absolútny osobný rekord!";
+          else MSG_SUB.textContent = "Výsledok bol úspešne uložený.";
+        }
+      } else {
+        const chybovaSprava = (data && data.error) ? data.error : `Chyba API (${res.status})`;
+        if (STATUS_EL) {
+          if (res.status === 429) STATUS_EL.textContent = "Stav: Limit zápisov (počkajte)";
+          else if (res.status === 403) STATUS_EL.textContent = "Stav: Iba pre personál";
+          else STATUS_EL.textContent = `Stav: ${chybovaSprava}`;
+        }
+        if (isGameOver && MSG_SUB) {
+          MSG_SUB.textContent = chybovaSprava;
+        }
+      }
+    } catch(e) {
+      if (STATUS_EL) STATUS_EL.textContent = "Stav: Offline";
+      if (isGameOver && MSG_SUB) MSG_SUB.textContent = "Zlyhalo sieťové spojenie so serverom.";
+    } finally {
+      isSyncing = false;
+    }
+  }
+
+  function renderLeaderboard(data) {
+    if (!data) return;
+    cachedLeaderboardData = data;
+    if (data.denny_seed) serverDailySeed = data.denny_seed;
+    if (data.sezona_nazov) {
+      seasonTitle = data.sezona_nazov;
+      const tabSeasonEl = document.getElementById('isas-2048-tab-season');
+      if (tabSeasonEl) tabSeasonEl.textContent = `🏆 ${seasonTitle}`;
+    }
+
+    if (data.mapa_dlazdic && typeof data.mapa_dlazdic === 'object') {
+      tileLabels = Object.assign({}, tileLabels, data.mapa_dlazdic);
+      renderBoard();
+    }
+    if (data.herne_mechaniky && typeof data.herne_mechaniky.medzisklad_povoleny === 'boolean') {
+      const holdToolBtn = document.getElementById('isas-2048-tool-hold');
+      if (holdToolBtn) {
+        holdToolBtn.style.display = data.herne_mechaniky.medzisklad_povoleny ? 'inline-flex' : 'none';
+      }
+    }
+    updateLiveRivalTracker();
+
+    let zoznam = [];
+    let mojeSkore = 0;
+    let mojePoradie = null;
+
+    const theadTr = document.getElementById('isas-2048-lb-thead-tr');
+    const milestoneWrap = document.getElementById('isas-2048-milestone-wrap');
+
+    if (activeLeaderboardTab === 'teams') {
+      if (theadTr) {
+        theadTr.innerHTML = `
+          <th style="width: 12%; text-align: center;">#</th>
+          <th style="width: 44%;">Tím / Divízia</th>
+          <th style="width: 22%;">Hráči</th>
+          <th style="width: 22%; text-align: right;">Priemer</th>
+        `;
+      }
+      // Vykreslenie firemného míľnika kvartálu
+      if (milestoneWrap && data.kvartalny_milnik) {
+        milestoneWrap.style.display = 'flex';
+        const m = data.kvartalny_milnik;
+        const valsEl = document.getElementById('isas-2048-milestone-vals');
+        const fillEl = document.getElementById('isas-2048-milestone-fill');
+        const pctEl = document.getElementById('isas-2048-milestone-pct');
+        const sezEl = document.getElementById('isas-2048-milestone-sezona');
+        if (valsEl) valsEl.textContent = `${Number(m.aktualne_skore || 0).toLocaleString()} / ${Number(m.cielove_skore || 0).toLocaleString()} b.`;
+        if (fillEl) fillEl.style.width = `${m.progres_pct}%`;
+        if (pctEl) pctEl.textContent = `${m.progres_pct}%`;
+        if (sezEl && m.sezona_nazov) sezEl.textContent = m.sezona_nazov;
+      }
+
+      const timy = data.rebricek_timy || [];
+      MY_RANK_EL.textContent = "Súťaž firemných oddelení";
+      BEST_SCORE_EL.textContent = timy.length > 0 ? Number(timy[0].priemer_skore || 0).toLocaleString() : '0';
+
+      if (timy.length === 0) {
+        LB_BODY.innerHTML = `<tr><td colspan="4" class="isas-ee-empty-td"><div class="isas-ee-empty-box"><span class="isas-ee-empty-icon">🏢</span><span class="isas-ee-empty-title">Žiadne dáta tímov</span></div></td></tr>`;
+        return;
+      }
+
+      let timyHtml = '';
+      timy.forEach(t => {
+        const rowClass = t.je_moj_tim ? ' isas-ee-lb-row-me' : '';
+        const nHracov = Math.abs(Number(t.pocet_hracov) || 0);
+        const formatHracov = (nHracov === 1) ? '1 hráč' : ((nHracov >= 2 && nHracov <= 4) ? `${nHracov} hráči` : `${nHracov} hráčov`);
+        timyHtml += `
+          <tr class="${rowClass}">
+            <td style="width: 12%; text-align: center;"><span class="isas-ee-rank-badge rank-other">${escapeHtml(String(t.poradie))}</span></td>
+            <td style="width: 44%;"><div class="isas-ee-player-wrap"><span class="isas-ee-player-name" title="${escapeHtml(t.nazov_timu)}">${escapeHtml(t.nazov_timu)}</span></div></td>
+            <td style="width: 22%;"><span class="isas-ee-level-chip">${formatHracov}</span></td>
+            <td style="width: 22%; text-align: right;"><span class="isas-ee-score-num">${Number(t.priemer_skore || 0).toLocaleString()} ⌀</span></td>
+          </tr>
+        `;
+      });
+      LB_BODY.innerHTML = timyHtml;
+      return;
+    } else {
+      if (milestoneWrap) milestoneWrap.style.display = 'none';
+    }
+
+    if (theadTr) {
+      theadTr.innerHTML = `
+        <th style="width: 12%; text-align: center;">#</th>
+        <th style="width: 44%;">Zamestnanec</th>
+        <th style="width: 22%;">Úroveň</th>
+        <th style="width: 22%; text-align: right;">Skóre</th>
+      `;
+    }
+
+    if (activeLeaderboardTab === 'daily') {
+      zoznam = data.rebricek_den || [];
+      mojeSkore = data.moje_skore_den || 0;
+      mojePoradie = data.moje_poradie_den;
+    } else if (activeLeaderboardTab === 'season') {
+      zoznam = data.rebricek_sezona || [];
+      mojeSkore = data.moje_skore_sezona || 0;
+      mojePoradie = data.moje_poradie_sezona;
+    } else {
+      zoznam = data.rebricek_all_time || [];
+      mojeSkore = data.moje_skore || 0;
+      mojePoradie = data.moje_poradie_all;
+    }
+
+    const firemnyRekordKategorie = (zoznam.length > 0 && zoznam[0].skore != null) ? (Number(zoznam[0].skore) || 0) : 0;
+    currentBestScore = Math.max(firemnyRekordKategorie, score);
+    BEST_SCORE_EL.textContent = currentBestScore.toLocaleString();
+    MY_RANK_EL.textContent = mojePoradie ? `Tvoje poradie: ${mojePoradie}. miesto (${Number(mojeSkore || 0).toLocaleString()} b.)` : `Tvoje skóre: ${Number(mojeSkore || 0).toLocaleString()} b.`;
+
+    if (zoznam.length === 0) {
+      let emptyTitle = "Sieň slávy čaká na prvého šampióna";
+      let emptySub = "Odohraj partiu a zapíš prvý firemný rekord!";
+      let emptyIcon = "🏆";
+
+      if (activeLeaderboardTab === 'daily') {
+        emptyIcon = "🎯";
+        emptyTitle = "Dnešná výzva čaká na rekord";
+        emptySub = "Prepnite na 'Denná výzva' vľavo hore a zapíšte dnešné prvé skóre!";
+      } else if (activeLeaderboardTab === 'season') {
+        emptyIcon = "🏆";
+        emptyTitle = "Kvartálna sieň slávy";
+        emptySub = "V tomto kvartáli zatiaľ nie je zapísaný žiadny výsledok.";
+      } else if (activeLeaderboardTab === 'alltime') {
+        emptyIcon = "👑";
+        emptyTitle = "Sieň legiend";
+        emptySub = "Historická sieň slávy zatiaľ neeviduje záznamy.";
+      }
+
+      LB_BODY.innerHTML = `
+        <tr class="isas-ee-empty-tr">
+          <td colspan="4" class="isas-ee-empty-td">
+            <div class="isas-ee-empty-box">
+              <span class="isas-ee-empty-icon">${emptyIcon}</span>
+              <span class="isas-ee-empty-title">${escapeHtml(emptyTitle)}</span>
+              <span class="isas-ee-empty-sub">${escapeHtml(emptySub)}</span>
+            </div>
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    let html = '';
+    zoznam.forEach(row => {
+      const meClass = row.je_moj_profil ? ' isas-ee-lb-row-me' : '';
+      let rankBadgeHtml = '';
+      if (row.poradie === 1) rankBadgeHtml = '<span class="isas-ee-rank-badge rank-1" title="1. miesto">🥇</span>';
+      else if (row.poradie === 2) rankBadgeHtml = '<span class="isas-ee-rank-badge rank-2" title="2. miesto">🥈</span>';
+      else if (row.poradie === 3) rankBadgeHtml = '<span class="isas-ee-rank-badge rank-3" title="3. miesto">🥉</span>';
+      else rankBadgeHtml = `<span class="isas-ee-rank-badge rank-other">${escapeHtml(String(row.poradie))}</span>`;
+
+      const bezpecneMeno = escapeHtml(row.meno);
+      const bezpecnaDlazdica = escapeHtml(row.dlazdica_nazov);
+      const bezpecneSkore = Number(row.skore || 0).toLocaleString();
+      const bountyBadgeHtml = (activeLeaderboardTab === 'daily' && row.bounty_splnena)
+        ? '<span class="isas-ee-bounty-done-icon" title="Smenová zákazka dňa splnená">🎯</span>'
+        : '';
+
+      const iniciala = (row.meno || '?').trim().charAt(0).toUpperCase();
+      let avatarHtml = '';
+      if (row.foto_url) {
+        // 🛡️ Ochrana pred 404: Pri zlyhaní načítania súboru sa fotka skryje a nahradí iniciálou
+        avatarHtml = `
+          <img src="${escapeHtml(row.foto_url)}" alt="${bezpecneMeno}" class="isas-ee-avatar" loading="lazy" width="22" height="22" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='inline-flex';">
+          <span class="isas-ee-avatar-placeholder" style="display: none;">${escapeHtml(iniciala)}</span>
+        `;
+      } else {
+        avatarHtml = `<span class="isas-ee-avatar-placeholder">${escapeHtml(iniciala)}</span>`;
+      }
+
+      html += `
+        <tr class="${meClass}">
+          <td style="width: 12%; text-align: center;">${rankBadgeHtml}</td>
+          <td style="width: 44%;">
+            <div class="isas-ee-player-wrap">
+              ${avatarHtml}
+              <div class="isas-ee-player-meta">
+                <span class="isas-ee-player-name" title="${bezpecneMeno}">${bountyBadgeHtml}${bezpecneMeno}</span>
+              </div>
+            </div>
+          </td>
+          <td style="width: 22%;">
+            <span class="isas-ee-level-chip" title="${bezpecnaDlazdica}">${bezpecnaDlazdica}</span>
+          </td>
+          <td style="width: 22%; text-align: right;">
+            <span class="isas-ee-score-num">${bezpecneSkore}</span>
+          </td>
+        </tr>
+      `;
+    });
+    LB_BODY.innerHTML = html;
+  }
+
+  // 4. Modal Open / Close & Boss Key
+  const CONTAINER = MODAL.querySelector('.isas-ee-container');
+  const btnClose = document.getElementById('isas-2048-btn-close');
+  const btnMax = document.getElementById('isas-2048-btn-max');
+  const btnMin = document.getElementById('isas-2048-btn-min');
+  const btnRestart = document.getElementById('isas-2048-btn-restart');
+  const btnNewGame = document.getElementById('isas-2048-btn-new-game');
+  const btnNavTrigger = document.getElementById('isas-2048-nav-btn');
+  const btnTheme = document.getElementById('isas-2048-btn-theme');
+
+  if (btnTheme) {
+    btnTheme.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const nextIdx = (THEMES.indexOf(currentTheme) + 1) % THEMES.length;
+      applyTheme(THEMES[nextIdx]);
+    });
+  }
+  const btnTabDaily = document.getElementById('isas-2048-tab-daily');
+  const btnTabSeason = document.getElementById('isas-2048-tab-season');
+  const btnTabAlltime = document.getElementById('isas-2048-tab-alltime');
+  const btnTabTeams = document.getElementById('isas-2048-tab-teams');
+  const btnModeStd = document.getElementById('isas-2048-mode-std');
+  const btnModeDaily = document.getElementById('isas-2048-mode-daily');
+  const btnShare = document.getElementById('isas-2048-btn-share');
+
+  function updateLeaderboardTabActive() {
+    if (btnTabDaily) btnTabDaily.classList.toggle('active', activeLeaderboardTab === 'daily');
+    if (btnTabSeason) btnTabSeason.classList.toggle('active', activeLeaderboardTab === 'season');
+    if (btnTabAlltime) btnTabAlltime.classList.toggle('active', activeLeaderboardTab === 'alltime');
+    if (btnTabTeams) btnTabTeams.classList.toggle('active', activeLeaderboardTab === 'teams');
+    if (cachedLeaderboardData) renderLeaderboard(cachedLeaderboardData);
+  }
+
+  if (btnTabDaily) {
+    btnTabDaily.addEventListener('click', () => {
+      activeLeaderboardTab = 'daily';
+      updateLeaderboardTabActive();
+    });
+  }
+  if (btnTabSeason) {
+    btnTabSeason.addEventListener('click', () => {
+      activeLeaderboardTab = 'season';
+      updateLeaderboardTabActive();
+    });
+  }
+  if (btnTabAlltime) {
+    btnTabAlltime.addEventListener('click', () => {
+      activeLeaderboardTab = 'alltime';
+      updateLeaderboardTabActive();
+    });
+  }
+  if (btnTabTeams) {
+    btnTabTeams.addEventListener('click', () => {
+      activeLeaderboardTab = 'teams';
+      updateLeaderboardTabActive();
+    });
+  }
+
+  function setGameMode(mode) {
+    if (currentGameMode === mode) return;
+    saveStateToLocal();
+    currentGameMode = mode;
+    const subTitleEl = MODAL.querySelector('.isas-ee-subtitle');
+    if (mode === 'daily') {
+      if (btnModeDaily) btnModeDaily.classList.add('active');
+      if (btnModeStd) btnModeStd.classList.remove('active');
+      if (subTitleEl) subTitleEl.textContent = `Denná výzva (${serverDailySeed})`;
+      activeLeaderboardTab = 'daily';
+      updateLeaderboardTabActive();
+      initDailyPRNG(serverDailySeed);
+    } else {
+      if (btnModeStd) btnModeStd.classList.add('active');
+      if (btnModeDaily) btnModeDaily.classList.remove('active');
+      if (subTitleEl) subTitleEl.textContent = 'Firemná strategická výzva';
+      activeLeaderboardTab = 'season';
+      updateLeaderboardTabActive();
+    }
+    initGame(false);
+  }
+
+  if (btnModeStd) btnModeStd.addEventListener('click', () => setGameMode('standard'));
+  if (btnModeDaily) btnModeDaily.addEventListener('click', () => setGameMode('daily'));
+
+  // 🛡️ Bezpečné úložiskové pomocné funkcie (odolné voči privátnemu režimu aj Ctrl+F5)
+  function setStorageItem(key, val) {
+    try { sessionStorage.setItem(key, val); } catch(e) {}
+    try { localStorage.setItem(key, val); } catch(e) {}
+  }
+  function getStorageItem(key) {
+    try {
+      const s = sessionStorage.getItem(key);
+      if (s !== null) return s;
+    } catch(e) {}
+    try {
+      const l = localStorage.getItem(key);
+      if (l !== null) return l;
+    } catch(e) {}
+    return null;
+  }
+  function removeStorageItem(key) {
+    try { sessionStorage.removeItem(key); } catch(e) {}
+    try { localStorage.removeItem(key); } catch(e) {}
+  }
+
+  function openEasterEgg() {
+    // 🛡️ Ochrana pred orezaním v CSS zoznamoch: Presun modálu priamo pod document.body
+    if (MODAL && document.body && MODAL.parentElement !== document.body) {
+      document.body.appendChild(MODAL);
+    }
+    isModalOpen = true;
+    MODAL.classList.remove('minimized');
+    MODAL.style.display = 'flex';
+    if (document.body) document.body.classList.add('isas-2048-locked'); // 🔒 Zámok scrollovania pozadia
+    
+    if (btnMin) {
+      btnMin.innerHTML = '&#8212;';
+      btnMin.title = 'Minimalizovať (Do lišty)';
+    }
+
+    // 🌐 Stav relácie uchovávame v Storage; z URL odstránime hash, aby stlačenie Enter v URL paneli vyvolalo reload stránky
+    setStorageItem('isas_2048_open', 'true');
+    if (window.location.hash === '#game-2048') {
+      try { history.replaceState(null, '', window.location.pathname + window.location.search); } catch(e) {}
+    }
+
+    initGame(false);
+    fetchLeaderboard();
+  }
+
+  function closeEasterEgg() {
+    isModalOpen = false;
+    MODAL.style.display = 'none';
+    MODAL.classList.remove('minimized');
+    if (CONTAINER) CONTAINER.classList.remove('maximized');
+    if (document.body) document.body.classList.remove('isas-2048-locked'); // 🔓 Odomknutie scrollovania pozadia
+    
+    // Vyčistenie relácie a odstránenie #game-2048 z adresného riadka
+    removeStorageItem('isas_2048_open');
+    removeStorageItem('isas_2048_mode');
+    if (window.location.hash === '#game-2048') {
+      try { history.replaceState(null, '', window.location.pathname + window.location.search); } catch(e) {}
+    }
+
+    syncScoreWithServer(); // Uložíme dosiahnuté skóre pri zatvorení
+  }
+
+  function toggleMaximize() {
+    if (CONTAINER) {
+      CONTAINER.classList.toggle('maximized');
+      const isMax = CONTAINER.classList.contains('maximized');
+      if (btnMax) btnMax.innerHTML = isMax ? '&#10064;' : '&#9634;';
+      setStorageItem('isas_2048_mode', isMax ? 'maximized' : 'normal');
+    }
+  }
+
+  function toggleMinimize() {
+    MODAL.classList.toggle('minimized');
+    const isMin = MODAL.classList.contains('minimized');
+    if (isMin) {
+      if (document.body) document.body.classList.remove('isas-2048-locked'); // Pri minimalizovaní do lišty odomkneme scrollovanie
+      if (btnMin) {
+        btnMin.innerHTML = '&#9650;'; // 🔺 Šípka hore: Indikátor pre obnovenie okna
+        btnMin.title = 'Obnoviť hru';
+      }
+      setStorageItem('isas_2048_mode', 'minimized');
+    } else {
+      if (document.body) document.body.classList.add('isas-2048-locked');
+      if (btnMin) {
+        btnMin.innerHTML = '&#8212;'; // ➖ Pomlčka: Minimalizovať
+        btnMin.title = 'Minimalizovať (Do lišty)';
+      }
+      setStorageItem('isas_2048_mode', CONTAINER && CONTAINER.classList.contains('maximized') ? 'maximized' : 'normal');
+    }
+  }
+
+  // Globálna expozícia pre bezpečné otvorenie odkiaľkoľvek
+  window.openISAS2048 = openEasterEgg;
+
+  if (btnNavTrigger) btnNavTrigger.addEventListener('click', openEasterEgg);
+  
+  // 🛡️ Ochrana pred event bubblingom pri ovládaní okna
+  if (btnClose) {
+    btnClose.addEventListener('click', function(e) {
+      e.stopPropagation();
+      closeEasterEgg();
+    });
+  }
+  if (btnMax) {
+    btnMax.addEventListener('click', function(e) {
+      e.stopPropagation();
+      toggleMaximize();
+    });
+  }
+  if (btnMin) {
+    btnMin.addEventListener('click', function(e) {
+      e.stopPropagation();
+      toggleMinimize();
+    });
+  }
+  if (btnRestart) btnRestart.addEventListener('click', () => {
+    syncScoreWithServer();
+    initGame(true);
+  });
+  if (btnNewGame) {
+    btnNewGame.addEventListener('click', () => {
+      const spustiNovuHru = () => {
+        syncScoreWithServer();
+        initGame(true);
+      };
+
+      if (typeof window.showGlobalConfirmModal === 'function') {
+        const modalObj = window.showGlobalConfirmModal(
+          "Nová hra 🔄",
+          "Naozaj chcete začať novú hru? Aktuálna rozohraná plocha sa resetuje.",
+          spustiNovuHru
+        );
+        if (modalObj && modalObj.overlay) {
+          modalObj.overlay.style.zIndex = "10000005"; // Garancia zobrazenia nad oknom hry
+        }
+      } else if (confirm("Naozaj začať novú hru? Aktuálna rozohraná plocha sa resetuje.")) {
+        spustiNovuHru();
+      }
+    });
+  }
+
+  // ↩️ Nástroj: Storno operácie (Undo 1x za hru)
+  if (btnUndo) {
+    btnUndo.addEventListener('click', function(e) {
+      e.stopPropagation();
+      if (!canUndo || undoCharges <= 0 || !undoGrid) return;
+      grid = undoGrid.map(row => [...row]);
+      score = undoScore;
+      animateScoreOdometer(score, true); // Pri storne okamžitý návrat čísla
+      movesCount = undoMovesCount;
+      nextSpawnVal = undoNextSpawnVal;
+      queueSpawnVal = undoQueueSpawnVal;
+      currentFlowStreak = undoFlowStreak;
+      maxFlowStreak = undoMaxFlowStreak;
+      if (undoHeatmapData) {
+        heatmapData = undoHeatmapData.map(r => [...r]);
+        heatmapSamples = undoHeatmapSamples;
+      }
+      holdTileVal = undoHoldTileVal;
+      holdLockedUntilNextMove = undoHoldLockedUntilNextMove;
+      movesUpCount = undoMovesUpCount;
+      homogeneityAchieved = undoHomogeneityAchieved;
+      dualAssemblyAchieved = undoDualAssemblyAchieved;
+      dailyBountyCompleted = undoDailyBountyCompleted;
+      if (!dailyBountyCompleted && currentGameMode === 'daily') {
+        const seed = serverDailySeed || getClientLocalDateStr();
+        try { localStorage.removeItem(`isas_2048_bounty_${seed}`); } catch(e) {}
+      }
+      setHoldMode('none');
+      updateNextTilePreview();
+      if (currentGameMode === 'daily' && typeof undoPrngState === 'number') {
+        dailyPrngState = undoPrngState;
+      }
+      undoCharges--;
+      canUndo = false;
+      undoGrid = null;
+      isGameOver = false;
+      const boardEl = document.getElementById('isas-2048-board');
+      if (boardEl) boardEl.classList.remove('is-game-over');
+      OVERLAY_MSG.style.display = 'none';
+      renderBoard();
+      updateToolsUi();
+      saveStateToLocal();
+      if (STATUS_EL) STATUS_EL.textContent = "Stav: Ťah stornovaný";
+    });
+  }
+
+  // 🗑️ Nástroj: Odpis skladu (Prepnutie do režimu výberu nepodarku)
+  if (btnScrap) {
+    btnScrap.addEventListener('click', function(e) {
+      e.stopPropagation();
+      if (isGameOver || scrapCharges <= 0) return;
+      const hasTwo = grid.some(row => row.includes(2));
+      if (!hasTwo && !isScrapMode) {
+        if (STATUS_EL) STATUS_EL.textContent = "V sklade nie je nepodarok (2)";
+        return;
+      }
+      if (holdMode !== 'none') setHoldMode('none');
+      setScrapMode(!isScrapMode);
+    });
+  }
+
+  // 📦 Nástroj: Karanténny medzisklad (Prepnutie do režimu uloženia / vyloženia dielu)
+  if (btnHold) {
+    btnHold.addEventListener('click', function(e) {
+      e.stopPropagation();
+      if (isGameOver) return;
+      if (isScrapMode) setScrapMode(false);
+      if (holdMode !== 'none') {
+        setHoldMode('none');
+        return;
+      }
+      if (holdTileVal === 0) {
+        const hasTiles = grid.some(row => row.some(c => c > 0));
+        if (!hasTiles) {
+          if (STATUS_EL) STATUS_EL.textContent = "Na ploche nie je položka na odloženie";
+          return;
+        }
+        setHoldMode('deposit');
+      } else {
+        const emptyCells = [];
+        for (let r = 0; r < 4; r++) {
+          for (let c = 0; c < 4; c++) {
+            if (grid[r][c] === 0) emptyCells.push({ r, c });
+          }
+        }
+        if (emptyCells.length === 0) {
+          if (STATUS_EL) STATUS_EL.textContent = "Na ploche nie je voľná bunka";
+          return;
+        }
+        // Ak je na ploche presne 1 voľná bunka, vyskladníme diel hneď bez medzikroku
+        if (emptyCells.length === 1) {
+          const { r, c } = emptyCells[0];
+          undoGrid = grid.map(row => [...row]);
+          undoScore = score;
+          undoHoldTileVal = holdTileVal;
+          undoMovesCount = movesCount;
+          undoNextSpawnVal = nextSpawnVal;
+          undoQueueSpawnVal = queueSpawnVal;
+          undoDailyBountyCompleted = dailyBountyCompleted;
+          canUndo = (undoCharges > 0);
+          grid[r][c] = holdTileVal;
+          holdTileVal = 0;
+          setHoldMode('none');
+          const boardEl = document.getElementById('isas-2048-board');
+          if (boardEl) boardEl.classList.remove('is-stressed');
+          renderBoard();
+          updateToolsUi();
+          saveStateToLocal();
+          triggerHaptic(15);
+          if (STATUS_EL) STATUS_EL.textContent = "Stav: Položka vyskladnená";
+          checkGameOver();
+          return;
+        }
+        setHoldMode('retrieve');
+      }
+    });
+  }
+
+  // 🎯 Interakcia s doskou: Odpis skladu a Uloženie do medziskladu
+  if (TILES_CONTAINER) {
+    TILES_CONTAINER.addEventListener('click', function(e) {
+      const tileEl = e.target.closest('.isas-ee-tile');
+      if (!tileEl) return;
+      const r = parseInt(tileEl.getAttribute('data-r'), 10);
+      const c = parseInt(tileEl.getAttribute('data-c'), 10);
+      const val = parseInt(tileEl.getAttribute('data-val'), 10);
+
+      // Režim Odpis skladu
+      if (isScrapMode && scrapCharges > 0 && val === 2) {
+        grid[r][c] = 0;
+        scrapCharges--;
+        canUndo = false;
+        undoGrid = null;
+        setScrapMode(false);
+        const boardEl = document.getElementById('isas-2048-board');
+        if (boardEl) boardEl.classList.remove('is-stressed');
+        renderBoard();
+        updateToolsUi();
+        saveStateToLocal();
+        if (STATUS_EL) STATUS_EL.textContent = "Stav: Nepodarok odpísaný";
+        return;
+      }
+
+      // Režim Uloženia do karanténneho medziskladu
+      if (holdMode === 'deposit' && holdTileVal === 0 && val > 0) {
+        undoGrid = grid.map(row => [...row]);
+        undoScore = score;
+        undoHoldTileVal = holdTileVal;
+        undoHoldLockedUntilNextMove = false;
+        undoMovesCount = movesCount;
+        undoNextSpawnVal = nextSpawnVal;
+        undoQueueSpawnVal = queueSpawnVal;
+        undoDailyBountyCompleted = dailyBountyCompleted;
+        canUndo = (undoCharges > 0);
+        holdTileVal = val;
+        holdLockedUntilNextMove = false; // Okamžité vyskladnenie povolené bez blokovania
+        grid[r][c] = 0;
+        setHoldMode('none');
+        const boardEl = document.getElementById('isas-2048-board');
+        if (boardEl) boardEl.classList.remove('is-stressed');
+        renderBoard();
+        updateToolsUi();
+        saveStateToLocal();
+        triggerHaptic(15);
+        if (STATUS_EL) STATUS_EL.textContent = `Stav: Položka ${val} odložená do medziskladu`;
+      }
+    });
+  }
+
+  // 🎯 Interakcia s prázdnymi bunkami dosky: Vyskladnenie z medziskladu
+  const boardElForCells = document.getElementById('isas-2048-board');
+  if (boardElForCells) {
+    const rawCells = boardElForCells.querySelectorAll('.isas-ee-cell');
+    rawCells.forEach((cell, idx) => {
+      cell.setAttribute('data-r', String(Math.floor(idx / 4)));
+      cell.setAttribute('data-c', String(idx % 4));
+      cell.addEventListener('click', function() {
+        if (holdMode !== 'retrieve' || holdTileVal <= 0) return;
+        const r = parseInt(this.getAttribute('data-r'), 10);
+        const c = parseInt(this.getAttribute('data-c'), 10);
+        if (grid[r][c] === 0) {
+          undoGrid = grid.map(row => [...row]);
+          undoScore = score;
+          undoHoldTileVal = holdTileVal;
+          undoHoldLockedUntilNextMove = holdLockedUntilNextMove;
+          undoMovesCount = movesCount;
+          undoNextSpawnVal = nextSpawnVal;
+          undoQueueSpawnVal = queueSpawnVal;
+          undoDailyBountyCompleted = dailyBountyCompleted;
+          canUndo = (undoCharges > 0);
+          grid[r][c] = holdTileVal;
+          holdTileVal = 0;
+          setHoldMode('none');
+          renderBoard();
+          updateToolsUi();
+          saveStateToLocal();
+          triggerHaptic(15);
+          if (STATUS_EL) STATUS_EL.textContent = "Stav: Položka vyskladnená";
+          checkGameOver();
+        }
+      });
+    });
+  }
+
+  // 🖱️ Kliknutie kdekoľvek na minimalizovanú lištu (mimo tlačidiel ovládania) obnoví okno
+  if (CONTAINER) {
+    CONTAINER.addEventListener('click', function(e) {
+      if (MODAL.classList.contains('minimized') && !e.target.closest('.isas-ee-win-ctrls')) {
+        toggleMinimize();
+      }
+    });
+  }
+
+  // 🛡️ UX: Bezpečné zatvorenie kliknutím na backdrop (iba ak nie je minimalizovaný)
+  MODAL.addEventListener('click', function(e) {
+    if (e.target === MODAL && !MODAL.classList.contains('minimized')) {
+      closeEasterEgg();
+    }
+  });
+
+  // 🔄 KONTROLA PO REFRESHE STRÁNKY (F5): Obnovenie hry a režimu okna
+  function restoreGameStateOnLoad() {
+    const savedTheme = getStorageItem('isas_2048_theme') || 'slate';
+    applyTheme(savedTheme);
+
+    const wasOpen = getStorageItem('isas_2048_open') === 'true' || window.location.hash === '#game-2048';
+    if (wasOpen) {
+      openEasterEgg();
+      const savedMode = getStorageItem('isas_2048_mode');
+      if (savedMode === 'maximized') {
+        toggleMaximize();
+      } else if (savedMode === 'minimized') {
+        toggleMinimize();
+      }
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', restoreGameStateOnLoad);
+  } else {
+    restoreGameStateOnLoad();
+  }
+
+  // Poistka pri plnom načítaní a podpora pre históriu prehliadača (Back/Forward)
+  window.addEventListener('load', function() {
+    if (!isModalOpen && (window.location.hash === '#game-2048' || getStorageItem('isas_2048_open') === 'true')) {
+      restoreGameStateOnLoad();
+    }
+  });
+
+  window.addEventListener('hashchange', function() {
+    if (window.location.hash === '#game-2048') {
+      if (!isModalOpen) openEasterEgg();
+    } else if (isModalOpen) {
+      closeEasterEgg();
+    }
+  });
+
+  // 5. Scroll-Jacking Ochrana a Ovládanie
+  window.addEventListener('keydown', function(e) {
+    // Escape najprv zruší aktívne režimy nástrojov; ak nie sú aktívne, zatvorí celé okno
+    if (e.key === 'Escape' && isModalOpen) {
+      if (isScrapMode) {
+        setScrapMode(false);
+        return;
+      }
+      if (holdMode !== 'none') {
+        setHoldMode('none');
+        return;
+      }
+      closeEasterEgg();
+      return;
+    }
+
+    if (!isModalOpen) return;
+
+    const code = e.code;
+    const isArrow = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key);
+    const isWasd = ['KeyW', 'KeyA', 'KeyS', 'KeyD'].includes(code);
+
+    if (isArrow || isWasd) {
+      if (isGameOver && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+        return; // Umožňuje plynulé rolovanie auditu partie šípkami bez blokovania prehliadača
+      }
+      e.preventDefault(); // Stop scrollovania a kolízií s natívnymi skratkami prehliadača
+      if (e.key === 'ArrowUp' || code === 'KeyW') move('UP');
+      else if (e.key === 'ArrowDown' || code === 'KeyS') move('DOWN');
+      else if (e.key === 'ArrowLeft' || code === 'KeyA') move('LEFT');
+      else if (e.key === 'ArrowRight' || code === 'KeyD') move('RIGHT');
+    }
+  }, { passive: false });
+
+  // 6. Dotykové & myšacie ovládanie s predikciou toku (Touch / Mouse Drag Ghosting)
+  let touchStartX = 0;
+  let touchStartY = 0;
+  let isMouseDragging = false;
+  let mouseStartX = 0;
+  let mouseStartY = 0;
+  const boardEl = document.getElementById('isas-2048-board');
+
+  if (boardEl) {
+    // Touch gestá na mobile
+    boardEl.addEventListener('touchstart', function(e) {
+      if (e.touches.length === 1) {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+      }
+    }, { passive: true });
+
+    boardEl.addEventListener('touchmove', function(e) {
+      if (!isModalOpen || isGameOver || e.touches.length === 0) return;
+      const dx = e.touches[0].clientX - touchStartX;
+      const dy = e.touches[0].clientY - touchStartY;
+      const dist = Math.hypot(dx, dy);
+      if (dist >= 14) {
+        const dir = (Math.abs(dx) > Math.abs(dy)) ? (dx > 0 ? 'RIGHT' : 'LEFT') : (dy > 0 ? 'DOWN' : 'UP');
+        highlightMergeCandidates(dir);
+      } else {
+        clearMergeCandidates();
+      }
+    }, { passive: true });
+
+    boardEl.addEventListener('touchend', function(e) {
+      clearMergeCandidates();
+      if (!isModalOpen || e.changedTouches.length === 0) return;
+      const dx = e.changedTouches[0].clientX - touchStartX;
+      const dy = e.changedTouches[0].clientY - touchStartY;
+      const dist = Math.hypot(dx, dy);
+
+      if (dist > 30) { // Ochrana pred nechceným micro-kliknutím
+        if (Math.abs(dx) > Math.abs(dy)) {
+          if (dx > 0) move('RIGHT');
+          else move('LEFT');
+        } else {
+          if (dy > 0) move('DOWN');
+          else move('UP');
+        }
+      }
+    }, { passive: true });
+
+    boardEl.addEventListener('touchcancel', clearMergeCandidates, { passive: true });
+
+    // Desktop myšacie gestá s predikciou
+    boardEl.addEventListener('mousedown', function(e) {
+      if (!isModalOpen || isGameOver || isScrapMode || holdMode !== 'none' || e.button !== 0) return;
+      isMouseDragging = true;
+      mouseStartX = e.clientX;
+      mouseStartY = e.clientY;
+    });
+
+    window.addEventListener('mousemove', function(e) {
+      if (!isMouseDragging || !isModalOpen) return;
+      const dx = e.clientX - mouseStartX;
+      const dy = e.clientY - mouseStartY;
+      const dist = Math.hypot(dx, dy);
+      if (dist >= 14) {
+        const dir = (Math.abs(dx) > Math.abs(dy)) ? (dx > 0 ? 'RIGHT' : 'LEFT') : (dy > 0 ? 'DOWN' : 'UP');
+        highlightMergeCandidates(dir);
+      } else {
+        clearMergeCandidates();
+      }
+    });
+
+    window.addEventListener('mouseup', function(e) {
+      if (!isMouseDragging) return;
+      isMouseDragging = false;
+      clearMergeCandidates();
+      const dx = e.clientX - mouseStartX;
+      const dy = e.clientY - mouseStartY;
+      const dist = Math.hypot(dx, dy);
+      if (dist > 30) {
+        if (Math.abs(dx) > Math.abs(dy)) {
+          if (dx > 0) move('RIGHT');
+          else move('LEFT');
+        } else {
+          if (dy > 0) move('DOWN');
+          else move('UP');
+        }
+      }
+    });
+  }
+
+  // 7. Spúšťače (Triggering Mechanizmy)
+  // Mechanizmus A: Konami Kód (Hore, Hore, Dole, Dole, Vľavo, Vpravo, Vľavo, Vpravo, B, A)
+  const konamiSeq = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','KeyB','KeyA'];
+  let konamiIdx = 0;
+
+  window.addEventListener('keydown', function(e) {
+    if (isModalOpen) return;
+
+    // 🛡️ Ochrana: Ignorovať stlačenia klávesov, ak používateľ práve píše do formulára v admine
+    const activeTag = document.activeElement ? document.activeElement.tagName : '';
+    if (['INPUT', 'TEXTAREA', 'SELECT'].includes(activeTag) || (document.activeElement && document.activeElement.isContentEditable)) {
+      konamiIdx = 0;
+      return;
+    }
+
+    const expected = konamiSeq[konamiIdx];
+    if (e.code === expected || e.key === expected) {
+      konamiIdx++;
+      if (konamiIdx === konamiSeq.length) {
+        konamiIdx = 0;
+        openEasterEgg();
+      }
+    } else {
+      konamiIdx = 0;
+    }
+  });
+
+  // 🎖️ Engine pre odomykanie firemných úspechov (Achievements)
+  function unlockAchievement(achId) {
+    try {
+      const key = 'isas_2048_achievements';
+      let unlocked = JSON.parse(localStorage.getItem(key) || '[]');
+      if (!unlocked.includes(achId)) {
+        unlocked.push(achId);
+        localStorage.setItem(key, JSON.stringify(unlocked));
+        renderAchievements();
+        triggerHaptic([30, 40, 30]);
+      }
+    } catch(e) {}
+  }
+
+  function renderAchievements() {
+    try {
+      const unlocked = JSON.parse(localStorage.getItem('isas_2048_achievements') || '[]');
+      unlocked.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('unlocked');
+      });
+    } catch(e) {}
+  }
+
+  function checkAchievementsOnMove() {
+    const nowHour = new Date().getHours();
+    const nowMin = new Date().getMinutes();
+    if (nowHour >= 20 || nowHour < 5) unlockAchievement('ach-night');
+    if (nowHour === 6 || (nowHour === 7 && nowMin <= 30)) unlockAchievement('ach-early');
+    if (lastMoveMerges >= 3) unlockAchievement('ach-combo');
+    if (getMaxTile() >= 512 && undoCharges === 1 && scrapCharges === 1) unlockAchievement('ach-clean');
+    if (getMaxTile() >= 2048) unlockAchievement('ach-2048');
+  }
+
+  // Kontrola odznakov pri každom ťahu
+  const originalMove = move;
+  move = function(direction) {
+    const moved = originalMove(direction);
+    if (moved) {
+      unlockAchievement('ach-first');
+      checkAchievementsOnMove();
+    }
+    return moved;
+  };
+
+  // 📤 Generátor vizitky a multikanálového zdieľania (Gmail, Telegram, Discord, Viber, WhatsApp)
+  function composeShareVizitka() {
+    const maxT = getMaxTile();
+    const nazovDlazdice = tileLabels[maxT] || `Položka ${maxT}`;
+    const elapsedTotalMs = Math.max(0, accumulatedTimeMs + (gameStartTime ? (Date.now() - gameStartTime) : 0));
+    const totalSec = Math.floor(elapsedTotalMs / 1000);
+    const mm = String(Math.floor(totalSec / 60)).padStart(2, '0');
+    const ss = String(totalSec % 60).padStart(2, '0');
+    const efficiency = movesCount > 0 ? (score / movesCount).toFixed(1) : '0.0';
+
+    const mapujDlazdicuNaEmoji = (val) => {
+      if (!val || val === 0) return '▫️';
+      if (val <= 4) return '⬜';
+      if (val <= 16) return '🟦';
+      if (val <= 64) return '🟩';
+      if (val <= 256) return '🟧';
+      if (val <= 1024) return '🟪';
+      return '🟨';
+    };
+    const maticaLinky = grid.map(riadok => riadok.map(mapujDlazdicuNaEmoji).join(' ')).join('\n');
+
+    let hracRiadok = '👤 Operátor linky';
+    if (cachedLeaderboardData && cachedLeaderboardData.profil_hraca) {
+      const p = cachedLeaderboardData.profil_hraca;
+      let meno = (p.meno || 'Operátor').trim();
+      let rola = (p.pracovna_rola || '').trim();
+      if (rola && !meno.includes(rola)) {
+        hracRiadok = `👤 ${p.ikona_pomeru || '💼'} ${meno} (${rola})`;
+      } else {
+        hracRiadok = `👤 ${p.ikona_pomeru || '💼'} ${meno}`;
+      }
+    }
+
+    const hlavickaRezim = (currentGameMode === 'daily')
+      ? `🎯 DENNÁ VÝZVA • ${serverDailySeed}`
+      : `🏆 ${seasonTitle.toUpperCase()}`;
+
+    let bountyInfo = '';
+    if (currentGameMode === 'daily') {
+      const mod = getDailyModifierInfo(serverDailySeed || getClientLocalDateStr());
+      bountyInfo = `\n⚙️ Modifikátor: ${mod.name}\n📋 Zákazka dňa: ${dailyBountyCompleted ? '🏆 SPLNENÁ' : '❌ Nesplnená'}`;
+    }
+
+    return `╭──────────────────────────────╮
+│  🎮 ISAS 2048 • VÝKON ZMENY  │
+╰──────────────────────────────╯
+${hlavickaRezim}
+${hracRiadok}
+🏆 Skóre: ${Number(score || 0).toLocaleString()} b.
+🏷️ Úroveň: ${nazovDlazdice} (${maxT})
+⏱️ Čas: ${mm}:${ss} | 🔄 Ťahy: ${movesCount} (Efektivita: ${efficiency} b/ťah)
+⚡ Max Flow: ${maxFlowStreak} | 🧭 Taktika: ${tacticalArchetype}${bountyInfo}
+
+┌── Stav linky 4x4 ──┐
+${maticaLinky}
+└────────────────────┘
+🛠️ ERP Nástroje: Storno [${undoCharges === 0 ? '❌' : '✅'}] | Odpis [${scrapCharges === 0 ? '❌' : '✅'}] | Medzisklad [${holdTileVal > 0 ? `Obsadený (${holdTileVal})` : 'Voľný'}]`;
+  }
+
+  function copyTextToClipboard(text, successMsg = "📋 Výsledok skopírovaný!") {
+    if (navigator.clipboard && window.isSecureContext && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(() => {
+        if (STATUS_EL) STATUS_EL.textContent = successMsg;
+        setTimeout(() => { if (STATUS_EL) STATUS_EL.textContent = "Stav: Pripravený"; }, 3000);
+      }).catch(() => fallbackLegacyCopy(text, successMsg));
+    } else {
+      fallbackLegacyCopy(text, successMsg);
+    }
+  }
+
+  function fallbackLegacyCopy(text, successMsg) {
+    try {
+      const tArea = document.createElement('textarea');
+      tArea.value = text;
+      tArea.style.position = 'fixed';
+      tArea.style.top = '-9999px';
+      tArea.style.left = '-9999px';
+      document.body.appendChild(tArea);
+      tArea.focus();
+      tArea.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(tArea);
+      if (ok && STATUS_EL) STATUS_EL.textContent = successMsg;
+    } catch(e) {}
+  }
+
+  const shareBoxEl = document.getElementById('isas-2048-share-card-box');
+  const btnShareClose = document.getElementById('isas-2048-btn-share-close');
+  const linkTg = document.getElementById('isas-share-tg');
+  const linkWa = document.getElementById('isas-share-wa');
+  const linkViber = document.getElementById('isas-share-viber');
+  const linkGmail = document.getElementById('isas-share-gmail');
+  const btnDiscord = document.getElementById('isas-share-discord');
+  const btnCopyVizitka = document.getElementById('isas-share-copy');
+  const btnNativeShare = document.getElementById('isas-share-native');
+
+  // Elementy nového digitálneho protokolu
+  const protoOpEl = document.getElementById('isas-proto-op');
+  const protoScoreEl = document.getElementById('isas-proto-score');
+  const protoTileEl = document.getElementById('isas-proto-tile');
+  const protoTimeMovesEl = document.getElementById('isas-proto-time-moves');
+  const protoEffEl = document.getElementById('isas-proto-eff');
+  const protoTacticEl = document.getElementById('isas-proto-tactic');
+  const protoRegimeEl = document.getElementById('isas-proto-regime');
+  const protoMosaicGrid = document.getElementById('isas-proto-mosaic-grid');
+
+  if (btnShare) {
+    btnShare.addEventListener('click', function() {
+      const vizitkaText = composeShareVizitka();
+      const maxT = getMaxTile();
+      const nazovDlazdice = tileLabels[maxT] || `Položka ${maxT}`;
+
+      const elapsedTotalMs = Math.max(0, accumulatedTimeMs + (gameStartTime ? (Date.now() - gameStartTime) : 0));
+      const totalSec = Math.floor(elapsedTotalMs / 1000);
+      const mm = String(Math.floor(totalSec / 60)).padStart(2, '0');
+      const ss = String(totalSec % 60).padStart(2, '0');
+      const efficiency = movesCount > 0 ? (score / movesCount).toFixed(1) : '0.0';
+
+      // 1. Očistenie mena a zamedzenie duplicity roly
+      let cleanName = 'Operátor linky';
+      if (cachedLeaderboardData && cachedLeaderboardData.profil_hraca) {
+        const p = cachedLeaderboardData.profil_hraca;
+        cleanName = (p.meno || 'Operátor').trim();
+        const rola = (p.pracovna_rola || '').trim();
+        if (rola && !cleanName.includes(rola)) {
+          cleanName = `${cleanName} (${rola})`;
+        }
+      }
+
+      // 2. Naplnenie hodnôt do nového technického tlačiva (vrátane Max Flow a dynamickej pečiatky)
+      if (protoOpEl) protoOpEl.textContent = cleanName;
+      if (protoScoreEl) protoScoreEl.textContent = Number(score || 0).toLocaleString();
+      if (protoTileEl) {
+        protoTileEl.textContent = `⚙️ ${nazovDlazdice} (${maxT})`;
+        protoTileEl.title = `${nazovDlazdice} (${maxT})`;
+      }
+      if (protoTimeMovesEl) protoTimeMovesEl.textContent = `${mm}:${ss} / ${movesCount}`;
+      if (protoEffEl) protoEffEl.textContent = `${efficiency} b/ťah`;
+      const protoFlowEl = document.getElementById('isas-proto-flow');
+      if (protoFlowEl) protoFlowEl.textContent = `⚡ ${maxFlowStreak} séria`;
+      const protoDocIdEl = document.getElementById('isas-proto-doc-id');
+      if (protoDocIdEl) {
+        const d = new Date();
+        const hh = String(d.getHours()).padStart(2, '0');
+        const min = String(d.getMinutes()).padStart(2, '0');
+        protoDocIdEl.textContent = `DOC-${hh}${min}`;
+      }
+      if (protoTacticEl) protoTacticEl.textContent = tacticalArchetype;
+      if (protoRegimeEl) {
+        protoRegimeEl.textContent = (currentGameMode === 'daily')
+          ? `DENNÁ VÝZVA • ${serverDailySeed}`
+          : `KVARTÁLNY VÝKON • ${seasonTitle.toUpperCase()}`;
+      }
+
+      // 3. Vykreslenie 4x4 miniatúrnej mozaiky v tlačive
+      if (protoMosaicGrid) {
+        protoMosaicGrid.innerHTML = '';
+        for (let r = 0; r < 4; r++) {
+          for (let c = 0; c < 4; c++) {
+            const v = grid[r][c];
+            const mcell = document.createElement('div');
+            let cls = 'isas-proto-mosaic-cell ';
+            if (v > 0) {
+              cls += (v > 2048) ? 'isas-ee-t-super' : `isas-ee-t-${v}`;
+            } else {
+              mcell.style.background = 'rgba(255,255,255,0.05)';
+            }
+            mcell.className = cls;
+            protoMosaicGrid.appendChild(mcell);
+          }
+        }
+      }
+
+      const encodedText = encodeURIComponent(vizitkaText);
+      const encodedSubject = encodeURIComponent(`ISAS 2048 • Protokol zmeny (${Number(score || 0).toLocaleString()} b.)`);
+
+      if (linkTg) linkTg.href = `https://t.me/share/url?text=${encodedText}`;
+      if (linkWa) linkWa.href = `https://api.whatsapp.com/send?text=${encodedText}`;
+      if (linkViber) linkViber.href = `viber://forward?text=${encodedText}`;
+      if (linkGmail) linkGmail.href = `https://mail.google.com/mail/?view=cm&fs=1&su=${encodedSubject}&body=${encodedText}`;
+
+      if (shareBoxEl) {
+        shareBoxEl.style.display = (shareBoxEl.style.display === 'none') ? 'block' : 'none';
+        if (shareBoxEl.style.display === 'block') {
+          shareBoxEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      }
+    });
+  }
+
+  if (btnShareClose && shareBoxEl) {
+    btnShareClose.addEventListener('click', () => { shareBoxEl.style.display = 'none'; });
+  }
+
+  // 🎮 Discord: Formátovaný Markdown kódový blok pre bezchybné zobrazenie v chate
+  if (btnDiscord) {
+    btnDiscord.addEventListener('click', function() {
+      const vizitkaText = composeShareVizitka();
+      const discordFormat = "```yaml\n" + vizitkaText + "\n```";
+      copyTextToClipboard(discordFormat, "🎮 Skopírované pre Discord!");
+      triggerHaptic(20);
+    });
+  }
+
+  if (btnCopyVizitka) {
+    btnCopyVizitka.addEventListener('click', function() {
+      const vizitkaText = composeShareVizitka();
+      copyTextToClipboard(vizitkaText, "📋 Vizitka skopírovaná!");
+      triggerHaptic(20);
+    });
+  }
+
+  if (btnNativeShare) {
+    btnNativeShare.addEventListener('click', async function() {
+      const vizitkaText = composeShareVizitka();
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: 'ISAS 2048 • Výkon zmeny',
+            text: vizitkaText
+          });
+        } catch(err) {
+          if (err.name !== 'AbortError') copyTextToClipboard(vizitkaText);
+        }
+      } else {
+        copyTextToClipboard(vizitkaText);
+      }
+    });
+  }
+
+  // Inicializácia odznakov pri štarte
+  renderAchievements();
+
+  // Spustenie je primárne riadené tlačidlom 🎮 v navigácii (#isas-2048-nav-btn)
+  // s voliteľným spustením cez Konami kód pre klávesnicu.
+
+})();
+</script>

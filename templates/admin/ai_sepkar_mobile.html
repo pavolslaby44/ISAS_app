@@ -1,0 +1,717 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ISAS AI Diagnostika</title>
+    <!-- Telegram WebApp API -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <!-- 🚀 ISAS CORE: Globálny JS Engine -->
+    <script src="{% static 'js/admin_master.js' %}"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+        
+        /* ==========================================
+           1. GLOBÁLNY LAYOUT A POZADIE
+           ========================================== */
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f8fafc;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(219, 234, 254, 0.7) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(209, 250, 229, 0.5) 0px, transparent 50%),
+                radial-gradient(at 50% 100%, rgba(238, 242, 255, 0.8) 0px, transparent 50%);
+            background-attachment: fixed;
+            background-size: cover;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            color: #0f172a;
+        }
+
+        /* Luxusný vodoznak (veľmi jemné ikony) */
+        .bg-animation {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1; pointer-events: none; overflow: hidden;
+        }
+        .industrial-icon {
+            position: absolute; opacity: 0.03; /* ZMENA: Extrémne jemné */
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.05));
+            animation: floatAround infinite ease-in-out;
+            will-change: transform;
+        }
+        @keyframes floatAround {
+            0%, 100% { transform: translate(0, 0) rotate(0deg) scale(1); }
+            33% { transform: translate(20px, 30px) rotate(5deg) scale(1.02); }
+            66% { transform: translate(-15px, 15px) rotate(-3deg) scale(0.98); }
+        }
+        
+        .isas-ai-modal {
+            width: 100%;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ==========================================
+           2. PRÉMIOVÁ HLAVIČKA (Glassmorphism)
+           ========================================== */
+        .isas-ai-header {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            padding: clamp(25px, 4vh, 40px) 20px;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 10px 30px -10px rgba(15, 23, 42, 0.3);
+            z-index: 100;
+        }
+        
+        .isas-ai-header-title {
+            font-size: clamp(22px, 4vw, 32px);
+            font-weight: 900;
+            margin: 0;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            letter-spacing: -0.03em;
+        }
+        
+        .ai-icon {
+            font-size: clamp(28px, 5vw, 38px);
+            animation: pulseGlow 3s infinite;
+        }
+        
+        @keyframes pulseGlow {
+            0%, 100% { filter: drop-shadow(0 0 5px rgba(59, 130, 246, 0.3)); transform: scale(1); }
+            50% { filter: drop-shadow(0 0 15px rgba(59, 130, 246, 0.7)); transform: scale(1.05); }
+        }
+        
+        .isas-ai-subtitle {
+            color: #94a3b8;
+            font-size: clamp(12px, 2vw, 14px);
+            margin-top: 10px;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+
+        /* ==========================================
+           3. OBSAHOVÁ ČASŤ A AI VÝSTUP
+           ========================================== */
+        .isas-ai-content {
+            flex: 1;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: clamp(20px, 4vh, 40px) clamp(15px, 4vw, 25px);
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+        }
+
+        /* AI Texty a Odrážky */
+        .isas-ai-content p {
+            font-size: clamp(15px, 3.5vw, 18px) !important;
+            font-weight: 500 !important;
+            color: #334155;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            padding: clamp(20px, 5vw, 30px) !important;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px -10px rgba(0,0,0,0.05);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            margin: 0 auto 25px auto !important;
+            width: 100%;
+            box-sizing: border-box;
+            line-height: 1.7;
+        }
+
+        .isas-ai-list {
+            list-style: none;
+            padding: 0;
+            margin: 0 auto 25px auto;
+            width: 100%;
+        }
+        
+        .isas-ai-list li {
+            position: relative;
+            padding: 18px 20px 18px 60px;
+            margin-bottom: 12px;
+            font-weight: 600;
+            font-size: clamp(14px, 3.5vw, 16px);
+            line-height: 1.5;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            color: #1e293b;
+            box-shadow: 0 4px 15px -5px rgba(0,0,0,0.03);
+            transition: all 0.2s ease;
+        }
+        
+        .isas-ai-list li:hover {
+            border-color: #bfdbfe;
+            box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.1);
+            transform: translateX(4px);
+        }
+        
+        .isas-ai-list li::before {
+            content: '⚡';
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 16px;
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            color: #2563eb;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.15);
+        }
+
+        /* Chybový stav */
+        .error-box {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #991b1b;
+            padding: 20px 25px;
+            border-radius: 16px;
+            margin: 20px auto;
+            width: 100%;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-weight: 600;
+            font-size: 15px;
+            box-shadow: 0 10px 25px -5px rgba(220, 38, 38, 0.1);
+        }
+
+        /* ==========================================
+           4. TECHNICKÝ PREUKAZ (Widget Style)
+           ========================================== */
+        .tech-passport {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            border-radius: 20px;
+            box-shadow: 0 15px 35px -10px rgba(0,0,0,0.05);
+            overflow: hidden;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .tech-passport summary {
+            padding: 20px 25px;
+            font-weight: 800;
+            font-size: 15px;
+            color: #0f172a;
+            cursor: pointer;
+            list-style: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+        }
+        .tech-passport summary::-webkit-details-marker { display: none; }
+        .tech-passport[open] summary { border-bottom: 1px solid rgba(226, 232, 240, 0.6); }
+        
+        .tp-chevron {
+            color: #94a3b8;
+            font-size: 12px;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .tech-passport[open] .tp-chevron { transform: rotate(180deg); color: #3b82f6; }
+        
+        .tech-passport-content { padding: 25px; display: flex; flex-direction: column; gap: 25px; }
+        
+        .tp-section-title {
+            font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em;
+            font-weight: 900; color: #64748b; margin-bottom: 10px;
+        }
+        
+        .tp-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px;
+        }
+        
+        .tp-item {
+            background: rgba(248, 250, 252, 0.8); 
+            padding: 14px; 
+            border-radius: 14px; 
+            border: 1px solid #e2e8f0;
+        }
+        
+        .tp-label { font-size: 10px; color: #64748b; font-weight: 800; margin-bottom: 4px; display: block; text-transform: uppercase; letter-spacing: 0.5px; }
+        .tp-value { font-size: 14px; color: #0f172a; font-weight: 800; word-break: break-word; }
+        
+        .tp-history-list { list-style: none; padding: 0; margin: 0; }
+        .tp-history-list li {
+            padding: 14px 16px; border-left: 3px solid #3b82f6; background: #f8fafc;
+            margin-bottom: 10px; border-radius: 0 12px 12px 0; font-size: 13px; color: #334155; font-weight: 500;
+            border-top: 1px solid #f1f5f9; border-right: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9;
+        }
+        .tp-history-date { font-weight: 900; color: #2563eb; margin-bottom: 4px; display: block; font-size: 12px; }
+
+        /* ==========================================
+           5. SPODNÝ PANEL A TLAČIDLO (Sticky)
+           ========================================== */
+        .action-container {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 10px clamp(15px, 4vw, 25px) 30px clamp(15px, 4vw, 25px);
+            box-sizing: border-box;
+            position: sticky;
+            bottom: 0;
+            background: linear-gradient(to bottom, rgba(248, 250, 252, 0) 0%, rgba(248, 250, 252, 0.9) 40%, rgba(248, 250, 252, 1) 100%);
+            z-index: 50;
+        }
+        
+        .isas-ai-confirm-btn {
+            background: #0f172a; /* Luxusná tmavá */
+            border-radius: 100px; /* Pill shape */
+            padding: 18px 30px;
+            font-weight: 800;
+            font-size: 15px;
+            color: white;
+            border: none;
+            width: 100%;
+            box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.4);
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .isas-ai-confirm-btn:hover {
+            box-shadow: 0 15px 35px -5px rgba(15, 23, 42, 0.5);
+            transform: translateY(-2px);
+            background: #1e293b;
+        }
+
+        /* ==========================================
+           6. ISAS QUICKNOTE (Ergonomický dizajn)
+           ========================================== */
+        #isas-quicknote-container {
+            position: fixed; bottom: 25px; right: 25px; z-index: 9999;
+            display: flex; flex-direction: column; align-items: flex-end;
+        }
+
+        #quicknote-toggle-btn {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); 
+            color: #fbbf24; 
+            border: 2px solid rgba(251, 191, 36, 0.4);
+            border-radius: 50%; 
+            width: 60px; /* ZMENA: Štandardná veľkosť FAB */
+            height: 60px; 
+            cursor: pointer; 
+            font-size: 26px; 
+            box-shadow: 0 10px 25px rgba(245, 158, 11, 0.25);
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); 
+            display: flex; align-items: center; justify-content: center; padding: 0;
+            z-index: 10000;
+        }
+        #quicknote-toggle-btn:hover { 
+            transform: scale(1.08) translateY(-3px); 
+            box-shadow: 0 15px 35px rgba(245, 158, 11, 0.4);
+            border-color: rgba(251, 191, 36, 0.8);
+        }
+
+        #quicknote-window {
+            display: none; width: clamp(300px, 85vw, 360px); height: clamp(350px, 60vh, 450px);
+            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border-radius: 24px; border: 1px solid rgba(226, 232, 240, 0.8);
+            position: absolute; bottom: 80px; right: 0;
+            flex-direction: column; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.2); overflow: hidden;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            z-index: 9999;
+        }
+        
+        #quicknote-textarea {
+            flex: 1; width: 100%; border: none; resize: none; padding: 20px;
+            font-family: 'Inter', sans-serif; font-size: 14px; line-height: 1.6;
+            color: #0f172a; background: transparent; outline: none; box-sizing: border-box;
+        }
+        
+        .quicknote-toolbar {
+            display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;
+            padding: 12px 15px; background: #f8fafc; border-top: 1px solid #f1f5f9; align-items: center;
+        }
+        
+        .qn-btn {
+            flex: 1 1 auto; justify-content: center; white-space: nowrap;
+            background: #ffffff; color: #475569; border: 1px solid #e2e8f0; padding: 10px 12px;
+            border-radius: 10px; font-size: 11px; font-weight: 800; cursor: pointer;
+            text-transform: uppercase; transition: all 0.2s; display: flex; align-items: center; gap: 6px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+        .qn-btn:hover { background: #f1f5f9; color: #0f172a; border-color: #cbd5e1; }
+        .qn-btn.primary { background: #10b981; color: white; border: none; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2); }
+        .qn-btn.primary:hover { background: #059669; }
+        .qn-btn.danger { background: #fef2f2; color: #ef4444; border-color: #fecaca; }
+        
+        @keyframes pulse-mic {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        .qn-btn.recording { background: #ef4444 !important; color: white !important; border: none; animation: pulse-mic 1.5s infinite; }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        ::selection { background: #3b82f6; color: white; }
+    </style>
+</head>
+<body>
+
+    <!-- Živé pozadie ISAS CORE -->
+    <div class="bg-animation">
+        <span class="industrial-icon" style="top: 8%; left: 4%; font-size: 160px; animation-duration: 25s;">⚙️</span>
+        <span class="industrial-icon" style="top: 65%; left: 5%; font-size: 180px; animation-duration: 35s;">📊</span>
+        <span class="industrial-icon" style="top: 10%; left: 80%; font-size: 150px; animation-duration: 28s;">📈</span>
+        <span class="industrial-icon" style="top: 75%; left: 85%; font-size: 130px; animation-duration: 22s;">⚡</span>
+        <span class="industrial-icon" style="top: 40%; left: 2%; font-size: 110px; animation-duration: 40s;">🔍</span>
+        <span class="industrial-icon" style="top: 5%; left: 45%; font-size: 170px; animation-duration: 45s;">🛡️</span>
+        <span class="industrial-icon" style="top: 85%; left: 42%; font-size: 140px; animation-duration: 30s;">📋</span>
+        <span class="industrial-icon" style="top: 35%; left: 88%; font-size: 100px; animation-duration: 26s;">⏱️</span>
+        <span class="industrial-icon" style="top: 52%; left: 65%; font-size: 120px; animation-duration: 38s;">🧠</span>
+        <span class="industrial-icon" style="top: 70%; left: 55%; font-size: 90px; animation-duration: 32s;">🔋</span>
+        <span class="industrial-icon" style="top: 20%; left: 20%; font-size: 80px; animation-duration: 50s;">⚙️</span>
+        <span class="industrial-icon" style="top: 88%; left: 12%; font-size: 105px; animation-duration: 29s;">🔌</span>
+        <span class="industrial-icon" style="top: 25%; left: 70%; font-size: 115px; animation-duration: 42s;">📌</span>
+        <span class="industrial-icon" style="top: 48%; left: 15%; font-size: 95px; animation-duration: 31s;">🛠️</span>
+        <span class="industrial-icon" style="top: 12%; left: 92%; font-size: 85px; animation-duration: 24s;">📦</span>
+        <span class="industrial-icon" style="top: 60%; left: 90%; font-size: 110px; animation-duration: 37s;">📐</span>
+    </div>
+
+    <div class="isas-ai-modal">
+        <div class="isas-ai-header">
+            <h2 class="isas-ai-header-title"><span class="ai-icon">🧠</span> ISAS AI: Diagnostika</h2>
+            <div class="isas-ai-subtitle">{{ zariadenie_nazov }}</div>
+        </div>
+        
+        <div class="isas-ai-content">
+            {% if chyba %}
+                <div class="error-box">
+                    {{ chyba }}
+                </div>
+            {% else %}
+                {{ ai_html_obsah|safe }}
+            {% endif %}
+        </div>
+
+        <div class="action-container">
+            
+            <!-- 📑 TECHNICKÝ PREUKAZ ZARIADENIA -->
+            <details class="tech-passport">
+                <summary>
+                    <span style="display: flex; align-items: center; gap: 10px;">📑 Technický preukaz zariadenia</span>
+                    <span class="tp-chevron">▼</span>
+                </summary>
+                <div class="tech-passport-content">
+                    
+                    <!-- ZÁKLADNÉ A PREVÁDZKOVÉ ÚDAJE -->
+                    <div class="tp-section-title">Základné a prevádzkové údaje</div>
+                    <div class="tp-grid">
+                        <div class="tp-item"><span class="tp-label">🏷️ Výrobca</span><span class="tp-value">{{ zariadenie.vyrobca.nazov_vyrobcu|default:"Nezadaný" }}</span></div>
+                        <div class="tp-item"><span class="tp-label">🔢 Výrobné číslo</span><span class="tp-value">{{ zariadenie.vyrobne_cislo|default:"Nezadané" }}</span></div>
+                        <div class="tp-item"><span class="tp-label">📅 {{ terms.rok_vyroby }}</span><span class="tp-value">{{ zariadenie.rok_vyroby|default:"-" }}</span></div>
+                        <div class="tp-item"><span class="tp-label">📍 {{ terms.umiestnenie }}</span><span class="tp-value">{{ zariadenie.umiestnenie|default:"-" }}</span></div>
+                        <div class="tp-item"><span class="tp-label">⏱️ {{ zariadenie.meter_label }} (Celkové)</span><span class="tp-value">{{ zariadenie.meter_display }}</span></div>
+                        <div class="tp-item"><span class="tp-label">🏋️ {{ zariadenie.meter_load_label }}</span><span class="tp-value">{{ zariadenie.meter_load_display }}</span></div>
+                    </div>
+
+                    <!-- ŠPECIFICKÉ PARAMETRE -->
+                    {% if ui_parametre %}
+                    <div class="tp-section-title" style="margin-top: 10px;">Špecifické parametre</div>
+                    <div class="tp-grid">
+                        {% for param in ui_parametre %}
+                        <div class="tp-item">
+                            <span class="tp-label">{{ param.nazov }}</span>
+                            <span class="tp-value">{{ param.hodnota|default:"-" }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <!-- HISTÓRIA ZÁSAHOV -->
+                    <div class="tp-section-title" style="margin-top: 10px;">Posledné servisné zásahy</div>
+                    {% if historia %}
+                        <ul class="tp-history-list">
+                        {% for zaznam in historia %}
+                            <li>
+                                <span class="tp-history-date">📅 {{ zaznam.vytvorene|date:"d.m.Y"|default:"-" }} <span style="color:#94a3b8; font-weight:600;">({{ zaznam.meter_label }}: {{ zaznam.meter_display }})</span></span>
+                                {{ zaznam.poruchy|linebreaksbr|default:"-" }}
+                            </li>
+                        {% endfor %}
+                        </ul>
+                    {% else %}
+                        <div style="color: #64748b; font-size: 13px; font-weight: 600; background: #f8fafc; padding: 20px; border-radius: 12px; text-align: center; border: 1px dashed #cbd5e1;">
+                            Zariadenie zatiaľ nemá žiadnu servisnú históriu.
+                        </div>
+                    {% endif %}
+
+                </div>
+            </details>
+
+            <button class="isas-ai-confirm-btn" onclick="zavrietOkno()"><span>✅</span> Rozumiem a zatvoriť</button>
+        </div>
+    </div>
+
+    <script>
+        // Inicializácia Telegram WebApp
+        if (window.Telegram && window.Telegram.WebApp) {
+            window.Telegram.WebApp.ready();
+            window.Telegram.WebApp.expand();
+        }
+
+        function zavrietOkno() {
+            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) {
+                window.Telegram.WebApp.close();
+            } else {
+                window.close();
+                document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;color:#64748b;font-weight:800;font-size:18px;">Môžete zatvoriť túto kartu.</div>';
+            }
+        }
+    </script>
+
+    <div style="display: none;">{% csrf_token %}</div>
+    <!-- 📝 ISAS QUICKNOTE KONTAJNER -->
+    <div id="isas-quicknote-container">
+        <div id="quicknote-window">
+            <div style="background: #1e293b; color: #f8fafc; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155;">
+                <span style="font-weight: 800; display: flex; align-items: center; gap: 10px; font-size: 14px;">📓 Rýchle poznámky</span>
+                <button onclick="toggleQuickNote()" style="background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 22px; padding: 0; line-height: 1; transition: color 0.2s;">×</button>
+            </div>
+            <textarea id="quicknote-textarea" placeholder="Poznačte si zistenia z diagnostiky, potrebné položky alebo kroky...&#10;(Všetko sa automaticky ukladá do telefónu)"></textarea>
+            
+            <div class="quicknote-toolbar">
+                <button class="qn-btn" id="qn-dictate-btn" onclick="qnDictate()" title="Hlasové diktovanie">🎙️ Diktovať</button>
+                <button class="qn-btn primary" id="qn-sync-btn" onclick="qnSyncToBot()" title="Poslať do Bota">📥 Do Bota</button>
+                <button class="qn-btn" id="qn-copy-btn" onclick="qnCopy()">📋 Kopírovať</button>
+                <button class="qn-btn" id="qn-share-btn" onclick="qnShare()" style="color: #d97706; border-color: #fde68a; background: #fffbeb;">📤 Zdieľať</button>
+                <button class="qn-btn danger" onclick="qnClear()">🗑️ Zmazať</button>
+            </div>
+        </div>
+        <button id="quicknote-toggle-btn" onclick="toggleQuickNote()" title="Otvoriť poznámkový blok">📓</button>
+    </div>
+
+    <!-- 📝 ISAS QUICKNOTE LOGIKA -->
+    <script>
+        function toggleQuickNote() {
+            const win = document.getElementById('quicknote-window');
+            if (win.style.display === 'flex') {
+                win.style.display = 'none';
+            } else {
+                win.style.display = 'flex';
+                setTimeout(() => document.getElementById('quicknote-textarea').focus(), 50);
+            }
+        }
+
+        function saveQuickNote() {
+            const el = document.getElementById('quicknote-textarea');
+            if (!el) return;
+            try {
+                localStorage.setItem('isas_quicknote_data', el.value);
+            } catch (e) {
+                console.warn('LocalStorage nie je dostupný:', e);
+            }
+        }
+
+        function qnCopy() {
+            const ta = document.getElementById('quicknote-textarea');
+            if (!ta) return;
+            const applySuccess = () => {
+                const btn = document.getElementById('qn-copy-btn');
+                if (!btn) return;
+                const originalHtml = btn.innerHTML;
+                btn.innerHTML = '✅ Hotovo';
+                btn.style.background = '#10b981';
+                btn.style.color = 'white';
+                setTimeout(() => { btn.innerHTML = originalHtml; btn.style.background = ''; btn.style.color = ''; }, 2000);
+            };
+            const applyError = () => {
+                if (typeof showISASToast === 'function') {
+                    showISASToast("Nepodarilo sa skopírovať text.", "❌", "error");
+                }
+            };
+            if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+                navigator.clipboard.writeText(ta.value).then(applySuccess).catch(applyError);
+            } else {
+                try {
+                    ta.select();
+                    document.execCommand('copy');
+                    applySuccess();
+                } catch (e) {
+                    applyError();
+                }
+            }
+        }
+
+        function qnClear() {
+            const doClear = function() {
+                const ta = document.getElementById('quicknote-textarea');
+                if (ta) {
+                    ta.value = '';
+                    saveQuickNote();
+                    ta.focus();
+                }
+            };
+            if (typeof window.showGlobalConfirmModal === 'function') {
+                window.showGlobalConfirmModal("Vymazať poznámky", "⚠️ Naozaj chcete vymazať všetky poznámky? Tento krok sa nedá vrátiť späť.", doClear);
+            } else if (window.confirm("Naozaj chcete vymazať všetky poznámky? Tento krok sa nedá vrátiť späť.")) {
+                doClear();
+            }
+        }
+
+        function qnShare() {
+            const ta = document.getElementById('quicknote-textarea');
+            const text = ta ? ta.value.trim() : '';
+            if (!text) { 
+                if (typeof showISASToast === 'function') {
+                    showISASToast("Poznámkový blok je prázdny. Nemáte čo zdieľať.", "📭", "warning"); 
+                } else {
+                    alert("Poznámkový blok je prázdny. Nemáte čo zdieľať.");
+                }
+                return; 
+            }
+            if (navigator.share) {
+                navigator.share({ title: 'ISAS Diagnostika - Poznámka', text: text })
+                .catch((error) => console.log('Zdieľanie zrušené', error));
+            } else {
+                qnCopy();
+                if (typeof window.showGlobalAlertModal === 'function') {
+                    window.showGlobalAlertModal("Skopírované", "Text bol skopírovaný do schránky. Môžete ho vložiť do ľubovoľnej aplikácie.", "success");
+                } else {
+                    alert("Text bol skopírovaný do schránky. Môžete ho vložiť do ľubovoľnej aplikácie.");
+                }
+            }
+        }
+
+        function qnDictate() {
+            const btn = document.getElementById('qn-dictate-btn');
+            const ta = document.getElementById('quicknote-textarea');
+            if (typeof window.ISASDictateEngine === 'function') {
+                window.ISASDictateEngine(btn, ta, '🎙️ Diktovať', '🔴 Počúvam...');
+            } else if (typeof showISASToast === 'function') {
+                showISASToast("Hlasové diktovanie nie je v tomto prehliadači dostupné.", "⚠️", "warning");
+            } else {
+                alert("Hlasové diktovanie nie je v tomto prehliadači dostupné.");
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const ta = document.getElementById('quicknote-textarea');
+            if (ta) {
+                try {
+                    ta.value = localStorage.getItem('isas_quicknote_data') || '';
+                } catch (e) {
+                    console.warn('LocalStorage nie je dostupný:', e);
+                }
+                ta.addEventListener('input', saveQuickNote);
+            }
+        });
+
+        function qnSyncToBot() {
+            const ta = document.getElementById('quicknote-textarea');
+            const text = ta ? ta.value.trim() : '';
+            if (!text) { 
+                if (typeof showISASToast === 'function') {
+                    showISASToast("Poznámkový blok je prázdny.", "📭", "warning"); 
+                } else {
+                    alert("Poznámkový blok je prázdny.");
+                }
+                return; 
+            }
+            
+            const btn = document.getElementById('qn-sync-btn');
+            const pathParts = window.location.pathname.replace(/\/$/, '').split('/');
+            const token = pathParts[pathParts.length - 1];
+            if (!token) {
+                if (typeof showISASToast === 'function') {
+                    showISASToast("Nepodarilo sa rozpoznať identifikátor zariadenia.", "⚠️", "error");
+                } else {
+                    alert("Nepodarilo sa rozpoznať identifikátor zariadenia.");
+                }
+                return;
+            }
+            if (typeof window.ISASAction !== 'function') {
+                if (typeof showISASToast === 'function') {
+                    showISASToast("Komunikačný modul nie je pripravený.", "⚠️", "error");
+                } else {
+                    alert("Komunikačný modul nie je pripravený.");
+                }
+                return;
+            }
+            
+            window.ISASAction({ text: text }, btn, {
+                url: `/evidencia/zariadenie/sepkar/draft/${token}/`,
+                loadingText: '⏳ Odosielam...',
+                reload: false,
+                onComplete: (data, b, origHtml) => {
+                    if (data.status === 'ok' || data.status === 'success') {
+                        b.innerHTML = '✅ Pripravené';
+                        b.classList.add('success');
+                        if (typeof window.showGlobalAlertModal === 'function') {
+                            window.showGlobalAlertModal(
+                                "Poznámky odoslané", 
+                                "Poznámky boli úspešne odoslané do tvojho Bota.<br><br>Teraz otvor Telegram/Discord, klikni na <b>'Nahlásiť servis'</b> a Bot ti ich automaticky ponúkne na import.", 
+                                "success"
+                            );
+                        } else {
+                            alert("Poznámky boli úspešne odoslané do tvojho Bota.");
+                        }
+                        setTimeout(() => { b.innerHTML = origHtml; b.classList.remove('success', 'is-processing'); b.style.pointerEvents = 'auto'; }, 3000);
+                    } else {
+                        b.innerHTML = '❌ Chyba';
+                        b.classList.add('error');
+                        const msg = data.msg || data.message || "Nepodarilo sa odoslať poznámky.";
+                        if (typeof showISASToast === 'function') {
+                            showISASToast(msg, "⚠️", "error");
+                        } else {
+                            alert(msg);
+                        }
+                        setTimeout(() => { b.innerHTML = origHtml; b.classList.remove('error', 'is-processing'); b.style.pointerEvents = 'auto'; }, 3000);
+                    }
+                },
+                onError: () => {
+                    if (typeof showISASToast === 'function') {
+                        showISASToast("Chyba spojenia so serverom. Skontrolujte pripojenie.", "🔌", "error");
+                    } else {
+                        alert("Chyba spojenia so serverom. Skontrolujte pripojenie.");
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>

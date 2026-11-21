@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <title>Objednávka #{{ cislo_objednavky }}</title>
+    {% include "documents/document_design_system.html" %}
+</head>
+<body>
+
+    <div class="document-wrapper">
+        <div class="watermark">OBJEDNÁVKA</div>
+
+        <!-- HLAVIČKA -->
+        <div class="header">
+            <div class="header-left">
+                {% if identita.logo and identita.logo.name %}
+                    <img src="{{ identita.logo.url }}" class="logo-img" alt="Logo">
+                {% else %}
+                    <h1 class="logo-text">{{ identita.nazov_spolocnosti|default:"ISAS CORE" }}</h1>
+                {% endif %}
+                {% if identita.podtitul %}
+                    <div class="company-meta">{{ identita.podtitul }}</div>
+                {% endif %}
+            </div>
+            <div class="header-right">
+                <div class="doc-type">Záväzná objednávka</div>
+                <div class="doc-number">{{ cislo_objednavky }}</div>
+                <div class="doc-date">Vystavené dňa: {{ datum_vystavenia }}</div>
+            </div>
+        </div>
+
+        <!-- INFORMAČNÉ KARTY -->
+        <div class="info-grid">
+            <!-- ODBERATEĽ (Naša firma) -->
+            <div class="info-card avoid-break">
+                <div class="info-card-header">🏢 Odberateľ (Fakturačná adresa)</div>
+                <div class="info-value">{{ identita.nazov_spolocnosti }}</div>
+                <div class="info-meta" style="margin-bottom: 10px;">
+                    {% if identita.sidlo_ulica %}{{ identita.sidlo_ulica }} {{ identita.sidlo_cislo }},{% endif %}
+                    {% if identita.sidlo_psc %}{{ identita.sidlo_psc }} {% endif %}{{ identita.sidlo_mesto|default:"" }}
+                    {% if identita.sidlo_stat %}<br>{{ identita.sidlo_stat }}{% endif %}
+                </div>
+                <div class="meta-line"><strong>IČO:</strong> <span>{{ identita.ico|default:"-" }}</span></div>
+                <div class="meta-line"><strong>DIČ:</strong> <span>{{ identita.dic|default:"-" }}</span></div>
+                <div class="meta-line"><strong>IČ DPH:</strong> <span>{% if identita.je_platca_dph %}{{ identita.ic_dph|default:"-" }}{% else %}<span style="color: var(--slate-500); font-weight: 600;">Neplatca DPH</span>{% endif %}</span></div>
+                {% if identita.iban %}
+                <div class="meta-line"><strong>IBAN:</strong> <span>{{ identita.iban }}</span></div>
+                {% endif %}
+                
+                <div class="meta-line" style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e2e8f0;">
+                    <strong>Vystavil:</strong> 
+                    <span>
+                        {% if vystavil_user.zamestnanec %}
+                            {{ vystavil_user.zamestnanec.meno }} {{ vystavil_user.zamestnanec.priezvisko }}
+                        {% else %}
+                            {{ identita.vystavuje_objednavky|default:identita.konatel|default:"Nákupné oddelenie" }}
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="meta-line"><strong>Tel:</strong> <span>{% if vystavil_user.zamestnanec.telefon %}{{ vystavil_user.zamestnanec.telefon }}{% else %}{{ identita.telefon|default:"-" }}{% endif %}</span></div>
+                <div class="meta-line"><strong>Email:</strong> <span>{% if vystavil_user.zamestnanec.email %}{{ vystavil_user.zamestnanec.email }}{% elif vystavil_user.email %}{{ vystavil_user.email }}{% else %}{{ identita.email_vseobecny|default:"-" }}{% endif %}</span></div>
+                {% if identita.web %}
+                <div class="meta-line"><strong>Web:</strong> <span>{{ identita.web }}</span></div>
+                {% endif %}
+            </div>
+
+            <!-- DODÁVATEĽ -->
+            <div class="info-card avoid-break">
+                <div class="info-card-header">🏭 Dodávateľ</div>
+                <div class="info-value">{{ dodavatel.Nazov_spolocnosti|default:dodavatel }}</div>
+                <div class="info-meta" style="margin-bottom: 10px;">
+                    {% if dodavatel.ulica_a_cislo %}{{ dodavatel.ulica_a_cislo }},{% endif %}
+                    {% if dodavatel.psc %}{{ dodavatel.psc }} {% endif %}{{ dodavatel.mesto|default:"" }}
+                    {% if dodavatel.stat %}<br>{{ dodavatel.stat }}{% endif %}
+                </div>
+                <div class="meta-line"><strong>IČO:</strong> <span>{{ dodavatel.ico|default:"-" }}</span></div>
+                <div class="meta-line"><strong>DIČ:</strong> <span>{{ dodavatel.dic|default:"-" }}</span></div>
+                <div class="meta-line"><strong>IČ DPH:</strong> <span>{{ dodavatel.ic_dph|default:"-" }}</span></div>
+                {% if dodavatel.iban %}
+                <div class="meta-line"><strong>IBAN:</strong> <span>{{ dodavatel.iban }}</span></div>
+                {% endif %}
+                
+                <div class="meta-line" style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e2e8f0;">
+                    <strong>Kontakt:</strong> <span>{% if dodavatel.oslovenie_rod %}{{ dodavatel.oslovenie_rod|title }} {% endif %}{{ dodavatel.kontaktna_osoba|default:"-" }}</span>
+                </div>
+                <div class="meta-line"><strong>Tel:</strong> <span>{{ dodavatel.telefon|default:"-" }}</span></div>
+                <div class="meta-line"><strong>Email:</strong> <span>{{ dodavatel.email|default:"-" }}</span></div>
+            </div>
+        </div>
+
+        <!-- MIESTO DODANIA A LOGISTIKA -->
+        <div class="section-title avoid-break">Logistika a miesto dodania</div>
+        <div class="ai-insight avoid-break">
+            <div class="ai-label">📍 PRESNÁ ADRESA DORUČENIA</div>
+            <div class="ai-content">
+                <strong style="color: var(--slate-900); display: block; margin-bottom: 8px; font-size: 13px;">
+                    {% if filialka %}
+                        Pobočka / Sklad: {{ filialka.nazov }}
+                    {% else %}
+                        Centrála spoločnosti (Hlavný sklad)
+                    {% endif %}
+                </strong>
+                
+                <div style="margin-bottom: 10px; font-weight: 500; color: var(--slate-700); line-height: 1.6;">
+                    {% if filialka %}
+                        {{ filialka.adresa|default:"Adresa neuvedená (Kontaktujte nás prosím telefonicky)"|linebreaksbr }}
+                    {% else %}
+                        {% if identita.adresa_prevadzky %}
+                            {{ identita.adresa_prevadzky|linebreaksbr }}
+                        {% else %}
+                            {% if identita.sidlo_ulica %}{{ identita.sidlo_ulica }} {{ identita.sidlo_cislo }}<br>{% endif %}
+                            {% if identita.sidlo_psc %}{{ identita.sidlo_psc }} {% endif %}{{ identita.sidlo_mesto|default:"" }}{% if identita.sidlo_stat %}<br>{{ identita.sidlo_stat }}{% endif %}
+                        {% endif %}
+                    {% endif %}
+                </div>
+
+                <span style="font-size: 10.5px; color: var(--slate-500); font-weight: 600; display: inline-block; padding: 6px 10px; background: #f1f5f9; border-radius: 4px; border: 1px solid #e2e8f0; width: 100%; box-sizing: border-box;">
+                    <strong>Kontaktná osoba pre prevzatie plnenia:</strong><br>
+                    {% if filialka %}
+                        👤 {% if filialka.zodpovedny_zamestnanec %}{{ filialka.zodpovedny_zamestnanec.meno }} {{ filialka.zodpovedny_zamestnanec.priezvisko }}{% else %}{{ filialka.veduci_skladu|default:"Skladník" }}{% endif %} 
+                        {% if filialka.zodpovedny_zamestnanec and filialka.zodpovedny_zamestnanec.telefon %}| 📞 {{ filialka.zodpovedny_zamestnanec.telefon }}{% elif filialka.telefon %}| 📞 {{ filialka.telefon }}{% endif %} 
+                        {% if filialka.zodpovedny_zamestnanec and filialka.zodpovedny_zamestnanec.email %}| ✉️ {{ filialka.zodpovedny_zamestnanec.email }}{% elif filialka.email %}| ✉️ {{ filialka.email }}{% endif %}
+                    {% else %}
+                        <!-- 🟢 OPRAVENÉ: Dynamické ťahanie pre Hlavný sklad -->
+                        👤 {% if identita.zodpovedny_zamestnanec_sklad %}{{ identita.zodpovedny_zamestnanec_sklad.meno }} {{ identita.zodpovedny_zamestnanec_sklad.priezvisko }}{% else %}{{ identita.veduci_skladu|default:"Prijímacie oddelenie skladu" }}{% endif %} 
+                        {% if identita.zodpovedny_zamestnanec_sklad and identita.zodpovedny_zamestnanec_sklad.telefon %}| 📞 {{ identita.zodpovedny_zamestnanec_sklad.telefon }}{% elif identita.telefon_sklad %}| 📞 {{ identita.telefon_sklad }}{% elif identita.telefon %}| 📞 {{ identita.telefon }}{% endif %} 
+                        {% if identita.zodpovedny_zamestnanec_sklad and identita.zodpovedny_zamestnanec_sklad.email %}| ✉️ {{ identita.zodpovedny_zamestnanec_sklad.email }}{% elif identita.email_sklad %}| ✉️ {{ identita.email_sklad }}{% elif identita.email_vseobecny %}| ✉️ {{ identita.email_vseobecny }}{% endif %}
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+
+        <!-- POLOŽKY -->
+        <div class="section-title avoid-break">Rozpis objednávaných položiek</div>
+        <table class="modern-table">
+            <thead>
+                <tr>
+                    <th style="width: 5%; text-align: center;">#</th>
+                    <th style="width: 70%;">Názov položky / Špecifikácia</th>
+                    <th class="right" style="width: 25%;">Požadované množstvo</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for polozka in polozky %}
+                <tr class="avoid-break">
+                    <td style="text-align: center; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--slate-500); font-weight: 700;">{{ forloop.counter }}</td>
+                    <td>
+                        <span class="mat-cat">{{ polozka.kategoria }}</span>
+                        <span class="item-name">{{ polozka.nazov }}</span>
+                        {% if polozka.vyrobca %}
+                            <span class="item-manufacturer">Výrobca: <strong>{{ polozka.vyrobca }}</strong></span>
+                        {% endif %}
+                    </td>
+                    <td class="right">
+                        <span class="mat-qty-val">{{ polozka.mnozstvo }}</span>
+                        <span class="mat-qty-unit">{{ polozka.merna_jednotka }}</span>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="3" style="text-align: center; padding: 20px; color: var(--slate-500); font-style: italic;">
+                        V objednávke nie sú evidované žiadne položky.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- LEGISLATÍVA A OBCHODNÉ PODMIENKY -->
+        <div class="legal-box avoid-break">
+            <div style="margin-bottom: 8px;">
+                <strong style="color: var(--slate-900);">Záväznosť, kvalita a ceny:</strong> Zmluvný vzťah sa riadi platnými právnymi predpismi. Uvedené ceny sú konečné, záväzné a <b>zahŕňajú všetky súvisiace náklady na dodanie (vrátane prípadného balného, dopravy a poistenia)</b> do miesta dodania (pokiaľ nie je výslovne dohodnuté inak). Dodávateľ garantuje, že predmet objednávky je originálny, bez právnych a faktických vád a spĺňa príslušné platné normy.
+            </div>
+            <div style="margin-bottom: 8px;">
+                <strong style="color: var(--slate-900);">Dodanie a prechod nebezpečenstva:</strong> Vlastnícke alebo užívacie právo a nebezpečenstvo škody prechádza na odberateľa výlučne až momentom riadneho prevzatia a kontroly dodávky v mieste alebo spôsobom dohodnutého dodania. V prípade omeškania dodávky si odberateľ vyhradzuje právo od objednávky bezodkladne odstúpiť bez akejkoľvek sankcie.
+            </div>
+            <div style="margin-bottom: 8px;">
+                <strong style="color: var(--slate-900);">Potvrdenie objednávky:</strong> Žiadame o <b>písomné potvrdenie akceptácie</b> a oznámenie presného termínu dodania najneskôr <b>do 48 hodín</b>. Márne uplynutie tejto lehoty alebo akákoľvek jednostranná zmena podmienok zo strany dodávateľa sa považuje za neakceptovanie objednávky.
+            </div>
+            <div>
+                <strong style="color: var(--slate-900);">Fakturačné inštrukcie:</strong> Faktúru (daňový doklad) vystavte so splatnosťou <strong>{{ identita.splatnost_faktur|default:"14" }} dní</strong> od jej preukázateľného doručenia a zašlite v PDF na: <span class="highlight-mail">{{ identita.email_fakturacia|default:identita.email_vseobecny }}</span>. Na faktúre <b>musí byť uvedené číslo objednávky: {{ cislo_objednavky }}</b>. Ak faktúra nebude obsahovať zákonné náležitosti alebo číslo objednávky, odberateľ je oprávnený ju vrátiť. Nová lehota splatnosti začne plynúť až doručením bezchybnej faktúry.
+            </div>
+        </div>
+
+        <!-- PÄTIČKA (Banka a Podpis) -->
+        <div class="signature-grid avoid-break">
+            <div class="bank-box">
+                <div class="info-card-header" style="border:none; margin-bottom: 5px; padding:0;">🏛️ Firemné a bankové údaje</div>
+                {% if identita.nazov_banky %}Banka: <strong>{{ identita.nazov_banky }}</strong><br>{% endif %}
+                {% if identita.iban %}<span class="bank-iban">{{ identita.iban }}</span>{% endif %}
+                {% if identita.swift %}SWIFT / BIC: <strong>{{ identita.swift }}</strong><br>{% endif %}
+                
+                {% if identita.zapis_v_registri %}
+                    <div style="font-size: 9px; color: var(--slate-500); margin-top: 6px; line-height: 1.4;">{{ identita.zapis_v_registri }}</div>
+                {% endif %}
+            </div>
+
+            <div class="sign-block">
+                <div class="sign-pad">
+                    {% if vystavil_user.zamestnanec.osobny_podpis and vystavil_user.zamestnanec.osobny_podpis.name %}
+                        <img src="{{ vystavil_user.zamestnanec.osobny_podpis.url }}" class="sign-img" alt="Osobný podpis">
+                    {% elif identita.peciatka_podpis and identita.peciatka_podpis.name %}
+                        <img src="{{ identita.peciatka_podpis.url }}" class="sign-img" alt="Pečiatka a Podpis">
+                    {% endif %}
+                </div>
+                <div class="sign-line">
+                    {% if vystavil_user.zamestnanec %}
+                        {{ vystavil_user.zamestnanec.meno }} {{ vystavil_user.zamestnanec.priezvisko }}
+                    {% else %}
+                        {{ identita.vystavuje_objednavky|default:identita.konatel|default:"Oprávnená osoba" }}
+                    {% endif %}
+                </div>
+                <div class="sign-detail">Vystavil / Oprávnená osoba za odberateľa</div>
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>

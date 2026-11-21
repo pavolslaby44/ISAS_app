@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cenová ponuka - {{ ponuka.cislo_ponuky }}</title>
+    
+    {% include "documents/document_design_system.html" %}
+</head>
+<body>
+
+    <div class="document-wrapper">
+    <div class="watermark">CENOVÁ PONUKA</div>
+
+    <!-- HLAVIČKA -->
+    <div class="header">
+        <div class="header-left">
+            {% if identita.logo and identita.logo.name %}
+                <img src="{{ identita.logo.url }}" class="logo-img" alt="Logo">
+            {% elif identita.nazov_spolocnosti %}
+                <h1 class="logo-text">{{ identita.nazov_spolocnosti }}</h1>
+            {% endif %}
+            {% if identita.podtitul %}
+                <div class="company-meta">{{ identita.podtitul }}</div>
+            {% endif %}
+        </div>
+        <div class="header-right">
+            <div class="doc-type">Cenová ponuka</div>
+            <div class="doc-number">{{ ponuka.cislo_ponuky }}</div>
+            <div class="doc-date">Vystavené dňa: {{ ponuka.datum_vystavenia|date:"d.m.Y" }}</div>
+            <div class="doc-date" style="color: var(--primary-dark);">Platnosť ponuky: {{ identita.predvolena_platnost_ponuk|default:"14" }} dní</div>
+        </div>
+    </div>
+
+    <!-- INFORMAČNÉ KARTY -->
+    <div class="info-grid">
+        <!-- DODÁVATEĽ -->
+        <div class="info-card avoid-break">
+            <div class="info-card-header">🏢 Dodávateľ (Zhotoviteľ)</div>
+            <div class="info-value">{{ identita.nazov_spolocnosti }}</div>
+            <div class="info-meta" style="margin-bottom: 10px;">
+                {% if identita.sidlo_ulica %}{{ identita.sidlo_ulica }} {{ identita.sidlo_cislo }},{% endif %}
+                {% if identita.sidlo_psc %}{{ identita.sidlo_psc }}{% endif %}
+                {% if identita.sidlo_mesto %}{{ identita.sidlo_mesto }}{% endif %}
+                {% if identita.sidlo_stat %}<br>{{ identita.sidlo_stat }}{% endif %}
+            </div>
+            <div class="meta-line"><strong>IČO:</strong> <span>{{ identita.ico|default:"-" }}</span></div>
+            <div class="meta-line"><strong>DIČ:</strong> <span>{{ identita.dic|default:"-" }}</span></div>
+            <!-- ⚖️ OPRAVA: Právne čisté zobrazenie statusu platcu DPH -->
+            <div class="meta-line"><strong>IČ DPH:</strong> <span>{% if identita.je_platca_dph %}{{ identita.ic_dph|default:"-" }}{% else %}<span style="color: var(--slate-500); font-weight: 600;">Neplatca DPH</span>{% endif %}</span></div>
+            
+            <div class="meta-line" style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e2e8f0;">
+                <strong>Vystavil:</strong> 
+                <span>
+                    {% if ponuka.vystavil.zamestnanec %}
+                        {{ ponuka.vystavil.zamestnanec.meno }} {{ ponuka.vystavil.zamestnanec.priezvisko }}
+                    {% else %}
+                        {{ identita.vystavuje_ponuky|default:identita.konatel|default:"Obchodné oddelenie" }}
+                    {% endif %}
+                </span>
+            </div>
+            <div class="meta-line"><strong>Tel:</strong> <span>{% if ponuka.vystavil.zamestnanec.telefon %}{{ ponuka.vystavil.zamestnanec.telefon }}{% elif ponuka.vystavil.telefon %}{{ ponuka.vystavil.telefon }}{% else %}{{ identita.telefon|default:"-" }}{% endif %}</span></div>
+            <div class="meta-line"><strong>Email:</strong> <span>{% if ponuka.vystavil.zamestnanec.email %}{{ ponuka.vystavil.zamestnanec.email }}{% elif ponuka.vystavil.email %}{{ ponuka.vystavil.email }}{% else %}{{ identita.email_vseobecny|default:"-" }}{% endif %}</span></div>
+            {% if identita.web %}
+            <div class="meta-line"><strong>Web:</strong> <span>{{ identita.web }}</span></div>
+            {% endif %}
+        </div>
+
+        <!-- ODBERATEĽ -->
+        <div class="info-card avoid-break">
+            <div class="info-card-header">👤 Odberateľ (Zákazník)</div>
+            <div class="info-value">{{ ponuka.zakaznik.Nazov_spolocnosti }}</div>
+            <div class="info-meta" style="margin-bottom: 10px;">
+                {% if ponuka.zakaznik.ulica_a_cislo %}{{ ponuka.zakaznik.ulica_a_cislo }},{% endif %}
+                {% if ponuka.zakaznik.psc %}{{ ponuka.zakaznik.psc }}{% endif %}
+                {% if ponuka.zakaznik.mesto %}{{ ponuka.zakaznik.mesto }}{% endif %}
+                {% if ponuka.zakaznik.stat %}<br>{{ ponuka.zakaznik.stat }}{% endif %}
+            </div>
+            <div class="meta-line"><strong>IČO:</strong> <span>{{ ponuka.zakaznik.ico|default:"-" }}</span></div>
+            <div class="meta-line"><strong>DIČ:</strong> <span>{{ ponuka.zakaznik.dic|default:"-" }}</span></div>
+            <div class="meta-line"><strong>IČ DPH:</strong> <span>{{ ponuka.zakaznik.ic_dph|default:"-" }}</span></div>
+            
+            {% if ponuka.zakaznik.kontaktna_osoba or ponuka.zakaznik.telefon or ponuka.zakaznik.email %}
+            <div class="meta-line" style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e2e8f0;">
+                <strong>Kontakt:</strong> <span>{{ ponuka.zakaznik.oslovenie_rod|default:""|title }} {{ ponuka.zakaznik.kontaktna_osoba|default:"-" }}</span>
+            </div>
+            <div class="meta-line"><strong>Tel:</strong> <span>{{ ponuka.zakaznik.telefon|default:"-" }}</span></div>
+            <div class="meta-line"><strong>Email:</strong> <span>{{ ponuka.zakaznik.email|default:"-" }}</span></div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- ⚙️ DOTKNUTÉ ZARIADENIA A SYSTÉMY -->
+    {% regroup polozky by zariadenie as unikatne_zariadenia %}
+    {% if ponuka.zariadenie or unikatne_zariadenia|length > 1 or unikatne_zariadenia.0.grouper %}
+    <div class="section-title avoid-break">Dotknuté zariadenia a systémy</div>
+    <div class="avoid-break" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 15px 20px; margin-bottom: 30px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+        
+        {% if ponuka.zariadenie %}
+            <div style="display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px dashed #f1f5f9;">
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0;">⚙️</div>
+                <div>
+                    <div style="font-size: 12.5px; font-weight: 800; color: var(--slate-900);">
+                        <!-- 💨 Kategória s Emoji + Model -->
+                        {{ ponuka.zariadenie.get_kategoria_display }} <span style="color: var(--slate-400); margin: 0 4px;">|</span> {{ ponuka.zariadenie.model_zariadenia|upper }}
+                        {% if ponuka.zariadenie.nazov %}<span style="color: var(--slate-500); font-weight: 600;">- "{{ ponuka.zariadenie.nazov }}"</span>{% endif %}
+                        <!-- 🚨 Odznak prenájmu -->
+                        {% if ponuka.zariadenie.v_prenajme_od_isas %}<span style="background: #fef2f2; color: #ef4444; font-size: 9px; padding: 2px 6px; border-radius: 4px; border: 1px solid #fca5a5; margin-left: 6px; font-weight: 800;">V PRENÁJME</span>{% endif %}
+                    </div>
+                    <div style="font-size: 10.5px; color: var(--slate-500); font-weight: 500; margin-top: 3px;">
+                        {% if ponuka.zariadenie.vyrobca %}Výrobca: <strong style="color: var(--slate-700);">{{ ponuka.zariadenie.vyrobca.nazov_vyrobcu }}</strong> | {% endif %}
+                        S/N: <strong style="color: var(--slate-700);">{{ ponuka.zariadenie.vyrobne_cislo }}</strong>
+                        {% if ponuka.zariadenie.rok_vyroby %} | {{ terms.rok_vyroby }}: {{ ponuka.zariadenie.rok_vyroby }}{% endif %}
+                        <!-- ⏱️ Prevádzkový stav počítadla -->
+                        {% if ponuka.zariadenie.aktualne_motohodiny > 0 %} | {{ ponuka.zariadenie.meter_label }}: {{ ponuka.zariadenie.meter_display }}{% endif %}
+                        {% if ponuka.zariadenie.umiestnenie %} | {{ terms.umiestnenie }}: {{ ponuka.zariadenie.umiestnenie }}{% endif %}
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+        
+        {% for z in unikatne_zariadenia %}
+            {% if z.grouper and z.grouper.id != ponuka.zariadenie.id %}
+                <div style="display: flex; align-items: center; gap: 12px; padding: 10px 0; {% if not forloop.last %}border-bottom: 1px dashed #f1f5f9;{% endif %}">
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0;">⚙️</div>
+                    <div>
+                        <div style="font-size: 12.5px; font-weight: 800; color: var(--slate-900);">
+                            <!-- 💨 Kategória s Emoji + Model -->
+                            {{ z.grouper.get_kategoria_display }} <span style="color: var(--slate-400); margin: 0 4px;">|</span> {{ z.grouper.model_zariadenia|upper }}
+                            {% if z.grouper.nazov %}<span style="color: var(--slate-500); font-weight: 600;">- "{{ z.grouper.nazov }}"</span>{% endif %}
+                            <!-- 🚨 Odznak prenájmu -->
+                            {% if z.grouper.v_prenajme_od_isas %}<span style="background: #fef2f2; color: #ef4444; font-size: 9px; padding: 2px 6px; border-radius: 4px; border: 1px solid #fca5a5; margin-left: 6px; font-weight: 800;">V PRENÁJME</span>{% endif %}
+                        </div>
+                        <div style="font-size: 10.5px; color: var(--slate-500); font-weight: 500; margin-top: 3px;">
+                            {% if z.grouper.vyrobca %}Výrobca: <strong style="color: var(--slate-700);">{{ z.grouper.vyrobca.nazov_vyrobcu }}</strong> | {% endif %}
+                            S/N: <strong style="color: var(--slate-700);">{{ z.grouper.vyrobne_cislo }}</strong>
+                            {% if z.grouper.rok_vyroby %} | {{ terms.rok_vyroby }}: {{ z.grouper.rok_vyroby }}{% endif %}
+                            <!-- ⏱️ Prevádzkový stav počítadla -->
+                            {% if z.grouper.aktualne_motohodiny > 0 %} | {{ z.grouper.meter_label }}: {{ z.grouper.meter_display }}{% endif %}
+                            {% if z.grouper.umiestnenie %} | {{ terms.umiestnenie }}: {{ z.grouper.umiestnenie }}{% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- PREDMET PONUKY A AI TEXT -->
+    {% if ponuka.ai_uvodny_text %}
+    <div class="section-title avoid-break">Predmet ponuky a Zhodnotenie</div>
+    <div class="ai-insight avoid-break">
+        <div class="ai-label">ISAS CORE - Úvod</div>
+        <div class="ai-content">
+            <div style="font-weight: 500; color: var(--slate-700); text-align: justify; line-height: 1.6;">
+                {{ ponuka.ai_uvodny_text|linebreaksbr }}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="section-title avoid-break">Rozpis položiek a služieb</div>
+
+    <!-- SEKCIA A: MATERIÁL A DIELY -->
+    <div class="info-card-header avoid-break" style="border:none; margin-bottom: 5px; font-size: 11px; color: var(--slate-900);">{{ terms.sekcia_material_label|default:"Dodané položky a komponenty" }}</div>
+    <table class="modern-table">
+        <thead>
+            <tr>
+                <th style="width: 40%;">Popis položky</th>
+                <th class="right" style="width: 15%;">Množstvo</th>
+                <th class="right" style="width: 15%;">Cena / j.</th>
+                <th class="right" style="width: 10%;">DPH</th>
+                <th class="right" style="width: 20%;">Spolu bez DPH</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in polozky %}
+                {% if p.typ_polozky != 'PRACA' and p.typ_polozky != 'DOPRAVA' and p.typ_polozky != 'ZLA' and p.typ_polozky != 'INE' %}
+                    <tr class="avoid-break">
+                        <td>
+                            <!-- 🏷️ ISAS UI: Kategória a Výrobca -->
+                            {% if p.kategoria_nazov %}
+                                <span class="mat-cat">{{ p.kategoria_nazov }}</span>
+                            {% endif %}
+                            
+                            <!-- 🧠 ISAS SMART FALLBACK: Názov -->
+                            <span class="item-name">{% if p.obchodny_nazov %}{{ p.obchodny_nazov }}{% else %}{{ p.nazov }}{% endif %}</span>
+                            
+                            <!-- 🕵️ ISAS SMART FALLBACK: Výrobca -->
+                            {% if not p.skryt_vyrobcu %}
+                                {% if p.vyrobca_nazov %}
+                                    <span class="item-manufacturer">Výrobca: <strong>{{ p.vyrobca_nazov }}</strong></span>
+                                {% elif p.skladovy_diel.vyrobca %}
+                                    <span class="item-manufacturer">Výrobca: <strong>{{ p.skladovy_diel.vyrobca }}</strong></span>
+                                {% elif p.skladovy_diel.vyrobca_dielu %}
+                                    <span class="item-manufacturer">Výrobca: <strong>{{ p.skladovy_diel.vyrobca_dielu }}</strong></span>
+                                {% endif %}
+                            {% endif %}
+                            
+                            <!-- ⚙️ ISAS FIX: Zobrazenie zariadenia pre konkrétny diel -->
+                            {% if p.zariadenie %}
+                                <div class="item-device-badge">
+                                    ⚙️ {{ p.zariadenie.model_zariadenia }} <span>(S/N: {{ p.zariadenie.vyrobne_cislo }})</span>
+                                </div>
+                            {% endif %}
+                            
+                            {% if p.zlava_percento > 0 %}
+                                <span class="badge-discount">Zľava -{{ p.zlava_percento|floatformat:1 }} %</span>
+                            {% endif %}
+                        </td>
+                        <td class="right"><b>{{ p.mnozstvo|floatformat:2 }}</b> <span style="font-size:9px; color:var(--slate-500);">{{ p.merna_jednotka }}</span></td>
+                        <td class="right">{{ p.jednotkova_cena_bez_dph|floatformat:2 }} {{ ponuka.mena }}</td>
+                        <td class="right">{% if ponuka.prenos_danovej_povinnosti %}0%{% else %}{{ p.sadzba_dph|floatformat:0 }}%{% endif %}</td>
+                        <td class="right"><b>{{ p.cena_po_zlave_bez_dph|floatformat:2 }} {{ ponuka.mena }}</b></td>
+                    </tr>
+                {% endif %}
+            {% empty %}
+                <tr>
+                    <td colspan="5" style="text-align: center; padding: 15px; color: var(--slate-500); font-style: italic;">
+                        V tejto sekcii nie sú evidované žiadne položky.
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- SEKCIA B: ODBORNÁ PRÁCA A DOPRAVA -->
+    <div class="info-card-header avoid-break" style="border:none; margin-bottom: 5px; font-size: 11px; color: var(--slate-900);">{{ terms.sekcia_prace_label|default:"Služby a realizácia" }}</div>
+    <table class="modern-table">
+        <thead>
+            <tr>
+                <th style="width: 40%;">Popis položky</th>
+                <th class="right" style="width: 15%;">Množstvo</th>
+                <th class="right" style="width: 15%;">Cena / j.</th>
+                <th class="right" style="width: 10%;">DPH</th>
+                <th class="right" style="width: 20%;">Spolu bez DPH</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in polozky %}
+                {% if p.typ_polozky == 'PRACA' or p.typ_polozky == 'DOPRAVA' or p.typ_polozky == 'INE' %}
+                    <tr class="avoid-break">
+                        <td>
+                            <!-- 🧹 OPRAVA: Odstránenie neprofesionálneho prefixu z názvu -->
+                            <span class="item-name">{{ p.nazov|cut:"🚨 EXPRES/HAVÁRIA: "|cut:"EXPRES/HAVÁRIA: " }}</span>
+                            
+                            <!-- 🚨 OPRAVA: Ak to bola havária, ukážeme to ako elegantný štítok pod názvom -->
+                            {% if "HAVÁRIA" in p.nazov or "EXPRES" in p.nazov %}
+                                <span style="display: inline-block; font-size: 9px; background: #fef2f2; color: #ef4444; font-weight: 700; padding: 2px 6px; border-radius: 4px; border: 1px solid #fca5a5; margin-top: 4px;">🚨 Havarijný príplatok</span>
+                            {% endif %}
+                            
+                            {% if p.zlava_percento > 0 %}
+                                <span class="badge-discount">Zľava -{{ p.zlava_percento|floatformat:1 }} %</span>
+                            {% endif %}
+                            
+                            <!-- ⚙️ ISAS FIX: Zobrazenie zariadenia pre konkrétnu prácu -->
+                            {% if p.zariadenie %}
+                                <br>
+                                <div class="item-device-badge">
+                                    ⚙️ {{ p.zariadenie.model_zariadenia }} <span>(S/N: {{ p.zariadenie.vyrobne_cislo }})</span>
+                                </div>
+                            {% endif %}
+                        </td>
+                        <td class="right">
+                            <b>{{ p.mnozstvo|floatformat:2 }}</b> 
+                            {% if p.merna_jednotka|lower != 'ks' %}
+                                <span style="font-size:9px; color:var(--slate-500);">{{ p.merna_jednotka }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="right">{{ p.jednotkova_cena_bez_dph|floatformat:2 }} {{ ponuka.mena }}</td>
+                        <td class="right">{% if ponuka.prenos_danovej_povinnosti %}0%{% else %}{{ p.sadzba_dph|floatformat:0 }}%{% endif %}</td>
+                        <td class="right"><b>{{ p.cena_po_zlave_bez_dph|floatformat:2 }} {{ ponuka.mena }}</b></td>
+                    </tr>
+                {% endif %}
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- SEKCIA C: MIMORIADNE ZĽAVY -->
+    {% regroup polozky by typ_polozky as polozky_skupiny %}
+    {% for skupina in polozky_skupiny %}
+        {% if skupina.grouper == 'ZLA' %}
+            <div class="info-card-header avoid-break" style="border:none; margin-bottom: 5px; font-size: 11px; color: var(--danger);">🏷️ Mimoriadne zľavy</div>
+            <table class="modern-table" style="border-color: #fca5a5;">
+                <thead>
+                    <tr>
+                        <th style="width: 80%; background: var(--danger-bg); color: var(--danger);">Popis poskytnutej zľavy</th>
+                        <th class="right" style="width: 20%; background: var(--danger-bg); color: var(--danger); text-align: right;">Výška zľavy bez DPH</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in skupina.list %}
+                        <tr class="avoid-break">
+                            <td>
+                                <span class="item-name" style="color: var(--danger); font-weight: 700;">{{ p.nazov }}</span>
+                                <span style="font-size: 10px; color: var(--slate-500); display: block; margin-top: 3px;">Mimoriadne odpočítanie z celkovej ceny diela</span>
+                            </td>
+                            <td class="right" style="text-align: right; vertical-align: middle;">
+                                <b style="color: var(--danger); font-size: 13px;">{{ p.cena_po_zlave_bez_dph|floatformat:2 }} {{ ponuka.mena }}</b>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    {% endfor %}
+
+    <!-- FINANČNÝ SUMÁR -->
+    <div class="summary-wrapper avoid-break">
+        <div class="totals-box">
+            
+            {% if ponuka.globalna_zlava_percento > 0 %}
+                <div class="total-line">
+                    <span>Medzisúčet bez DPH:</span>
+                    <span>{{ ponuka.celkom_bez_dph_pred_zlavou|floatformat:2 }} {{ ponuka.mena }}</span>
+                </div>
+                <div class="total-line discount">
+                    <span>Zľava na doklad ({{ ponuka.globalna_zlava_percento|floatformat:1 }} %):</span>
+                    <span>- {{ ponuka.hodnota_zlavy|floatformat:2 }} {{ ponuka.mena }}</span>
+                </div>
+            {% endif %}
+            
+            {% if identita.je_platca_dph %}
+                <div class="total-line" {% if ponuka.globalna_zlava_percento > 0 %}style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #cbd5e1;"{% endif %}>
+                    <span>Základ pre DPH:</span>
+                    <span>{{ ponuka.celkom_bez_dph|floatformat:2 }} {{ ponuka.mena }}</span>
+                </div>
+                
+                <div class="total-line">
+                    <span>{% if ponuka.prenos_danovej_povinnosti %}DPH (Prenos daň. pov.):{% else %}Hodnota DPH:{% endif %}</span>
+                    <span>{{ ponuka.celkom_dph|floatformat:2 }} {{ ponuka.mena }}</span>
+                </div>
+            {% else %}
+                <div class="total-line" {% if ponuka.globalna_zlava_percento > 0 %}style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #cbd5e1;"{% endif %}>
+                    <span>Suma celkom:</span>
+                    <span>{{ ponuka.celkom_bez_dph|floatformat:2 }} {{ ponuka.mena }}</span>
+                </div>
+                <div class="total-line" style="font-size: 9px; color: var(--slate-500);">
+                    <span>* Nie sme platcami DPH</span>
+                </div>
+            {% endif %}
+            
+            <div class="total-final">
+                <span>
+                    {% if not identita.je_platca_dph %}
+                        Celková suma:
+                    {% elif ponuka.prenos_danovej_povinnosti %}
+                        Celková suma (bez DPH):
+                    {% else %}
+                        Celková suma s DPH:
+                    {% endif %}
+                </span>
+                <span>{{ ponuka.celkom_s_dph|floatformat:2 }} {{ ponuka.mena }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- LEGISLATÍVA A OBCHODNÉ PODMIENKY -->
+    <div class="legal-box avoid-break">
+        <div style="margin-bottom: 8px;">
+            <strong style="color: var(--slate-900);">Platnosť ponuky a Platobné podmienky:</strong> Ceny sú garantované len počas platnosti tejto ponuky (<strong>{{ identita.predvolena_platnost_ponuk|default:"14" }} dní</strong> od vystavenia), po uplynutí tejto lehoty ponuka bezodkladne zaniká. Splatnosť faktúry je stanovená na <strong>{{ ponuka.zakaznik.predvolena_splatnost_dni|default:"14" }} dní</strong>. Výskyt drobných vád a nedorobkov, ktoré nebránia bezpečnému užívaniu diela, neoprávňujú objednávateľa na zadržanie platby či jej časti.
+        </div>
+
+        <div style="margin-bottom: 8px;">
+            <strong style="color: var(--slate-900);">Výhrada vlastníctva:</strong> <b>Dodaný tovar, komponenty a ostatné hmotné plnenia zostávajú výlučným vlastníctvom zhotoviteľa až do úplného uhradenia celkovej fakturovanej čiastky.</b> Až do tohto momentu s nimi objednávateľ nesmie právne disponovať (predať, založiť).
+        </div>
+
+        <div style="margin-bottom: 8px;">
+            <strong style="color: var(--slate-900);">Rozsah prác a Viacpráce:</strong> Ponuka vychádza z aktuálne známeho stavu. Ak sa počas realizácie zistia nepredvídané okolnosti alebo skryté vady vyžadujúce dodatočné položky alebo práce (viacpráce), zhotoviteľ realizáciu preruší a úkony budú vykonané až po ich cenovom odsúhlasení objednávateľom. Zhotoviteľ nenesie zodpovednosť za omeškanie spôsobené vyššou mocou alebo výpadkom u subdodávateľov.
+        </div>
+
+        {% if ponuka.typ_servisu.all %}
+            <div style="margin-bottom: 8px;">
+                <strong style="color: var(--slate-900);">Záručné podmienky:</strong> Na vykonané odborné úkony sa vzťahuje záruka: 
+                {% for t in ponuka.typ_servisu.all %}
+                    {{ t.nazov }} ({{ t.zaruka_mesiace }} mesiacov){% if not forloop.last %}, {% endif %}
+                {% endfor %}. 
+                Záruka na dodané položky a komponenty sa riadi platnou legislatívou a podmienkami dodávateľa/výrobcu. Záruka okamžite zaniká pri neodbornom zásahu tretej strany, zanedbaní predpísanej starostlivosti alebo nedodržaní prevádzkových podmienok.
+            </div>
+        {% endif %}
+
+        {% if ponuka.prenos_danovej_povinnosti %}
+            <div style="margin-bottom: 8px; color: var(--danger); font-weight: 700;">
+                ⚠️ Prenos daňovej povinnosti: Dodanie tovaru alebo služby podlieha režimu prenesenia daňovej povinnosti (Reverse charge). Daň odvedie príjemca plnenia.
+            </div>
+        {% endif %}
+        
+        {% if ponuka.zavrecny_text %}
+            <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--slate-500);">
+                <strong style="color: var(--slate-900);">Ďalšie obchodné dojednania:</strong><br>
+                <span style="white-space: pre-line;">{{ ponuka.zavrecny_text }}</span>
+            </div>
+        {% endif %}
+        
+        <!-- ⚖️ ZÁVEREČNÁ PRÁVNA POISTKA -->
+        <div style="margin-top: 10px; font-size: 8.5px; color: var(--slate-500); border-top: 1px solid #e2e8f0; padding-top: 6px; line-height: 1.4;">
+            Zmluvný vzťah sa riadi platným obchodným právom krajiny sídla zhotoviteľa. Ak je objednávateľom spotrebiteľ, vzťah sa riadi príslušnou legislatívou na ochranu spotrebiteľa. V prípade sporov vzniknutých zo zmluvných vzťahov medzi podnikateľmi sa zmluvné strany dohodli na miestnej príslušnosti vecne príslušného súdu podľa sídla zhotoviteľa.
+        </div>
+    </div>
+
+    <!-- PÄTIČKA (Banka a Podpis) -->
+    <!-- 🪄 OPRAVA: Dynamická mriežka. Ak je ponuka schválená, rozdelí sa na 3 stĺpce -->
+    <div class="signature-grid avoid-break" {% if ponuka.cas_schvalenia and ponuka.meno_schvalitela %}style="grid-template-columns: 1fr 1fr 1fr;"{% endif %}>
+        <!-- BANKOVÉ ÚDAJE -->
+        <div class="bank-box">
+            <div class="info-card-header" style="border:none; margin-bottom: 5px; padding:0;">💳 Údaje pre prípadnú platbu</div>
+            {% if identita.nazov_banky %}Banka: <strong>{{ identita.nazov_banky }}</strong><br>{% endif %}
+            {% if identita.iban %}<span class="bank-iban">{{ identita.iban }}</span>{% endif %}
+            {% if identita.swift %}SWIFT / BIC kód: <strong>{{ identita.swift }}</strong><br><br>{% endif %}
+            
+            {% if identita.zapis_v_registri %}
+                <span style="font-size: 9px; color: var(--slate-500);">{{ identita.zapis_v_registri }}</span>
+            {% endif %}
+        </div>
+
+        <!-- PODPIS -->
+        <div class="sign-block">
+            <div class="sign-pad">
+                {% if ponuka.vystavil.zamestnanec.osobny_podpis %}
+                    <img src="{{ ponuka.vystavil.zamestnanec.osobny_podpis.url }}" class="sign-img" alt="Osobný podpis">
+                {% elif identita.peciatka_podpis %}
+                    <img src="{{ identita.peciatka_podpis.url }}" class="sign-img" alt="Pečiatka a Podpis">
+                {% endif %}
+            </div>
+            <div class="sign-line">
+                {% if ponuka.vystavil.zamestnanec %}
+                    {{ ponuka.vystavil.zamestnanec.meno }} {{ ponuka.vystavil.zamestnanec.priezvisko }}
+                {% else %}
+                    {{ identita.vystavuje_ponuky|default:identita.konatel|default:"Oprávnená osoba" }}
+                {% endif %}
+            </div>
+            <div class="sign-detail">Vystavil / Oprávnená osoba za dodávateľa</div>
+        </div>
+
+        <!-- ✍️ OPRAVA: Pridanie digitálnej stopy zákazníka (E-Podpis) -->
+            {% if ponuka.cas_schvalenia and ponuka.meno_schvalitela %}
+            <div class="sign-block">
+                <div class="sign-pad" style="flex-direction: column; justify-content: flex-end;">
+                    <div style="color: var(--success); font-size: 24px; line-height: 1; margin-bottom: 4px;">✅</div>
+                <div style="font-size: 9px; color: var(--success); font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Elektronicky schválené</div>
+            </div>
+            <div class="sign-line">{{ ponuka.meno_schvalitela }}</div>
+            <div class="sign-detail">Dňa: {{ ponuka.cas_schvalenia|date:"d.m.Y H:i" }}<br>IP: {{ ponuka.ip_adresa_schvalitela|default:"Neznáma" }}</div>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+</body>
+</html>
