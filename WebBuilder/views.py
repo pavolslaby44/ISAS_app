@@ -351,7 +351,7 @@ def public_web_view(request):
         ).exclude(slug__isnull=True).exclude(slug__exact='').select_related('vyrobca', 'zakaznik', *active_param_rels).only(
             'nazov', 'model_zariadenia', 'slug', 'kategoria', 'obrazok_na_webe', 'cena_prenajmu_na_den', 'v_prenajme_od_isas',
             'v_servisnom_rezime', 'hmotnost_kg', 'rok_vyroby', 'aktualne_motohodiny', 'motohodiny_v_zatazi', 'iot_je_aktivny', 'zaruka_do', 'predlzena_zaruka_do',
-            'bezpecnostny_kluc', 'vyrobca__nazov_vyrobcu', 'zakaznik__Nazov_spolocnosti', 'zakaznik__zobrazit_ako_referenciu'
+            'bezpecnostny_kluc', 'vyrobca__nazov_vyrobcu', 'zakaznik__Nazov_spolocnosti', 'zakaznik__zobrazit_ako_referenciu', *active_param_rels
         )
 
         rentals_grouped = {}
@@ -2208,7 +2208,7 @@ class RentalListView(WebBaseMixin, TemplateView):
             'nazov', 'model_zariadenia', 'slug', 'kategoria', 'obrazok_na_webe', 'cena_prenajmu_na_den', 'v_prenajme_od_isas',
             'v_servisnom_rezime', 'umiestnenie', 'hmotnost_kg', 'rok_vyroby', 'aktualne_motohodiny', 'motohodiny_v_zatazi',
             'iot_je_aktivny', 'zaruka_do', 'predlzena_zaruka_do', 'vyrobca__nazov_vyrobcu',
-            'zakaznik__Nazov_spolocnosti', 'zakaznik__zobrazit_ako_referenciu'
+            'zakaznik__Nazov_spolocnosti', 'zakaznik__zobrazit_ako_referenciu', *active_param_rels
         )
 
         # 🧭 DATA-DRIVEN SEGMENTÁCIA: Dynamické načítanie kategórií prítomných v požičovni
@@ -2555,7 +2555,8 @@ class ReklamaciaView(WebBaseMixin, TemplateView):
             UlohaModel = apps.get_model('Evidencia', 'Uloha')
             otvoreny_servis_subquery = UlohaModel.objects.filter(zariadenia=models.OuterRef('pk'), dokoncene=False) if UlohaModel else None
 
-            zariadenia_qs = ServisovaneZariadenie.objects.filter(zakaznik=b2b_klient).select_related('vyrobca', *get_active_parameter_reverse_names())
+            active_param_rels = get_active_parameter_reverse_names()
+            zariadenia_qs = ServisovaneZariadenie.objects.filter(zakaznik=b2b_klient).select_related('vyrobca', *active_param_rels)
             if otvoreny_servis_subquery is not None:
                 zariadenia_qs = zariadenia_qs.annotate(ma_otvoreny_servis=models.Exists(otvoreny_servis_subquery))
 
@@ -2564,7 +2565,8 @@ class ReklamaciaView(WebBaseMixin, TemplateView):
                     'id', 'kategoria', 'model_zariadenia', 'vyrobne_cislo', 'nazov', 
                     'vyrobca__nazov_vyrobcu', 'zaruka_do', 'predlzena_zaruka_do', 
                     'bezpecnostny_kluc', 'umiestnenie', 'aktualne_motohodiny', 
-                    'motohodiny_v_zatazi', 'rok_vyroby', 'datum_instalacie', 'v_servisnom_rezime'
+                    'motohodiny_v_zatazi', 'rok_vyroby', 'datum_instalacie', 'v_servisnom_rezime',
+                    *active_param_rels
                 )
                 .order_by('nazov', 'model_zariadenia')
             )
@@ -2590,7 +2592,8 @@ class ReklamaciaView(WebBaseMixin, TemplateView):
                     'id', 'kategoria', 'model_zariadenia', 'vyrobne_cislo', 'nazov',
                     'vyrobca__nazov_vyrobcu', 'zaruka_do', 'predlzena_zaruka_do',
                     'bezpecnostny_kluc', 'umiestnenie', 'aktualne_motohodiny',
-                    'motohodiny_v_zatazi', 'rok_vyroby', 'datum_instalacie', 'v_servisnom_rezime'
+                    'motohodiny_v_zatazi', 'rok_vyroby', 'datum_instalacie', 'v_servisnom_rezime',
+                    *active_param_rels
                 )
                 .order_by('zaruka_do', 'predlzena_zaruka_do')
             )
