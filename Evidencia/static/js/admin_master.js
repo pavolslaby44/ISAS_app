@@ -2567,7 +2567,7 @@ document.addEventListener("DOMContentLoaded", function() {
         const formDiv = document.querySelector('.isas-password-page #content-main form > div');
         if (formDiv && !formDiv.querySelector('.isas-back-btn-top')) {
             const backBtn = document.createElement('a');
-            backBtn.href = "javascript:history.back()";
+            backBtn.href = (window.location.pathname.match(/^(.*?\/admin\/)/) || ['', '/admin/'])[1];
             backBtn.className = "isas-back-btn-top";
             backBtn.innerHTML = "⬅️ Naspäť";
             formDiv.insertBefore(backBtn, formDiv.firstChild);

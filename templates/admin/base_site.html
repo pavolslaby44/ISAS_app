@@ -2533,31 +2533,32 @@
        🔐 12. STRÁNKA ZMENY HESLA (KOMPAKTNÝ PREMIOVÝ DIZAJN)
        ========================================== */
     body.isas-password-page, body.password-change {
-        overflow: hidden !important;
+        overflow-x: clip !important;
+        overflow-y: auto !important;
     }
 
     body.isas-password-page #content, body.password-change #content {
         display: flex !important;
         justify-content: center !important;
-        align-items: center !important;
+        align-items: flex-start !important;
         min-height: calc(100vh - 120px) !important;
         padding: 15px !important;
         box-sizing: border-box !important;
     }
 
-    /* 🌟 Prémiová Kompaktná Karta (Bez nutnosti scrollovať) */
+    /* 🌟 Prémiová Kompaktná Karta (Centrovaná cez margin: auto bez orezania pri chybách) */
     body.isas-password-page #content-main, body.password-change #content-main {
         width: 100% !important;
         max-width: 480px !important;
         height: auto !important;
-        overflow: hidden !important; /* 🚫 Úplný zákaz scrollovania v karte */
+        overflow: visible !important;
         background: rgba(255, 255, 255, 0.96) !important;
         backdrop-filter: blur(20px) !important;
         border: 1px solid rgba(226, 232, 240, 0.9) !important;
         border-radius: 18px !important;
         padding: 18px 24px !important;
         box-shadow: 0 20px 40px -10px rgba(0,0,0,0.12) !important;
-        margin: 0 auto !important;
+        margin: auto !important;
         position: relative !important;
         box-sizing: border-box !important;
     }
@@ -2569,8 +2570,9 @@
         content: none !important;
     }
 
-    /* 🛡️ Kompaktný Informačný panel */
-    body.isas-password-page #content-main form > div > p, body.password-change #content-main form > div > p {
+    /* 🛡️ Kompaktný Informačný panel (bez prepísania .errornote) */
+    body.isas-password-page #content-main form > div > p:not(.errornote),
+    body.password-change #content-main form > div > p:not(.errornote) {
         color: #1e293b !important;
         font-size: 11.5px !important;
         line-height: 1.4 !important;
@@ -2585,9 +2587,157 @@
         align-items: center !important;
         gap: 8px !important;
     }
-    body.isas-password-page #content-main form > div > p::before, body.password-change #content-main form > div > p::before {
+    body.isas-password-page #content-main form > div > p:not(.errornote)::before,
+    body.password-change #content-main form > div > p:not(.errornote)::before {
         content: '🔒';
         font-size: 18px !important;
+    }
+
+    /* 🚨 Chybový banner a validačné chyby polí pri neúspešnej zmene hesla */
+    body.isas-password-page #content-main p.errornote,
+    body.password-change #content-main p.errornote {
+        color: #991b1b !important;
+        font-size: 11.5px !important;
+        line-height: 1.4 !important;
+        margin: 0 0 10px 0 !important;
+        font-weight: 800 !important;
+        text-align: left !important;
+        background: #fef2f2 !important;
+        padding: 8px 12px !important;
+        border-radius: 8px !important;
+        border: 1px solid #fecaca !important;
+        border-left: 3px solid #ef4444 !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 8px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+    body.isas-password-page #content-main p.errornote::before,
+    body.password-change #content-main p.errornote::before {
+        content: '⚠️';
+        font-size: 16px !important;
+        flex-shrink: 0 !important;
+    }
+
+    body.isas-password-page ul.errorlist,
+    body.password-change ul.errorlist {
+        margin: 6px 0 0 0 !important;
+        padding: 7px 10px !important;
+        list-style: none !important;
+        background: #fef2f2 !important;
+        border: 1px solid #fecaca !important;
+        border-radius: 8px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+    body.isas-password-page ul.errorlist li,
+    body.password-change ul.errorlist li {
+        color: #b91c1c !important;
+        font-size: 11px !important;
+        font-weight: 700 !important;
+        line-height: 1.35 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    body.isas-password-page ul.errorlist li + li,
+    body.password-change ul.errorlist li + li {
+        margin-top: 3px !important;
+    }
+    body.isas-password-page .form-row.errors input[type="password"],
+    body.isas-password-page .form-row.errors input[type="text"],
+    body.password-change .form-row.errors input[type="password"],
+    body.password-change .form-row.errors input[type="text"] {
+        border-color: #ef4444 !important;
+        background: #fffafb !important;
+    }
+    body.isas-password-page .form-row.errors input:focus,
+    body.password-change .form-row.errors input:focus {
+        box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15) !important;
+    }
+
+    /* ✅ Stránka potvrdenia úspešnej zmeny hesla (password_change/done/) */
+    .isas-password-done-card {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+    .isas-done-icon {
+        width: 58px !important;
+        height: 58px !important;
+        border-radius: 50% !important;
+        background: #ecfdf5 !important;
+        border: 2px solid #a7f3d0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 28px !important;
+        margin: 4px auto 12px auto !important;
+        box-shadow: 0 8px 20px rgba(16, 185, 129, 0.18) !important;
+    }
+    .isas-done-title {
+        width: 100% !important;
+        text-align: center !important;
+        font-size: 17px !important;
+        font-weight: 900 !important;
+        color: #0f172a !important;
+        margin: 0 0 12px 0 !important;
+        letter-spacing: -0.2px !important;
+    }
+    .isas-done-info {
+        width: 100% !important;
+        box-sizing: border-box !important;
+        color: #065f46 !important;
+        font-size: 12px !important;
+        line-height: 1.5 !important;
+        margin: 0 0 14px 0 !important;
+        font-weight: 600 !important;
+        text-align: left !important;
+        background: #ecfdf5 !important;
+        padding: 10px 12px !important;
+        border-radius: 8px !important;
+        border-left: 3px solid #10b981 !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 8px !important;
+    }
+    .isas-done-info::before {
+        content: '🔒';
+        font-size: 18px !important;
+        flex-shrink: 0 !important;
+    }
+    .isas-done-actions {
+        width: 100% !important;
+        display: flex !important;
+        justify-content: center !important;
+    }
+    .isas-done-home-btn {
+        width: 100% !important;
+        height: 44px !important;
+        min-height: 44px !important;
+        padding: 0 20px !important;
+        font-size: 13px !important;
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+        border-radius: 10px !important;
+        font-weight: 900 !important;
+        letter-spacing: 0.5px !important;
+        box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35) !important;
+        transition: all 0.25s ease !important;
+        color: #ffffff !important;
+        text-transform: uppercase !important;
+        text-decoration: none !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 8px !important;
+        box-sizing: border-box !important;
+    }
+    .isas-done-home-btn:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 6px 18px rgba(16, 185, 129, 0.45) !important;
+        color: #ffffff !important;
     }
 
     body.isas-password-page fieldset.module, body.password-change fieldset.module {
