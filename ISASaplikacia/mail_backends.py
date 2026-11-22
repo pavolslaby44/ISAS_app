@@ -17,10 +17,10 @@ class ISASDynamicEmailBackend(EmailBackend):
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._lock = threading.Lock()
+        self._config_lock = threading.RLock()
 
     def _apply_dynamic_settings(self):
-        with self._lock:
+        with self._config_lock:
             # 1. Priorita: Cache / Databázový model GlobalneNastavenia
             gn_data = cache.get('isas_smtp_config')
             if gn_data is None:
