@@ -150,15 +150,16 @@ def public_web_view(request):
     context = None if is_preview else cache.get(cache_key)
     
     if not context:
+        bloky = list(WebBlok.objects.filter(je_aktivny=True, verzia=verzia_blokov).order_by('poradie')) # Evaluácia do RAM
+        identita = FiremnaIdentita.objects.first()
+
         # Ak neexistuje pk=1 ani pk=2, vezmeme prvý dostupný záznam
         nastavenia = WebNastavenia.objects.filter(pk=2 if is_preview else 1).first()
         if not nastavenia:
             nastavenia = WebNastavenia.objects.first()
         if not nastavenia:
-            nastavenia = WebNastavenia(hlavna_farba="#0284c7", titulok_webu="ISAS Web")
-            
-        bloky = list(WebBlok.objects.filter(je_aktivny=True, verzia=verzia_blokov).order_by('poradie')) # Evaluácia do RAM
-        identita = FiremnaIdentita.objects.first()
+            default_titulok = identita.nazov_spolocnosti if (identita and identita.nazov_spolocnosti) else "ISAS CORE WEB"
+            nastavenia = WebNastavenia(hlavna_farba="#0284c7", titulok_webu=default_titulok)
         
         if not identita:
             identita = FiremnaIdentita(nazov_spolocnosti="Naša Spoločnosť")
@@ -1472,19 +1473,28 @@ class WebBaseMixin:
         
         # 🚀 CACHE SINGLETONS: Ochrana DB pred opakovanými SELECT dopytmi na každej podstránke
         cache_ver = cache.get('web_cache_version', 1)
-        nastavenia_cache_key = f'isas_web_nastavenia_{2 if is_preview else 1}_v{cache_ver}'
-        nastavenia = cache.get(nastavenia_cache_key)
-        if not nastavenia:
-            nastavenia = WebNastavenia.objects.filter(pk=2 if is_preview else 1).first() or WebNastavenia.objects.first() or WebNastavenia(hlavna_farba='#0284c7', titulok_webu='ISAS Web')
-            cache.set(nastavenia_cache_key, nastavenia, 3600)
-        context['nastavenia'] = nastavenia
-
         identita_cache_key = f'isas_firemna_identita_singleton_v{cache_ver}'
         identita = cache.get(identita_cache_key)
         if not identita:
-            identita = FiremnaIdentita.objects.select_related('zodpovedny_zamestnanec_sklad').first() or FiremnaIdentita(nazov_spolocnosti='Naša Spoločnosť')
-            cache.set(identita_cache_key, identita, 3600)
+            identita_db = FiremnaIdentita.objects.select_related('zodpovedny_zamestnanec_sklad').first()
+            if identita_db:
+                identita = identita_db
+                cache.set(identita_cache_key, identita, 3600)
+            else:
+                identita = FiremnaIdentita(nazov_spolocnosti='Naša Spoločnosť')
         context['identita'] = identita
+
+        nastavenia_cache_key = f'isas_web_nastavenia_{2 if is_preview else 1}_v{cache_ver}'
+        nastavenia = cache.get(nastavenia_cache_key)
+        if not nastavenia:
+            nastavenia_db = WebNastavenia.objects.filter(pk=2 if is_preview else 1).first() or WebNastavenia.objects.first()
+            if nastavenia_db:
+                nastavenia = nastavenia_db
+                cache.set(nastavenia_cache_key, nastavenia, 3600)
+            else:
+                default_titulok = identita.nazov_spolocnosti if (identita and getattr(identita, 'pk', None) and identita.nazov_spolocnosti) else 'ISAS CORE WEB'
+                nastavenia = WebNastavenia(hlavna_farba='#0284c7', titulok_webu=default_titulok)
+        context['nastavenia'] = nastavenia
         context['mena'] = getattr(identita, 'predvolena_mena', None) or get_firemna_mena()
 
         gn_cache_key = f'isas_globalne_nastavenia_v{cache_ver}'
@@ -4091,8 +4101,9 @@ def b2b_login_view(request):
         logout(request)
 
     is_preview = _resolve_preview_mode(request)
-    nastavenia = WebNastavenia.objects.filter(pk=2 if is_preview else 1).first() or WebNastavenia.objects.first() or WebNastavenia(hlavna_farba="#0284c7", titulok_webu="ISAS Web")
     identita = FiremnaIdentita.objects.first() or FiremnaIdentita(nazov_spolocnosti="Naša Spoločnosť")
+    default_titulok = identita.nazov_spolocnosti if (getattr(identita, 'pk', None) and identita.nazov_spolocnosti) else "ISAS CORE WEB"
+    nastavenia = WebNastavenia.objects.filter(pk=2 if is_preview else 1).first() or WebNastavenia.objects.first() or WebNastavenia(hlavna_farba="#0284c7", titulok_webu=default_titulok)
     context = {
         'nastavenia': nastavenia,
         'identita': identita,
@@ -4227,8 +4238,9 @@ def b2b_dashboard_view(request):
     ).order_by('-casova_peciatka', '-id')[:10])
     
     is_preview = _resolve_preview_mode(request)
-    nastavenia = WebNastavenia.objects.filter(pk=2 if is_preview else 1).first() or WebNastavenia.objects.first() or WebNastavenia(hlavna_farba="#0284c7", titulok_webu="ISAS Web")
     identita = FiremnaIdentita.objects.first() or FiremnaIdentita(nazov_spolocnosti="Naša Spoločnosť")
+    default_titulok = identita.nazov_spolocnosti if (getattr(identita, 'pk', None) and identita.nazov_spolocnosti) else "ISAS CORE WEB"
+    nastavenia = WebNastavenia.objects.filter(pk=2 if is_preview else 1).first() or WebNastavenia.objects.first() or WebNastavenia(hlavna_farba="#0284c7", titulok_webu=default_titulok)
 
     # 📡 Dynamické určenie IoT/SCADA domény podľa konfigurácie v settings.py a .env
     telemetry_base = getattr(settings, 'MAIN_TELEMETRY_DOMAIN', 'localhost')
