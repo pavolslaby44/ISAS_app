@@ -30,8 +30,8 @@
             {% if blok.obrazok and blok.obrazok.name %}style="background-image: url('{{ blok.obrazok.url }}'); background-size: cover; background-position: center;"{% endif %}>
             <div class="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/80 backdrop-blur-[2px]"></div>
             <div class="relative z-10 max-w-4xl mx-auto">
-                <h1 class="text-3xl sm:text-5xl md:text-7xl font-extrabold mb-6 leading-tight break-words">{{ blok.nadpis }}</h1>
-                <p class="text-xl md:text-2xl mb-10 text-gray-200">{{ blok.podnadpis }}</p>
+                <h1 class="text-3xl sm:text-5xl md:text-6xl font-extrabold tracking-tight mb-6 leading-[1.15] break-words">{{ blok.nadpis }}</h1>
+                <p class="text-base sm:text-lg md:text-xl font-normal leading-relaxed text-gray-300 max-w-3xl mx-auto mb-10">{{ blok.podnadpis|linebreaksbr }}</p>
                 <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
                     {% if blok.tlacidlo_text %}
                     <a href="{% if has_booking %}#rezervacia{% else %}#kontakt{% endif %}" class="w-full sm:w-auto inline-block bg-brand hover-bg-brand text-white font-bold text-lg py-4 px-10 rounded-xl transition duration-300 shadow-2xl transform hover:-translate-y-1">
