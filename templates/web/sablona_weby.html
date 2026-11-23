@@ -93,8 +93,20 @@
         <section class="py-20 px-6 bg-white">
             <div class="max-w-5xl mx-auto text-center">
                 <h2 class="text-3xl sm:text-4xl font-bold mb-5 text-gray-900">{{ blok.nadpis }}</h2>
-                <div class="w-16 h-1 bg-brand mx-auto rounded-full mb-10"></div>
-                <p class="max-w-3xl mx-auto text-left text-base sm:text-lg text-gray-600 leading-relaxed mb-10">{{ blok.podnadpis|linebreaksbr }}</p>
+                <div class="w-32 h-1 bg-brand mx-auto rounded-full mb-10"></div>
+
+                {% if blok.obrazok and blok.obrazok.name %}
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center mb-10">
+                    <div class="lg:col-span-7 text-center lg:text-left">
+                        <p class="text-base sm:text-lg text-gray-600 leading-relaxed">{{ blok.podnadpis|linebreaksbr }}</p>
+                    </div>
+                    <div class="lg:col-span-5 max-w-md mx-auto lg:max-w-none w-full">
+                        <img src="{{ blok.obrazok.url }}" alt="{{ blok.nadpis }}" loading="lazy" class="w-full h-auto max-h-[460px] object-cover object-top rounded-3xl shadow-2xl border border-gray-100 bg-gray-100">
+                    </div>
+                </div>
+                {% else %}
+                <p class="max-w-4xl mx-auto text-center text-base sm:text-lg text-gray-600 leading-relaxed mb-10">{{ blok.podnadpis|linebreaksbr }}</p>
+                {% endif %}
 
                 {% if blok.tlacidlo_text %}
                 <div class="mb-10 text-center">
