@@ -414,7 +414,7 @@ def public_web_view(request):
         for r in rental_flotila:
             r['referencie'] = list(r['referencie'])
 
-        stat_zakaznici = Zakaznik.objects.count()
+        stat_zakaznici = Zakaznik.objects.filter(je_interny_profil=False).count()
         stat_zariadenia = ServisovaneZariadenie.objects.count()
         stat_servisy = ServisnyZaznam.objects.filter(dokoncene=True).count()
         

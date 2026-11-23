@@ -562,7 +562,7 @@ def render_isas_layout(content_html, layout="col", gap=4, center=False, columns=
 def render_isas_flex_between(left_content, right_content, extra_style=""):
     """Generuje riadok s prvkami zarovnanými na protiľahlé strany (Left ... Right)."""
     return format_html(
-        '<div style="display: flex; justify-content: space-between; align-items: center; width: 100%; {}">'
+        '<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 6px 10px; width: 100%; box-sizing: border-box; {}">'
         '<span>{}</span><span>{}</span>'
         '</div>',
         mark_safe(extra_style), mark_safe(left_content), mark_safe(right_content)
@@ -607,7 +607,7 @@ def render_isas_key_value(label, value, subtext=None, icon=None):
 def render_isas_premium_card(icon, title, main_text, sub_left, sub_right, grad_start, grad_end, shadow_color):
     """Generuje prémiovú kartu s prechodom (napr. pre Bankový účet)."""
     return format_html(
-        '<div style="background: linear-gradient(135deg, {}, {}); color: white; padding: 12px; border-radius: 12px; box-shadow: 0 4px 10px {}; position: relative; overflow: hidden;">'
+        '<div style="width: 100%; box-sizing: border-box; background: linear-gradient(135deg, {}, {}); color: white; padding: 12px; border-radius: 12px; box-shadow: 0 4px 10px {}; position: relative; overflow: hidden;">'
         '<div style="position: absolute; right: -10px; top: -10px; font-size: 50px; opacity: 0.1;">{}</div>'
         '<div style="font-size: 10px; color: rgba(255,255,255,0.8); font-weight: 800; text-transform: uppercase; margin-bottom: 4px; position: relative; z-index: 2;">{}</div>'
         '<div style="font-family: monospace; font-size: 13px; font-weight: 800; letter-spacing: 0.5px; margin-bottom: 4px; position: relative; z-index: 2;">{}</div>'

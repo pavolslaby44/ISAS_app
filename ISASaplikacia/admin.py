@@ -613,7 +613,7 @@ class FiremnaIdentitaAdmin(ISASSingletonAdminMixin, ISASPremiumAdmin):
         )
         
         mena_displej = obj.predvolena_mena or obj.get_country_defaults().get('mena') or get_firemna_mena()
-        r2_info = f"⏳ FA: {obj.splatnost_faktur} dní | PO: {obj.predvolena_platnost_ponuk} dní | 💰 {mena_displej}"
+        r2_info = render_isas_text(f"⏳ FA: {obj.splatnost_faktur} dní | PO: {obj.predvolena_platnost_ponuk} dní | 💰 {mena_displej}", size=11, color="#334155", weight=700, align="right")
         r2_content = render_isas_flex_between(dph_badge, r2_info)
         
         if ic_dph_text:
