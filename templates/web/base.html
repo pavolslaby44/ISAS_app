@@ -44,6 +44,15 @@
     {% endif %}
     <style>
         .hover-bg-brand:hover { filter: brightness(0.9); }
+        html.overflow-hidden, body.overflow-hidden { overscroll-behavior: none; }
+        .isas-dark-scroll {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
+        }
+        .isas-dark-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+        .isas-dark-scroll::-webkit-scrollbar-track { background: transparent; margin: 14px 0; }
+        .isas-dark-scroll::-webkit-scrollbar-thumb { background-color: rgba(148, 163, 184, 0.35); border-radius: 9999px; }
+        .isas-dark-scroll::-webkit-scrollbar-thumb:hover { background-color: rgba(148, 163, 184, 0.55); }
         {% block extra_css %}{% endblock %}
     </style>
     {% block extra_head %}{% endblock %}
@@ -1196,8 +1205,8 @@
     </div>
 
     <!-- ⚙️ ISAS CORE ARCHITECTURE MODAL -->
-    <div id="coreModalOverlay" role="dialog" aria-modal="true" aria-labelledby="coreModalTitle" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[110] hidden opacity-0 transition-opacity duration-300 overflow-y-auto overflow-x-hidden p-4 sm:p-6 flex min-h-full items-center justify-center overscroll-contain">
-        <div id="coreModalDialog" class="bg-slate-950 text-gray-200 rounded-3xl shadow-2xl border border-gray-800 max-w-lg w-full p-6 sm:p-8 transform scale-95 transition-all duration-300 relative my-auto max-h-[90vh] overflow-y-auto">
+    <div id="coreModalOverlay" role="dialog" aria-modal="true" aria-labelledby="coreModalTitle" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[110] hidden opacity-0 transition-opacity duration-300 overflow-hidden p-4 sm:p-6 flex min-h-full items-center justify-center overscroll-none">
+        <div id="coreModalDialog" class="bg-slate-950 text-gray-200 rounded-3xl shadow-2xl border border-gray-800 max-w-4xl w-full p-6 sm:p-8 transform scale-95 transition-all duration-300 relative my-auto max-h-[90vh] overflow-y-auto overscroll-contain isas-dark-scroll">
             <button type="button" onclick="toggleCoreModal(false)" aria-label="Zatvoriť okno" class="absolute top-5 right-5 text-gray-400 hover:text-white bg-gray-900 hover:bg-gray-800 rounded-full p-2 border border-gray-800 transition focus:outline-none">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
@@ -1208,50 +1217,63 @@
                 </div>
                 <div>
                     <h3 id="coreModalTitle" class="text-xl font-extrabold text-white tracking-tight">ISAS CORE Platform</h3>
-                    <p class="text-xs text-emerald-400 font-semibold">Odvetvovo-neutrálne B2B ERP, IoT &amp; Web jadro</p>
+                    <p class="text-xs text-emerald-400 font-semibold">Odvetvovo-neutrálne B2B ERP, FSM, IoT &amp; AI jadro</p>
                 </div>
             </div>
 
             <p class="text-xs text-gray-300 leading-relaxed mb-5">
-                Tento verejný web, klientska zóna, sledovanie zákaziek aj dopytový systém bežia priamo na modulárnom jadre ISAS CORE. Jediná architektúra bez zásahu do kódu poháňa rôzne vertikály – od IT infraštruktúry až po priemyselný servis – s real-time napojením na ERP a dispečing.
+                Táto webová prezentácia a nadväzujúce digitálne služby bežia priamo na modulárnom jadre ISAS CORE. Jediná architektúra bez zásahu do kódu prepája kompletnú vnútropodnikovú aj mimopodnikovú agendu servisných firiem naprieč vertikálami – od IT infraštruktúry až po priemyselný servis – v reálnom čase.
             </p>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs mb-5">
                 <div class="bg-gray-900/80 border border-gray-800 rounded-2xl p-3.5">
-                    <p class="text-[10px] font-extrabold uppercase tracking-wider text-gray-400 mb-1">Backend &amp; Dáta</p>
+                    <p class="text-[10px] font-extrabold uppercase tracking-wider text-gray-400 mb-1">Jadro &amp; Bezpečnosť</p>
                     <p class="font-semibold text-white">Python / Django / PostgreSQL</p>
-                    <p class="text-[11px] text-gray-400 mt-0.5">Transakčný ledger, Redis &amp; Celery</p>
+                    <p class="text-[11px] text-gray-400 mt-0.5 leading-relaxed">Transakčný ledger, Redis &amp; Celery, Playwright (PDF), multi-tenant izolácia, RBAC, šifrovanie, audit zmien, SHA-256 pečate &amp; GDPR</p>
                 </div>
                 <div class="bg-gray-900/80 border border-gray-800 rounded-2xl p-3.5">
-                    <p class="text-[10px] font-extrabold uppercase tracking-wider text-gray-400 mb-1">Bezpečnosť &amp; Audit</p>
-                    <p class="font-semibold text-white">WORM SHA-256 &amp; Multi-Tenant</p>
-                    <p class="text-[11px] text-gray-400 mt-0.5">Subdoménová izolácia a GDPR</p>
+                    <p class="text-[10px] font-extrabold uppercase tracking-wider text-gray-400 mb-1">Terénny servis &amp; Dispečing</p>
+                    <p class="font-semibold text-white">Plánovanie, GPS, SOS &amp; Meteo</p>
+                    <p class="text-[11px] text-gray-400 mt-0.5 leading-relaxed">Optimalizácia trás (Maps/OSRM), vyťaženosť technikov, dohľad výjazdov v reálnom čase &amp; vstupky pre vrátnice (SBS)</p>
                 </div>
                 <div class="bg-gray-900/80 border border-gray-800 rounded-2xl p-3.5">
-                    <p class="text-[10px] font-extrabold uppercase tracking-wider text-gray-400 mb-1">Telemetria &amp; IoT</p>
-                    <p class="font-semibold text-white">Real-time dáta &amp; Diagnostika</p>
-                    <p class="text-[11px] text-gray-400 mt-0.5">Časové rady, alarmy a QR pas</p>
+                    <p class="text-[10px] font-extrabold uppercase tracking-wider text-gray-400 mb-1">Sklady, Logistika &amp; Požičovňa</p>
+                    <p class="font-semibold text-white">Viacskladové zásoby &amp; Flotila</p>
+                    <p class="text-[11px] text-gray-400 mt-0.5 leading-relaxed">Centrála, pobočky a vozidlá, predikcia nákupu, nákupný košík, objednávky dodávateľom &amp; evidencia prenájmov</p>
                 </div>
                 <div class="bg-gray-900/80 border border-gray-800 rounded-2xl p-3.5">
-                    <p class="text-[10px] font-extrabold uppercase tracking-wider text-gray-400 mb-1">ERP &amp; Integrácie</p>
-                    <p class="font-semibold text-white">eFaktúra &amp; Účtovné mostíky</p>
-                    <p class="text-[11px] text-gray-400 mt-0.5">Peppol, Pohoda, Omega &amp; AI boti</p>
+                    <p class="text-[10px] font-extrabold uppercase tracking-wider text-gray-400 mb-1">HR, Fleet &amp; Dátová správa</p>
+                    <p class="font-semibold text-white">Mzdové podklady, Fleet &amp; Archívy</p>
+                    <p class="text-[11px] text-gray-400 mt-0.5 leading-relaxed">Kniha jázd, tankovania, diéty, absencie, expirácie (BOZP/STK), nábor, hromadné Excel importy/exporty &amp; zálohy</p>
+                </div>
+                <div class="bg-gray-900/80 border border-gray-800 rounded-2xl p-3.5">
+                    <p class="text-[10px] font-extrabold uppercase tracking-wider text-gray-400 mb-1">Ekonomika, Dane &amp; ERP</p>
+                    <p class="font-semibold text-white">Marže, Fakturácia &amp; Párovanie</p>
+                    <p class="text-[11px] text-gray-400 mt-0.5 leading-relaxed">Cenové ponuky, zálohy, dobropisy, párovanie platieb a objednávok, dane podľa štátu, eFaktúra (Peppol) &amp; ERP exporty</p>
+                </div>
+                <div class="bg-gray-900/80 border border-gray-800 rounded-2xl p-3.5">
+                    <p class="text-[10px] font-extrabold uppercase tracking-wider text-gray-400 mb-1">IoT, Compliance &amp; Kvalita</p>
+                    <p class="font-semibold text-white">Telemetria, Revízie &amp; ESG</p>
+                    <p class="text-[11px] text-gray-400 mt-0.5 leading-relaxed">IoT telemetria (API/Modbus/OPC UA/MQTT), zápis registrov, alarmy, QR pas stroja, servisné plány, záruky, zákonné kontroly, ISO kvalita &amp; ESG audit</p>
+                </div>
+                <div class="bg-gray-900/80 border border-gray-800 rounded-2xl p-3.5">
+                    <p class="text-[10px] font-extrabold uppercase tracking-wider text-gray-400 mb-1">Mimopodnikový Web &amp; Portály</p>
+                    <p class="font-semibold text-white">Verejný Web, E-shop &amp; B2B Zóna</p>
+                    <p class="text-[11px] text-gray-400 mt-0.5 leading-relaxed">Rezervácie, dopyty, sledovanie zákaziek, reklamácie, kalkulátor výjazdu, blog, kariéra, klientsky IoT portál (subdoména), schvaľovanie ponúk &amp; podpisovanie protokolov</p>
+                </div>
+                <div class="bg-gray-900/80 border border-gray-800 rounded-2xl p-3.5">
+                    <p class="text-[10px] font-extrabold uppercase tracking-wider text-gray-400 mb-1">AI Automatizácia &amp; Integrácie</p>
+                    <p class="font-semibold text-white">Multimodálna AI, Pošta &amp; API</p>
+                    <p class="text-[11px] text-gray-400 mt-0.5 leading-relaxed">Analýza dát a diagnostika, vyťažovanie dokladov (PDF/Excel/foto), hlasové hlásenia (TG/Discord), AI správa webu/obsahu, e-mail klient (AI triedenie a koncepty) &amp; webhooky</p>
                 </div>
             </div>
 
             <div class="pt-4 border-t border-gray-800 flex items-center justify-between gap-3 flex-wrap text-xs">
-                <span class="text-gray-400">Architektúra &amp; vývoj: <strong class="text-gray-200">{{ identita.konatel|default:identita.nazov_spolocnosti }}</strong></span>
-                <div class="flex items-center gap-2 ml-auto">
-                    {% if identita.linkedin %}
-                    <a href="{{ identita.linkedin }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 bg-[#0A66C2]/20 hover:bg-[#0A66C2] text-blue-300 hover:text-white border border-[#0A66C2]/40 font-bold px-3.5 py-2 rounded-xl transition">
-                        <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
-                        <span>LinkedIn</span>
-                    </a>
-                    {% endif %}
-                    <button type="button" onclick="toggleCoreModal(false)" class="bg-white/10 hover:bg-white/20 text-white font-bold px-4 py-2 rounded-xl transition">
-                        Zavrieť
-                    </button>
-                </div>
+                <span class="text-gray-400">Architektúra &amp; vývoj: <strong class="text-gray-200">Pavol Slabý</strong></span>
+                <a href="https://www.linkedin.com/in/pavol-slaby/" target="_blank" rel="noopener noreferrer" class="ml-auto inline-flex items-center gap-1.5 bg-[#0A66C2]/20 hover:bg-[#0A66C2] text-blue-300 hover:text-white border border-[#0A66C2]/40 font-bold px-3.5 py-2 rounded-xl transition">
+                    <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
+                    <span>LinkedIn</span>
+                </a>
             </div>
         </div>
     </div>
