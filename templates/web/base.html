@@ -227,52 +227,52 @@
     </main>
 
     <!-- 🟢 PÄTIČKA -->
-    <footer class="bg-gray-950 text-gray-500 py-12 text-sm mt-auto border-t border-gray-900">
+    <footer class="bg-gray-950 text-gray-400 py-12 text-sm mt-auto border-t border-gray-900">
         <div class="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-8 pb-8 border-b border-gray-900 text-left">
             <div>
                 <p class="font-extrabold text-white text-base mb-2">{{ identita.nazov_spolocnosti }}</p>
                 {% if identita.sidlo_ulica %}
-                <p class="text-xs text-gray-400">{{ identita.sidlo_ulica }} {{ identita.sidlo_cislo }}, {{ identita.sidlo_psc }} {{ identita.sidlo_mesto }}{% if identita.sidlo_stat %}, {{ identita.sidlo_stat }}{% endif %}</p>
+                <p class="text-xs text-gray-300">{{ identita.sidlo_ulica }} {{ identita.sidlo_cislo }}, {{ identita.sidlo_psc }} {{ identita.sidlo_mesto }}{% if identita.sidlo_stat %}, {{ identita.sidlo_stat }}{% endif %}</p>
                 {% endif %}
                 {% if identita.adresa_prevadzky %}
-                <p class="text-xs text-gray-400 mt-1.5"><span class="text-gray-500">Prevádzka:</span> {{ identita.adresa_prevadzky }}</p>
+                <p class="text-xs text-gray-300 mt-1.5"><span class="text-gray-400">Prevádzka:</span> {{ identita.adresa_prevadzky }}</p>
                 {% endif %}
                 {% if identita.koresp_adresa %}
-                <p class="text-xs text-gray-400 mt-1.5"><span class="text-gray-500">Korešpondenčná adresa:</span> {{ identita.koresp_adresa }}</p>
+                <p class="text-xs text-gray-300 mt-1.5"><span class="text-gray-400">Korešpondenčná adresa:</span> {{ identita.koresp_adresa }}</p>
                 {% endif %}
                 {% if identita.zapis_v_registri %}
-                <p class="text-[11px] text-gray-500 mt-2">{{ identita.zapis_v_registri }}</p>
+                <p class="text-[11px] text-gray-400 mt-2">{{ identita.zapis_v_registri }}</p>
                 {% endif %}
                 {% if identita.konatel %}
-                <p class="text-[11px] text-gray-500 mt-1">Konateľ: {{ identita.konatel }}</p>
+                <p class="text-[11px] text-gray-400 mt-1">Konateľ: {{ identita.konatel }}</p>
                 {% endif %}
             </div>
             <div>
                 <p class="font-extrabold text-white text-xs uppercase tracking-wider mb-2">Identifikačné údaje</p>
-                <div class="text-xs text-gray-400 space-y-1">
+                <div class="text-xs text-gray-300 space-y-1">
                     {% if identita.ico %}<p>IČO: {{ identita.ico }}</p>{% endif %}
                     {% if identita.dic %}<p>DIČ: {{ identita.dic }}</p>{% endif %}
                     {% if identita.ic_dph %}<p>IČ DPH: {{ identita.ic_dph }}</p>{% endif %}
                     <p>{% if identita.je_platca_dph %}Platca DPH{% else %}Neplatca DPH{% endif %}</p>
-                    {% if identita.iban %}<p class="pt-1 text-gray-300">IBAN: {{ identita.iban }}</p>{% endif %}
+                    {% if identita.iban %}<p class="pt-1 text-gray-200">IBAN: {{ identita.iban }}</p>{% endif %}
                     {% if identita.swift %}<p>SWIFT/BIC: {{ identita.swift }}{% if identita.nazov_banky %} ({{ identita.nazov_banky }}){% endif %}</p>{% endif %}
                 </div>
             </div>
             <div>
                 <p class="font-extrabold text-white text-xs uppercase tracking-wider mb-2">Kontakt a podpora</p>
-                <div class="text-xs text-gray-400 space-y-1">
+                <div class="text-xs text-gray-300 space-y-1">
                     {% if identita.telefon %}<p>Tel: <a href="tel:{{ identita.telefon }}" class="hover:text-white transition">{{ identita.telefon }}</a></p>{% endif %}
                     {% if identita.email_vseobecny %}<p>E-mail: <a href="mailto:{{ identita.email_vseobecny }}" class="hover:text-white transition">{{ identita.email_vseobecny }}</a></p>{% endif %}
                     {% if identita.email_fakturacia %}<p>Fakturácia: <a href="mailto:{{ identita.email_fakturacia }}" class="hover:text-white transition">{{ identita.email_fakturacia }}</a></p>{% endif %}
                     {% if identita.telefon_sklad %}<p>Sklad/Príjem: <a href="tel:{{ identita.telefon_sklad }}" class="hover:text-white transition">{{ identita.telefon_sklad }}</a></p>{% endif %}
                     {% if identita.email_sklad %}<p>E-mail sklad: <a href="mailto:{{ identita.email_sklad }}" class="hover:text-white transition">{{ identita.email_sklad }}</a></p>{% endif %}
-                    {% if identita.veduci_skladu or identita.zodpovedny_zamestnanec_sklad %}<p class="text-[11px] text-gray-500">Vedúci skladu: {{ identita.veduci_skladu|default:identita.zodpovedny_zamestnanec_sklad }}</p>{% endif %}
+                    {% if identita.veduci_skladu or identita.zodpovedny_zamestnanec_sklad %}<p class="text-[11px] text-gray-400">Vedúci skladu: {{ identita.veduci_skladu|default:identita.zodpovedny_zamestnanec_sklad }}</p>{% endif %}
                     
                     <div class="pt-3 mt-3 border-t border-gray-800 space-y-2">
-                        <a href="{% url 'webbuilder:reklamacie' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="text-gray-500 hover:text-white transition flex items-center gap-1.5 font-semibold">
+                        <a href="{% url 'webbuilder:reklamacie' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="text-gray-300 hover:text-white transition flex items-center gap-1.5 font-semibold">
                             <span>🛡️</span> Garančný servis a reklamácie (RMA)
                         </a>
-                        <button type="button" onclick="toggleTicketModal(true)" class="text-gray-500 hover:text-white transition flex items-center gap-1.5 font-semibold text-left">
+                        <button type="button" onclick="toggleTicketModal(true)" class="text-gray-300 hover:text-white transition flex items-center gap-1.5 font-semibold text-left">
                             <span>🔍</span> Overiť stav zákazky (Ticket Checker)
                         </button>
                     </div>
@@ -280,24 +280,31 @@
             </div>
         </div>
         <div class="max-w-7xl mx-auto px-6 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
-            <p>&copy; {% now "Y" %} {{ identita.nazov_spolocnosti }}. Všetky práva vyhradené.</p>
+            <p class="text-xs text-gray-300">&copy; {% now "Y" %} {{ identita.nazov_spolocnosti }}. Všetky práva vyhradené.</p>
             
             {% if identita.linkedin or identita.facebook or identita.instagram %}
             <div class="flex items-center gap-4 text-xs font-semibold">
                 <span class="text-gray-400">Sledujte nás:</span>
                 {% if identita.linkedin %}
-                <a href="{{ identita.linkedin }}" target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:text-white transition">LinkedIn</a>
+                <a href="{{ identita.linkedin }}" target="_blank" rel="noopener noreferrer" class="text-gray-300 hover:text-white transition">LinkedIn</a>
                 {% endif %}
                 {% if identita.facebook %}
-                <a href="{{ identita.facebook }}" target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:text-white transition">Facebook</a>
+                <a href="{{ identita.facebook }}" target="_blank" rel="noopener noreferrer" class="text-gray-300 hover:text-white transition">Facebook</a>
                 {% endif %}
                 {% if identita.instagram %}
-                <a href="{{ identita.instagram }}" target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:text-white transition">Instagram</a>
+                <a href="{{ identita.instagram }}" target="_blank" rel="noopener noreferrer" class="text-gray-300 hover:text-white transition">Instagram</a>
                 {% endif %}
             </div>
             {% endif %}
             
-            <p class="text-xs opacity-50">Poháňané systémom ISAS CORE</p>
+            <button type="button" onclick="toggleCoreModal(true)" class="group inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-gray-900/90 hover:bg-gray-800 border border-gray-700/80 hover:border-brand/60 text-xs font-semibold text-gray-300 hover:text-white shadow-sm transition-all duration-300 cursor-pointer" title="Zobraziť technické informácie o jadre platformy">
+                <span class="relative flex h-2 w-2">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                <span>Poháňané systémom <strong class="text-white font-extrabold tracking-wide">ISAS CORE</strong></span>
+                <svg class="w-3.5 h-3.5 text-gray-400 group-hover:text-white group-hover:translate-x-0.5 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </button>
         </div>
     </footer>
 
@@ -553,6 +560,7 @@
             if (e.key === 'Escape') {
                 toggleCart(false);
                 toggleTicketModal(false);
+                if (typeof toggleCoreModal === 'function') toggleCoreModal(false);
                 const mobileMenu = document.getElementById('mobileMenu');
                 const mobileBtn = document.getElementById('mobileMenuBtn');
                 if (mobileMenu && !mobileMenu.classList.contains('hidden')) {
@@ -1177,6 +1185,106 @@
             </div>
         </div>
     </div>
+
+    <!-- ⚙️ ISAS CORE ARCHITECTURE MODAL -->
+    <div id="coreModalOverlay" role="dialog" aria-modal="true" aria-labelledby="coreModalTitle" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[110] hidden opacity-0 transition-opacity duration-300 overflow-y-auto overflow-x-hidden p-4 sm:p-6 flex min-h-full items-center justify-center overscroll-contain">
+        <div id="coreModalDialog" class="bg-slate-950 text-gray-200 rounded-3xl shadow-2xl border border-gray-800 max-w-lg w-full p-6 sm:p-8 transform scale-95 transition-all duration-300 relative my-auto max-h-[90vh] overflow-y-auto">
+            <button type="button" onclick="toggleCoreModal(false)" aria-label="Zatvoriť okno" class="absolute top-5 right-5 text-gray-400 hover:text-white bg-gray-900 hover:bg-gray-800 rounded-full p-2 border border-gray-800 transition focus:outline-none">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+
+            <div class="flex items-center gap-3 mb-5">
+                <div class="w-11 h-11 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center text-xl">
+                    ⚙️
+                </div>
+                <div>
+                    <h3 id="coreModalTitle" class="text-xl font-extrabold text-white tracking-tight">ISAS CORE Platform</h3>
+                    <p class="text-xs text-emerald-400 font-semibold">Autonómne B2B ERP, IoT &amp; Web jadro</p>
+                </div>
+            </div>
+
+            <p class="text-xs text-gray-300 leading-relaxed mb-5">
+                Tento verejný web, klientska zóna, sledovanie zákaziek aj dopytový systém bežia priamo na modulárnom jadre ISAS CORE s real-time napojením na podnikovú databázu a dispečing.
+            </p>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs mb-5">
+                <div class="bg-gray-900/80 border border-gray-800 rounded-2xl p-3.5">
+                    <p class="text-[10px] font-extrabold uppercase tracking-wider text-gray-400 mb-1">Backend &amp; Dáta</p>
+                    <p class="font-semibold text-white">Python / Django / PostgreSQL</p>
+                    <p class="text-[11px] text-gray-400 mt-0.5">Transakčný ledger, Redis &amp; Celery workery</p>
+                </div>
+                <div class="bg-gray-900/80 border border-gray-800 rounded-2xl p-3.5">
+                    <p class="text-[10px] font-extrabold uppercase tracking-wider text-gray-400 mb-1">Bezpečnosť &amp; Audit</p>
+                    <p class="font-semibold text-white">WORM SHA-256 &amp; Multi-Tenant</p>
+                    <p class="text-[11px] text-gray-400 mt-0.5">Subdoménová izolácia, GDPR anonymizácia</p>
+                </div>
+                <div class="bg-gray-900/80 border border-gray-800 rounded-2xl p-3.5">
+                    <p class="text-[10px] font-extrabold uppercase tracking-wider text-gray-400 mb-1">Telemetria &amp; IoT</p>
+                    <p class="font-semibold text-white">Real-time dáta &amp; Diagnostika</p>
+                    <p class="text-[11px] text-gray-400 mt-0.5">Časové rady, auto-alarmy, digitálny QR pas</p>
+                </div>
+                <div class="bg-gray-900/80 border border-gray-800 rounded-2xl p-3.5">
+                    <p class="text-[10px] font-extrabold uppercase tracking-wider text-gray-400 mb-1">ERP &amp; Integrácie</p>
+                    <p class="font-semibold text-white">eFaktúra &amp; Účtovné mostíky</p>
+                    <p class="text-[11px] text-gray-400 mt-0.5">Peppol, Pohoda XML, Omega, AI asistenti</p>
+                </div>
+            </div>
+
+            <div class="pt-4 border-t border-gray-800 flex items-center justify-between gap-3 flex-wrap text-xs">
+                <span class="text-gray-400">Architektúra &amp; vývoj: <strong class="text-gray-200">{{ identita.konatel|default:identita.nazov_spolocnosti }}</strong></span>
+                <button type="button" onclick="toggleCoreModal(false)" class="bg-white/10 hover:bg-white/20 text-white font-bold px-4 py-2 rounded-xl transition">
+                    Zavrieť
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            const coreOverlay = document.getElementById('coreModalOverlay');
+            const coreDialog = document.getElementById('coreModalDialog');
+            let isMouseDownCore = false;
+            let corePreviousFocus = null;
+
+            window.toggleCoreModal = function(show) {
+                if (!coreOverlay || !coreDialog) return;
+                if (show) {
+                    corePreviousFocus = document.activeElement;
+                    document.documentElement.classList.add('overflow-hidden');
+                    document.body.classList.add('overflow-hidden');
+                    coreOverlay.classList.remove('hidden');
+                    setTimeout(() => {
+                        coreOverlay.classList.remove('opacity-0');
+                        coreDialog.classList.remove('scale-95');
+                        coreDialog.classList.add('scale-100');
+                        const closeBtn = coreDialog.querySelector('button');
+                        if (closeBtn && !('ontouchstart' in window)) closeBtn.focus();
+                    }, 10);
+                } else {
+                    coreOverlay.classList.add('opacity-0');
+                    coreDialog.classList.remove('scale-100');
+                    coreDialog.classList.add('scale-95');
+                    setTimeout(() => {
+                        coreOverlay.classList.add('hidden');
+                        document.documentElement.classList.remove('overflow-hidden');
+                        document.body.classList.remove('overflow-hidden');
+                        if (corePreviousFocus && typeof corePreviousFocus.focus === 'function') {
+                            corePreviousFocus.focus();
+                            corePreviousFocus = null;
+                        }
+                    }, 300);
+                }
+            };
+
+            if (coreOverlay) {
+                coreOverlay.addEventListener('mousedown', function(e) { isMouseDownCore = (e.target === this); });
+                coreOverlay.addEventListener('mouseup', function(e) {
+                    if (isMouseDownCore && e.target === this) window.toggleCoreModal(false);
+                    isMouseDownCore = false;
+                });
+            }
+        })();
+    </script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

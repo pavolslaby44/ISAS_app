@@ -96,7 +96,7 @@
                 <div class="w-32 h-1 bg-brand mx-auto rounded-full mb-10"></div>
 
                 {% if blok.obrazok and blok.obrazok.name %}
-                <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center mb-10">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start mb-10">
                     <div class="lg:col-span-7 text-center lg:text-left">
                         <p class="text-base sm:text-lg text-gray-600 leading-relaxed">{{ blok.podnadpis|linebreaksbr }}</p>
                     </div>
@@ -890,7 +890,7 @@
                             <div class="bg-gray-800 p-3 rounded-lg text-brand">🏢</div>
                             <div>
                                 <p class="font-bold text-gray-300 text-sm uppercase tracking-wider">Fakturačné údaje</p>
-                                <p>IČO: {{ identita.ico }} <br> DIČ: {{ identita.dic }}{% if identita.ic_dph %} <br> IČ DPH: {{ identita.ic_dph }}{% endif %}</p>
+                                <p>IČO: {{ identita.ico }}{% if identita.dic %} <br> DIČ: {{ identita.dic }}{% endif %}{% if identita.ic_dph %} <br> IČ DPH: {{ identita.ic_dph }}{% endif %}</p>
                             </div>
                         </div>
 
