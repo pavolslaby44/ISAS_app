@@ -560,7 +560,7 @@
                     <div class="bg-gray-50 rounded-3xl p-8 border border-gray-200 shadow-sm hover:shadow-md transition duration-300 flex flex-col justify-between">
                         <div>
                             <div class="w-12 h-12 bg-amber-100 rounded-2xl flex items-center justify-center text-2xl mb-6">⚡</div>
-                            <h3 class="text-xl font-bold text-gray-900 mb-3">{{ industry_terms.hub_tab_esg|default:"Úspora energie & ESG" }}</h3>
+                            <h3 class="text-xl font-bold text-gray-900 mb-3">{{ industry_terms.hub_tab_esg_clean|default:"Úspora energie & ESG" }}</h3>
                             <p class="text-sm text-gray-600 mb-6 leading-relaxed">{% if has_esg_audit or has_rekuperacia %}Meranie a vyhodnocovanie prevádzkových strát, optimalizácia nákladov na energie a znižovanie uhlíkovej stopy.{% else %}{{ industry_terms.tco_desc|default:"Optimalizácia celkových prevádzkových a investičných nákladov." }}{% endif %}</p>
                             <ul class="space-y-2.5 text-xs text-gray-700 font-semibold mb-8">
                                 {% if has_esg_audit %}<li class="flex items-center gap-2"><span class="text-emerald-600 font-bold">✓</span> {{ industry_terms.esg_idle_title|default:"Audit chodu bez záťaže & CO₂ stopa" }}</li>{% endif %}
@@ -579,7 +579,7 @@
                     <div class="bg-gray-50 rounded-3xl p-8 border border-gray-200 shadow-sm hover:shadow-md transition duration-300 flex flex-col justify-between">
                         <div>
                             <div class="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center text-2xl mb-6">⚖️</div>
-                            <h3 class="text-xl font-bold text-gray-900 mb-3">{{ industry_terms.hub_tab_law|default:"Legislatíva & Bezpečnosť" }}</h3>
+                            <h3 class="text-xl font-bold text-gray-900 mb-3">{{ industry_terms.hub_tab_law_clean|default:"Legislatíva & Bezpečnosť" }}</h3>
                             <p class="text-sm text-gray-600 mb-6 leading-relaxed">{{ industry_terms.revizie_desc|default:"Sledovanie povinných auditov, inšpekcií a bezpečnostných predpisov." }}</p>
                             <ul class="space-y-2.5 text-xs text-gray-700 font-semibold mb-8">
                                 {% if has_vtz %}<li class="flex items-center gap-2"><span class="text-emerald-600 font-bold">✓</span> {{ industry_terms.revizie_title|default:"Periodické inšpekcie a revízie" }}</li>{% endif %}
@@ -588,7 +588,7 @@
                             </ul>
                         </div>
                         <a href="{% url 'webbuilder:nastroje' %}{% if is_preview %}?preview=ai_draft{% endif %}#law" class="w-full text-center bg-white border border-gray-300 hover:border-gray-900 hover:bg-gray-900 hover:text-white text-gray-900 font-bold py-3 rounded-xl transition text-sm block shadow-xs">
-                            Overiť {{ industry_terms.hub_tab_law|default:"legislatívu a revízie"|striptags }} &rarr;
+                            Overiť {{ industry_terms.hub_tab_law_clean|default:"legislatívu a revízie"|striptags }} &rarr;
                         </a>
                     </div>
                     {% endif %}
@@ -598,7 +598,7 @@
                     <div class="bg-gray-50 rounded-3xl p-8 border border-gray-200 shadow-sm hover:shadow-md transition duration-300 flex flex-col justify-between">
                         <div>
                             <div class="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center text-2xl mb-6">🔬</div>
-                            <h3 class="text-xl font-bold text-gray-900 mb-3">{{ industry_terms.hub_tab_diag|default:"Technická Diagnostika" }}</h3>
+                            <h3 class="text-xl font-bold text-gray-900 mb-3">{{ industry_terms.hub_tab_diag_clean|default:"Technická Diagnostika" }}</h3>
                             <p class="text-sm text-gray-600 mb-6 leading-relaxed">Prediktívna diagnostika, prevádzkové parametre a ekonomické modely prevádzky.</p>
                             <ul class="space-y-2.5 text-xs text-gray-700 font-semibold mb-8">
                                 {% if has_media_quality %}<li class="flex items-center gap-2"><span class="text-emerald-600 font-bold">✓</span> {{ industry_terms.cistota_title|default:"Normy akosti a filtrácie pracovného média" }}</li>{% endif %}
@@ -607,7 +607,7 @@
                             </ul>
                         </div>
                         <a href="{% url 'webbuilder:nastroje' %}{% if is_preview %}?preview=ai_draft{% endif %}#diag" class="w-full text-center bg-white border border-gray-300 hover:border-gray-900 hover:bg-gray-900 hover:text-white text-gray-900 font-bold py-3 rounded-xl transition text-sm block shadow-xs">
-                            Otvoriť {{ industry_terms.hub_tab_diag|default:"technickú diagnostiku"|striptags }} &rarr;
+                            Otvoriť {{ industry_terms.hub_tab_diag_clean|default:"technickú diagnostiku"|striptags }} &rarr;
                         </a>
                     </div>
                     {% endif %}

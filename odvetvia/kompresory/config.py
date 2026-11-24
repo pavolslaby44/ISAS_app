@@ -258,7 +258,7 @@ INDUSTRY_TERMS = {
     'tco_title': 'TCO kalkulátor kompresorovej stanice',
     'tco_desc': 'Rozpad celkových nákladov na vlastníctvo kompresora podľa profilu prevádzky.',
     'capex_title': 'Nákup kompresora vs. Prenájom',
-    'capex_desc': 'Porovnanie nákupu nového kompresora voči dlhodobému prenájmu.',
+    'capex_desc': 'Porovnanie nákupu nového kompresora (vrátane 5 % p.a. na údržbu) voči dlhodobému prenájmu',
     'capex_price_label': 'Cena nového kompresora',
     'capex_rent_label': 'Mesačný prenájom kompresora',
     'vibro_title': 'Vibrodiagnostika stroja',

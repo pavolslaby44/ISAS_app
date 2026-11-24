@@ -99,7 +99,7 @@
                         {% endfor %}
                     </div>
                 </div>
-                {% elif nav_katalog_menu|length == 1 %}
+                {% elif nav_katalog_menu|length == 1 and request.resolver_match.view_name != nav_katalog_menu.0.url_name %}
                 <a href="{% url nav_katalog_menu.0.url_name %}{% if is_preview %}?preview=ai_draft{% endif %}" class="hover:text-brand transition flex items-center gap-1.5">
                     <span>{{ nav_katalog_menu.0.ikona }}</span> {{ nav_katalog_menu.0.nazov }}
                 </a>
@@ -155,7 +155,9 @@
                 <a href="{% url 'webbuilder:home' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="mobile-link hover:text-brand transition py-1">🏠 Úvod</a>
                 {% endif %}
                 {% for item in nav_katalog_menu %}
+                {% if request.resolver_match.view_name != item.url_name %}
                 <a href="{% url item.url_name %}{% if is_preview %}?preview=ai_draft{% endif %}" class="mobile-link hover:text-brand transition py-1">{{ item.ikona }} {{ item.nazov }}</a>
+                {% endif %}
                 {% endfor %}
                 {% if nav_flags.show_referencie %}
                 <a href="{% url 'webbuilder:referencie_list' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="mobile-link hover:text-brand transition py-1">📸 Referencie</a>

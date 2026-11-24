@@ -6,6 +6,7 @@ Zabezpečuje úplnú izoláciu univerzálneho ERP jadra od doménovej logiky odv
 """
 import importlib
 import logging
+import re
 from datetime import date
 from typing import Optional, Tuple, Dict, Any, List
 from django.conf import settings
@@ -375,6 +376,11 @@ def get_all_industry_terms(extra_overrides: Optional[Dict[str, Any]] = None) -> 
     for k, v in terms.items():
         if isinstance(v, str) and '{year}' in v:
             terms[k] = v.replace('{year}', aktualny_rok)
+
+    for tab_key in ('hub_tab_esg', 'hub_tab_law', 'hub_tab_diag'):
+        raw_tab = str(terms.get(tab_key, '') or '').strip()
+        clean_tab = re.sub(r'^[^\w]+', '', raw_tab).strip()
+        terms[f'{tab_key}_clean'] = clean_tab or raw_tab
 
     return terms
 
