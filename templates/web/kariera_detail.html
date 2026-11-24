@@ -147,11 +147,11 @@
 
             <!-- Pravý stĺpec: Kontaktný formulár pre odoslanie CV -->
             <div class="lg:col-span-1">
-                <div id="formular-reakcia" class="bg-gray-900 text-white rounded-3xl p-6 md:p-8 shadow-2xl sticky top-24 scroll-mt-24">
-                    <h3 class="text-xl font-bold mb-2 flex items-center gap-2">
+                <div id="formular-reakcia" class="bg-gray-900 text-white rounded-3xl p-5 md:p-6 shadow-2xl lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto scroll-mt-24">
+                    <h3 class="text-lg font-bold mb-1.5 flex items-center gap-2">
                         <span>🚀</span> Pošli nám životopis
                     </h3>
-                    <p class="text-xs text-gray-400 mb-6">Všetky doručené životopisy starostlivo posudzujeme a vybraných kandidátov budeme kontaktovať.</p>
+                    <p class="text-xs text-gray-400 mb-4">Všetky doručené životopisy starostlivo posudzujeme a vybraných kandidátov budeme kontaktovať.</p>
 
                     {% if not je_aktualna and not is_preview %}
                     <div class="p-6 bg-gray-800 rounded-2xl border border-gray-700 text-center">
@@ -163,7 +163,7 @@
                         </a>
                     </div>
                     {% else %}
-                    <form id="careerApplicationForm" action="{% url 'webbuilder:submit_career' %}" method="POST" enctype="multipart/form-data" class="space-y-4">
+                    <form id="careerApplicationForm" action="{% url 'webbuilder:submit_career' %}" method="POST" enctype="multipart/form-data" class="space-y-2.5">
                         {% csrf_token %}
                         <input type="hidden" name="pozicia_id" value="{{ pozicia.id }}">
                         {% if is_preview %}<input type="hidden" name="preview" value="ai_draft">{% endif %}
@@ -175,31 +175,31 @@
 
                         <div>
                             <label for="id_meno" class="block text-xs font-bold text-gray-300 uppercase mb-1">Meno a priezvisko *</label>
-                            <input type="text" id="id_meno" name="meno" required maxlength="150" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand">
+                            <input type="text" id="id_meno" name="meno" required maxlength="150" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand">
                         </div>
 
                         <div>
                             <label for="id_email" class="block text-xs font-bold text-gray-300 uppercase mb-1">E-mailová adresa *</label>
-                            <input type="email" id="id_email" name="email" required maxlength="254" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand">
+                            <input type="email" id="id_email" name="email" required maxlength="254" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand">
                         </div>
 
                         <div>
                             <label for="id_telefon" class="block text-xs font-bold text-gray-300 uppercase mb-1">Telefónne číslo *</label>
-                            <input type="tel" id="id_telefon" name="telefon" required maxlength="50" placeholder="Telefón *" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand">
+                            <input type="tel" id="id_telefon" name="telefon" required maxlength="50" placeholder="Telefón *" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand">
                         </div>
 
                         <div>
                             <label for="id_zivotopis" class="block text-xs font-bold text-gray-300 uppercase mb-1">Životopis (PDF, Word) *</label>
-                            <input type="file" id="id_zivotopis" name="zivotopis" required accept=".pdf,.doc,.docx,.odt" class="w-full bg-gray-800 border border-gray-700 rounded-xl p-2 text-xs text-gray-300 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-brand file:text-white hover:file:bg-brand/80">
+                            <input type="file" id="id_zivotopis" name="zivotopis" required accept=".pdf,.doc,.docx,.odt" class="w-full bg-gray-800 border border-gray-700 rounded-xl p-1.5 text-xs text-gray-300 file:mr-3 file:py-1.5 file:px-3.5 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-brand file:text-white hover:file:bg-brand/80">
                         </div>
 
                         <div>
                             <label for="id_motivacna_sprava" class="block text-xs font-bold text-gray-300 uppercase mb-1">Pár slov o tebe (voliteľné)</label>
-                            <textarea id="id_motivacna_sprava" name="motivacna_sprava" rows="3" maxlength="3000" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand"></textarea>
+                            <textarea id="id_motivacna_sprava" name="motivacna_sprava" rows="2" maxlength="3000" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand"></textarea>
                         </div>
 
-                        <div class="flex items-start gap-2 pt-2">
-                            <input type="checkbox" id="id_gdpr_suhlas" name="gdpr_suhlas" required class="mt-1 rounded bg-gray-800 border-gray-700 text-brand focus:ring-brand">
+                        <div class="flex items-start gap-2 pt-1">
+                            <input type="checkbox" id="id_gdpr_suhlas" name="gdpr_suhlas" required class="mt-0.5 rounded bg-gray-800 border-gray-700 text-brand focus:ring-brand">
                             <label for="id_gdpr_suhlas" class="text-[11px] text-gray-400 leading-tight">
                                 Súhlasím so spracovaním osobných údajov za účelom výberového konania. *
                             </label>
@@ -207,14 +207,14 @@
 
                         <div id="careerFormFeedback" class="hidden text-xs p-3 rounded-xl font-bold"></div>
 
-                        <button type="submit" id="careerSubmitBtn" class="w-full bg-brand hover-bg-brand text-white font-bold py-3.5 rounded-xl shadow-lg transition duration-200 flex items-center justify-center gap-2">
+                        <button type="submit" id="careerSubmitBtn" class="w-full bg-brand hover-bg-brand text-white font-bold py-3 rounded-xl shadow-lg transition duration-200 flex items-center justify-center gap-2">
                             <span>Odoslať žiadosť</span>
                         </button>
                     </form>
                     {% endif %}
 
                     {% if identita.email_vseobecny or identita.telefon %}
-                    <div class="mt-4 pt-4 border-t border-gray-800 text-[11px] text-gray-400 text-center">
+                    <div class="mt-3 pt-3 border-t border-gray-800 text-[11px] text-gray-400 text-center">
                         Máš otázky k výberovému konaniu? Kontaktuj nás na 
                         {% if identita.email_vseobecny %}<a href="mailto:{{ identita.email_vseobecny }}" class="text-white hover:underline">{{ identita.email_vseobecny }}</a>{% endif %}
                         {% if identita.telefon %}{% if identita.email_vseobecny %} alebo {% endif %}<a href="tel:{{ identita.telefon|cut:' ' }}" class="text-white hover:underline">{{ identita.telefon }}</a>{% endif %}.
