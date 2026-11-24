@@ -81,7 +81,7 @@ from Evidencia.utils_compliance import (
 )
 from ISASaplikacia.models import FiremnaIdentita, GlobalneNastavenia, StatLokalizacia
 from Evidencia.utils_helper import get_client_ip, get_firemna_mena
-from WebBuilder.utils_helper import get_b2b_client_and_discount, get_eshop_models, get_work_shifts, get_nav_katalog_menu
+from WebBuilder.utils_helper import get_active_web_blocks, get_b2b_client_and_discount, get_eshop_models, get_nav_katalog_menu, get_web_nav_flags, get_work_shifts
 from .models import Clanok, WebBlok, WebFAQ, WebNastavenia
 
 logger = logging.getLogger(__name__)
@@ -553,6 +553,8 @@ def public_web_view(request):
         cas_sadzba = getattr(gn, 'sadzba_za_cas_na_ceste', None)
         sadzba_za_cas_na_ceste_s_dph = (cas_sadzba * dph_koeficient).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP) if (cas_sadzba is not None and cas_sadzba > Decimal('0.00')) else None
 
+        aktivne_bloky_set = {getattr(b, 'typ', '') for b in bloky}
+
         context = {
             'nastavenia': nastavenia,
             'identita': identita,
@@ -603,7 +605,8 @@ def public_web_view(request):
             'klient_zariadenia': klient_zariadenia,
             'globalne_nastavenia': gn,
             'servisne_strediska': servisne_strediska,
-            'nav_katalog_menu': get_nav_katalog_menu(cache_ver=web_version),
+            'nav_katalog_menu': get_nav_katalog_menu(cache_ver=web_version, is_preview=is_preview, aktivne_bloky=aktivne_bloky_set),
+            'nav_flags': get_web_nav_flags(cache_ver=web_version, is_preview=is_preview, aktivne_bloky=aktivne_bloky_set),
             'sadzba_za_km_s_dph': sadzba_za_km_s_dph,
             'sadzba_za_cas_na_ceste_s_dph': sadzba_za_cas_na_ceste_s_dph,
             'cart_env': {
@@ -1422,11 +1425,16 @@ def machine_passport_view(request, kluc):
         ).order_by('-datum_prijatia')
     ) if PrijataObjednavkaModel else []
 
+    web_ver = cache.get('web_cache_version', 1)
+    aktivne_bloky_set = get_active_web_blocks(cache_ver=web_ver, is_preview=is_preview)
+
     # 🌐 DYNAMICKÁ KANONICKÁ URL: Očistená od query parametrov podľa systémových pravidiel
     canonical_url = request.build_absolute_uri(request.path)
 
     context = {
         'sluzby': sluzby,
+        'nav_katalog_menu': get_nav_katalog_menu(cache_ver=web_ver, is_preview=is_preview, aktivne_bloky=aktivne_bloky_set),
+        'nav_flags': get_web_nav_flags(cache_ver=web_ver, is_preview=is_preview, aktivne_bloky=aktivne_bloky_set),
         'zariadenie': zariadenie,
         'posledny_servis': posledny_servis,
         'predchadzajuce_servisy': predchadzajuce_servisy,
@@ -1560,7 +1568,9 @@ class WebBaseMixin:
             }
 
         # 🧭 DATA-DRIVEN DYNAMICKÁ NAVIGÁCIA (Single Source of Truth cez get_nav_katalog_menu)
-        context['nav_katalog_menu'] = get_nav_katalog_menu(cache_ver=cache_ver)
+        aktivne_bloky_set = get_active_web_blocks(cache_ver=cache_ver, is_preview=is_preview)
+        context['nav_katalog_menu'] = get_nav_katalog_menu(cache_ver=cache_ver, is_preview=is_preview, aktivne_bloky=aktivne_bloky_set)
+        context['nav_flags'] = get_web_nav_flags(cache_ver=cache_ver, is_preview=is_preview, aktivne_bloky=aktivne_bloky_set)
 
         # 🛒 BEZPEČNÉ PROSTREDIE KOŠÍKA (Data-Driven JSON bez rizika XSS a syntax erroru)
         b2b_klient_base, zlava_base = get_b2b_client_and_discount(self.request)
@@ -4102,13 +4112,27 @@ def b2b_login_view(request):
 
     is_preview = _resolve_preview_mode(request)
     identita = FiremnaIdentita.objects.first() or FiremnaIdentita(nazov_spolocnosti="Naša Spoločnosť")
+    gn = GlobalneNastavenia.objects.first()
+    mena_firmy = getattr(identita, 'predvolena_mena', None) or get_firemna_mena()
     default_titulok = identita.nazov_spolocnosti if (getattr(identita, 'pk', None) and identita.nazov_spolocnosti) else "ISAS CORE WEB"
     nastavenia = WebNastavenia.objects.filter(pk=2 if is_preview else 1).first() or WebNastavenia.objects.first() or WebNastavenia(hlavna_farba="#0284c7", titulok_webu=default_titulok)
+    web_ver = cache.get('web_cache_version', 1)
+    aktivne_bloky_set = get_active_web_blocks(cache_ver=web_ver, is_preview=is_preview)
+    raw_next = (request.POST.get('next') or request.GET.get('next') or '').strip()
+    safe_next_url = raw_next if (
+        raw_next and url_has_allowed_host_and_scheme(raw_next, allowed_hosts={request.get_host()}, require_https=request.is_secure())
+    ) else ''
     context = {
         'nastavenia': nastavenia,
         'identita': identita,
+        'globalne_nastavenia': gn,
+        'industry_terms': get_all_industry_terms(),
         'is_preview': is_preview,
-        'mena': getattr(identita, 'predvolena_mena', None) or get_firemna_mena(),
+        'mena': mena_firmy,
+        'next_url': safe_next_url,
+        'nav_katalog_menu': get_nav_katalog_menu(cache_ver=web_ver, is_preview=is_preview, aktivne_bloky=aktivne_bloky_set),
+        'nav_flags': get_web_nav_flags(cache_ver=web_ver, is_preview=is_preview, aktivne_bloky=aktivne_bloky_set),
+        'cart_env': {'mena': mena_firmy, 'b2bZlava': 0, 'vyzadujeGatePass': False, 'dispecingInfo': ''},
     }
 
     if request.method == 'POST':
@@ -4239,6 +4263,10 @@ def b2b_dashboard_view(request):
     
     is_preview = _resolve_preview_mode(request)
     identita = FiremnaIdentita.objects.first() or FiremnaIdentita(nazov_spolocnosti="Naša Spoločnosť")
+    gn = GlobalneNastavenia.objects.first()
+    mena_firmy = getattr(identita, 'predvolena_mena', None) or get_firemna_mena()
+    _, zlava_dec = get_b2b_client_and_discount(request)
+    dispecing_text = f"Náš dispečing požiadavku spracuje v prevádzkovom čase ({gn.pracovny_cas_od.strftime('%H:%M')} – {gn.pracovny_cas_do.strftime('%H:%M')}{'' if getattr(gn, 'pracovat_vikendy', False) else ', v pracovné dni'})." if (gn and getattr(gn, 'pracovny_cas_od', None) and getattr(gn, 'pracovny_cas_do', None)) else ""
     default_titulok = identita.nazov_spolocnosti if (getattr(identita, 'pk', None) and identita.nazov_spolocnosti) else "ISAS CORE WEB"
     nastavenia = WebNastavenia.objects.filter(pk=2 if is_preview else 1).first() or WebNastavenia.objects.first() or WebNastavenia(hlavna_farba="#0284c7", titulok_webu=default_titulok)
 
@@ -4249,6 +4277,10 @@ def b2b_dashboard_view(request):
     else:
         telemetry_domain = telemetry_base
 
+    web_ver = cache.get('web_cache_version', 1)
+    aktivne_bloky_set = get_active_web_blocks(cache_ver=web_ver, is_preview=is_preview)
+    web_ver = cache.get('web_cache_version', 1)
+    aktivne_bloky_set = get_active_web_blocks(cache_ver=web_ver, is_preview=is_preview)
     context = {
         'klient': b2b_klient,
         'zariadenia': zariadenia,
@@ -4261,12 +4293,21 @@ def b2b_dashboard_view(request):
         'aktivne_alarmy': aktivne_alarmy,
         'nastavenia': nastavenia,
         'identita': identita,
+        'globalne_nastavenia': gn,
         'is_preview': is_preview,
         'telemetry_domain': telemetry_domain,
-        'mena': getattr(identita, 'predvolena_mena', None) or get_firemna_mena(),
+        'mena': mena_firmy,
         'dnes': dnes,
         'industry_terms': industry_terms,
         'compliance_disclaimer': get_legal_disclaimer(),
+        'nav_katalog_menu': get_nav_katalog_menu(cache_ver=web_ver, is_preview=is_preview, aktivne_bloky=aktivne_bloky_set),
+        'nav_flags': get_web_nav_flags(cache_ver=web_ver, is_preview=is_preview, aktivne_bloky=aktivne_bloky_set),
+        'cart_env': {
+            'mena': mena_firmy,
+            'b2bZlava': float(zlava_dec),
+            'vyzadujeGatePass': bool(getattr(b2b_klient, 'vyzaduje_povolenie_vstupu', False)),
+            'dispecingInfo': dispecing_text,
+        },
     }
 
     return render(request, 'web/b2b_dashboard.html', context)

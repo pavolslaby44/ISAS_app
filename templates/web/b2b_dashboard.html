@@ -201,7 +201,7 @@
                                 <span class="font-bold text-gray-700">{% widthratio stroj.motohodiny_v_zatazi stroj.aktualne_motohodiny 100 %}%</span>
                             </div>
                             {% endif %}
-                            {% with dalsi_plan=stroj.planovane_servisy.all.0 %}
+                            {% with dalsi_plan=stroj.planovane_servisy.all|first %}
                             {% if dalsi_plan %}
                             {% if dalsi_plan.planovany_datum and dalsi_plan.planovany_datum < dnes or dalsi_plan.planovane_motohodiny and stroj.aktualne_motohodiny and stroj.aktualne_motohodiny >= dalsi_plan.planovane_motohodiny or dalsi_plan.planovane_motohodiny_zataz and stroj.motohodiny_v_zatazi and stroj.motohodiny_v_zatazi >= dalsi_plan.planovane_motohodiny_zataz %}
                             <div class="flex justify-between items-center text-[11px] pt-1 border-t border-gray-100 text-red-700 bg-red-50/80 px-2 py-0.5 rounded border border-red-200/60 font-bold">

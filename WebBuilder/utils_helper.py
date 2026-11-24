@@ -5,6 +5,7 @@ import zoneinfo
 from django.apps import apps
 from django.conf import settings
 from django.core.cache import cache
+from django.db.models import Q
 from django.urls import reverse, NoReverseMatch
 from django.utils import timezone
 
@@ -196,9 +197,43 @@ def get_work_shifts(gn, target_date):
     
     return work_start, midpoint, work_end
 
-def get_nav_katalog_menu(cache_ver=1):
-    """🧭 DATA-DRIVEN DYNAMICKÁ NAVIGÁCIA (Single Source of Truth s ochranou pred výpadkom Cache a LookupError)."""
-    katalog_cache_key = f'isas_nav_katalog_menu_v{cache_ver}'
+def get_active_web_blocks(cache_ver=1, is_preview=False):
+    """🧱 Vráti množinu aktívnych typov WebBlok pre verziu LIVE alebo DRAFT (cachované podľa web_cache_version)."""
+    verzia = 'DRAFT' if is_preview else 'LIVE'
+    blocks_cache_key = f'isas_active_web_blocks_v{cache_ver}_{verzia.lower()}'
+    cached_blocks = None
+    try:
+        cached_blocks = cache.get(blocks_cache_key)
+    except Exception:
+        cached_blocks = None
+
+    if cached_blocks is not None:
+        return set(cached_blocks)
+
+    typy_list = []
+    try:
+        WebBlokModel = apps.get_model('WebBuilder', 'WebBlok')
+        if WebBlokModel:
+            typy_list = list(
+                WebBlokModel.objects.filter(je_aktivny=True, verzia=verzia)
+                .values_list('typ', flat=True)
+                .distinct()
+            )
+    except Exception:
+        typy_list = []
+
+    try:
+        cache.set(blocks_cache_key, typy_list, 3600)
+    except Exception:
+        pass
+    return set(typy_list)
+
+
+def get_nav_katalog_menu(cache_ver=1, is_preview=False, aktivne_bloky=None):
+    """🧭 DATA-DRIVEN DYNAMICKÁ NAVIGÁCIA (Single Source of Truth viazaná na aktívne bloky a reálny obsah)."""
+    ind_mod = str(getattr(settings, 'INDUSTRY_MODULE', 'generic') or 'generic').strip().lower()
+    ver_tag = 'draft' if is_preview else 'live'
+    katalog_cache_key = f'isas_nav_katalog_menu_v{cache_ver}_ind_{ind_mod}_{ver_tag}'
     nav_katalog_menu = None
     try:
         nav_katalog_menu = cache.get(katalog_cache_key)
@@ -207,6 +242,8 @@ def get_nav_katalog_menu(cache_ver=1):
 
     if nav_katalog_menu is None:
         nav_katalog_menu = []
+        if aktivne_bloky is None:
+            aktivne_bloky = get_active_web_blocks(cache_ver=cache_ver, is_preview=is_preview)
 
         def _url_exists(name):
             try:
@@ -215,15 +252,15 @@ def get_nav_katalog_menu(cache_ver=1):
             except (NoReverseMatch, Exception):
                 return False
 
-        # 1. Služby & Servis (Defenzívny lookup modelu)
+        # 1. Služby & Servis (iba ak je zapnutý blok SERVICES a existuje publikovaná služba so slugom)
         try:
             TypServisuPraceModel = apps.get_model('Evidencia', 'TypServisuPrace')
         except (LookupError, ValueError):
             TypServisuPraceModel = None
 
-        if _url_exists('webbuilder:sluzby_list') and TypServisuPraceModel:
+        if 'SERVICES' in aktivne_bloky and _url_exists('webbuilder:sluzby_list') and TypServisuPraceModel:
             try:
-                if TypServisuPraceModel.objects.filter(zobrazit_na_webe=True).exists():
+                if TypServisuPraceModel.objects.filter(zobrazit_na_webe=True).exclude(slug__isnull=True).exclude(slug__exact='').exists():
                     nav_katalog_menu.append({
                         'url_name': 'webbuilder:sluzby_list',
                         'ikona': '🛠️',
@@ -232,13 +269,16 @@ def get_nav_katalog_menu(cache_ver=1):
             except Exception:
                 pass
 
-        # 2. Náhradné diely / E-shop (iba ak existuje routa, odvetvie má sekciu dielov a v DB sú reálne dáta)
-        if _url_exists('webbuilder:eshop_list'):
+        # 2. Náhradné diely / E-shop (iba ak je zapnutý blok PARTS a existuje zverejnená položka so slugom)
+        if 'PARTS' in aktivne_bloky and _url_exists('webbuilder:eshop_list'):
             eshop_models = get_eshop_models()
             has_eshop_data = False
             for m in eshop_models:
                 try:
-                    if m.objects.exists():
+                    m_fields = {f.name for f in m._meta.fields}
+                    if 'slug' not in m_fields or 'zobrazit_na_webe' not in m_fields:
+                        continue
+                    if m.objects.filter(zobrazit_na_webe=True).exclude(slug__isnull=True).exclude(slug__exact='').exists():
                         has_eshop_data = True
                         break
                 except Exception:
@@ -250,19 +290,17 @@ def get_nav_katalog_menu(cache_ver=1):
                     'nazov': get_industry_term('eshop_nav_label', get_industry_term('nav_katalog_label', 'Katalóg produktov')),
                 })
 
-        # 3. Požičovňa zariadení (iba ak existuje routa a v DB existujú reálne prenajímateľné zariadenia)
-        if _url_exists('webbuilder:rental_list'):
+        # 3. Požičovňa zariadení (iba ak je zapnutý blok RENTAL a existuje prenajímateľné zariadenie so slugom)
+        if 'RENTAL' in aktivne_bloky and _url_exists('webbuilder:rental_list'):
             has_rental_data = False
             try:
                 ServisovaneZariadenieModel = apps.get_model('Evidencia', 'ServisovaneZariadenie')
                 if ServisovaneZariadenieModel:
                     has_rental_data = ServisovaneZariadenieModel.objects.filter(
                         je_urcene_na_prenajom=True, zobrazit_na_webe_prenajom=True
-                    ).exists()
+                    ).exclude(slug__isnull=True).exclude(slug__exact='').exists()
             except Exception:
                 pass
-
-            # Architektonická integrita: Rental v celom jadre čerpá výhradne zo ServisovaneZariadenie
 
             if has_rental_data:
                 nav_katalog_menu.append({
@@ -271,8 +309,8 @@ def get_nav_katalog_menu(cache_ver=1):
                     'nazov': get_industry_term('rental_nav_label', get_industry_term('rental_title', 'Požičovňa zariadení')),
                 })
 
-        # 4. Inžinierske & Diagnostické Centrum (ak existuje routa a aktívne odvetvie podporuje aspoň 1 nástroj)
-        if _url_exists('webbuilder:nastroje'):
+        # 4. Inžinierske & Diagnostické Centrum (iba ak je zapnutý blok ENGINEERING_HUB a odvetvie podporuje aspoň 1 nástroj)
+        if 'ENGINEERING_HUB' in aktivne_bloky and _url_exists('webbuilder:nastroje'):
             if is_esg_audit_supported() or HAS_HEAT_RECOVERY or HAS_VTZ_INSPECTION or HAS_FPLYNY_AUDIT or HAS_VIBRO_DIAGNOSTICS or HAS_CAPEX_CALCULATOR:
                 nav_katalog_menu.append({
                     'url_name': 'webbuilder:nastroje',
@@ -281,10 +319,83 @@ def get_nav_katalog_menu(cache_ver=1):
                 })
 
         try:
-            cache.set(katalog_cache_key, nav_katalog_menu, 3600)
+            cache.set(katalog_cache_key, nav_katalog_menu, 300)
         except Exception:
             pass
     return nav_katalog_menu or []
+
+
+def get_web_nav_flags(cache_ver=1, is_preview=False, aktivne_bloky=None):
+    """🧭 Vráti príznaky viditeľnosti sekcií v hlavičke, pätičke a Hero banneri podľa aktívnych blokov a obsahu."""
+    ver_tag = 'draft' if is_preview else 'live'
+    flags_cache_key = f'isas_web_nav_flags_v{cache_ver}_{ver_tag}'
+    cached_flags = None
+    try:
+        cached_flags = cache.get(flags_cache_key)
+    except Exception:
+        cached_flags = None
+
+    if isinstance(cached_flags, dict):
+        return cached_flags
+
+    if aktivne_bloky is None:
+        aktivne_bloky = get_active_web_blocks(cache_ver=cache_ver, is_preview=is_preview)
+
+    dnes = timezone.localdate() if getattr(settings, 'USE_TZ', False) else timezone.now().date()
+
+    show_referencie = False
+    if 'REFERENCES' in aktivne_bloky:
+        try:
+            ServisnyZaznamModel = apps.get_model('Evidencia', 'ServisnyZaznam')
+            if ServisnyZaznamModel:
+                show_referencie = ServisnyZaznamModel.objects.filter(
+                    zobrazit_na_webe=True, dokoncene=True
+                ).filter(
+                    (Q(foto_po__isnull=False) & ~Q(foto_po='')) |
+                    (Q(foto_pred__isnull=False) & ~Q(foto_pred='')) |
+                    (Q(video__isnull=False) & ~Q(video=''))
+                ).exclude(slug__isnull=True).exclude(slug__exact='').exists()
+        except Exception:
+            show_referencie = False
+
+    show_blog = False
+    if 'BLOG_TEASER' in aktivne_bloky:
+        try:
+            ClanokModel = apps.get_model('WebBuilder', 'Clanok')
+            if ClanokModel:
+                qs_blog = ClanokModel.objects.all() if is_preview else ClanokModel.objects.filter(
+                    je_aktivny=True, datum_vydania__lte=dnes
+                )
+                show_blog = qs_blog.exclude(slug__isnull=True).exclude(slug__exact='').exists()
+        except Exception:
+            show_blog = False
+
+    show_kariera = False
+    if 'CAREER' in aktivne_bloky:
+        try:
+            PoziciaModel = apps.get_model('Evidencia', 'PracovnaPozicia')
+            if PoziciaModel:
+                qs_poz = PoziciaModel.objects.all() if is_preview else PoziciaModel.objects.filter(
+                    je_aktivna=True
+                ).filter(Q(platnost_do__isnull=True) | Q(platnost_do__gte=dnes))
+                show_kariera = qs_poz.exclude(slug__isnull=True).exclude(slug__exact='').exists()
+        except Exception:
+            show_kariera = False
+
+    flags = {
+        'show_referencie': show_referencie,
+        'show_blog': show_blog,
+        'show_kariera': show_kariera,
+        'show_ticket': 'TICKET' in aktivne_bloky,
+        'show_kontakt': 'CONTACT' in aktivne_bloky,
+        'show_services_block': 'SERVICES' in aktivne_bloky,
+    }
+
+    try:
+        cache.set(flags_cache_key, flags, 300)
+    except Exception:
+        pass
+    return flags
 
 
 def sanitizuj_verejne_html(html_vstup: str) -> str:

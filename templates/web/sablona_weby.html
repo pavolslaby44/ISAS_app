@@ -34,11 +34,13 @@
                 <p class="text-base sm:text-lg md:text-xl font-normal leading-relaxed text-gray-300 max-w-3xl mx-auto mb-10">{{ blok.podnadpis|linebreaksbr }}</p>
                 <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
                     {% if blok.tlacidlo_text %}
-                    <a href="{% if has_booking %}#rezervacia{% else %}#kontakt{% endif %}" class="w-full sm:w-auto inline-block bg-brand hover-bg-brand text-white font-bold text-lg py-4 px-10 rounded-xl transition duration-300 shadow-2xl transform hover:-translate-y-1">
-                        {{ blok.tlacidlo_text }}
-                    </a>
+                        {% if has_booking or nav_flags.show_kontakt %}
+                        <a href="{% if has_booking %}#rezervacia{% else %}#kontakt{% endif %}" class="w-full sm:w-auto inline-block bg-brand hover-bg-brand text-white font-bold text-lg py-4 px-10 rounded-xl transition duration-300 shadow-2xl transform hover:-translate-y-1">
+                            {{ blok.tlacidlo_text }}
+                        </a>
+                        {% endif %}
                     {% endif %}
-                    {% if sluzby %}
+                    {% if sluzby and nav_flags.show_services_block %}
                     <a href="#sluzby" class="w-full sm:w-auto inline-block bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold text-lg py-4 px-8 rounded-xl transition duration-300 backdrop-blur-sm">
                         Naše služby &darr;
                     </a>
