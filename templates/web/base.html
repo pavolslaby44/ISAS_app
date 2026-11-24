@@ -734,11 +734,21 @@
             const emergencyAlert = document.getElementById('cartEmergencyAlert');
             const expressWrapper = document.getElementById('cartExpressWrapper');
             const expressCheck = document.getElementById('cartExpressCheck');
+            const summaryEl = document.getElementById('cartPricingSummary');
             if (isasCart.length === 0) {
                 emptyState.classList.remove('hidden');
                 form.style.display = 'none';
                 if (emergencyAlert) emergencyAlert.classList.add('hidden');
                 if (expressWrapper) expressWrapper.classList.add('hidden');
+                if (summaryEl) summaryEl.classList.add('hidden');
+                const subtotalEl = document.getElementById('cartSubtotalVal');
+                const discRow = document.getElementById('cartDiscountRow');
+                const discValEl = document.getElementById('cartDiscountVal');
+                const finalEl = document.getElementById('cartFinalVal');
+                if (subtotalEl) subtotalEl.innerText = '';
+                if (discRow) discRow.classList.add('hidden');
+                if (discValEl) discValEl.innerText = '';
+                if (finalEl) finalEl.innerText = '';
             } else {
                 emptyState.classList.add('hidden');
                 form.style.display = 'block';
@@ -757,7 +767,6 @@
                 let sumPrice = 0;
                 let hasPrice = false;
                 const b2bZlavaPercent = parseFloat(cartEnv.b2bZlava) || 0;
-                const summaryEl = document.getElementById('cartPricingSummary');
                 
                 let cartHtml = '';
                 isasCart.forEach(item => {
