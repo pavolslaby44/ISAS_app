@@ -29,10 +29,10 @@
     <div class="max-w-7xl mx-auto">
         <!-- Hlavička stránky (Dynamicky z databázy WebBlok) -->
         <div class="text-center max-w-3xl mx-auto mb-16">
-            <span class="bg-brand/10 text-brand text-xs font-extrabold px-3.5 py-1.5 rounded-full uppercase tracking-wider">
+            <span class="inline-block bg-brand/10 text-brand text-xs font-extrabold px-3.5 py-1.5 rounded-full uppercase tracking-wider">
                 Pridaj sa do nášho tímu
             </span>
-            <h1 class="text-4xl md:text-5xl font-black text-gray-900 mt-4 mb-6 leading-tight">
+            <h1 class="text-4xl md:text-5xl font-black text-gray-900 mt-6 mb-6 leading-tight">
                 {{ kariera_blok.nadpis|default:"Kariéra a voľné pracovné pozície" }}
             </h1>
             <p class="text-lg text-gray-600 leading-relaxed">
@@ -87,7 +87,7 @@
                     {% endif %}
                 </div>
 
-                <div class="pt-6 border-t border-gray-200 mt-4 flex items-center justify-between gap-3">
+                <div class="pt-6 border-t border-gray-200 mt-4 flex items-end justify-between gap-3">
                     <div class="flex flex-col text-xs text-gray-400 font-medium min-w-0">
                         {% if pozicia.lokalita or identita.sidlo_mesto or identita.sidlo_stat %}
                         <span class="truncate">📍 {{ pozicia.lokalita|default:identita.sidlo_mesto|default:identita.sidlo_stat }}</span>
