@@ -81,6 +81,9 @@
             </div>
             
             <div class="hidden md:flex items-center gap-7 font-semibold text-gray-600">
+                {% if request.resolver_match and request.resolver_match.url_name != 'home' and request.resolver_match.url_name != 'b2b_login' %}
+                <a href="{% url 'webbuilder:home' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="hover:text-brand transition">Úvod</a>
+                {% endif %}
                 {% if nav_katalog_menu|length > 1 %}
                 <!-- Dropdown: Katalóg & Ponuka -->
                 <div class="relative group">
@@ -120,11 +123,16 @@
                 {% endif %}
                 
                 {% if request.user.is_authenticated and request.user.zakaznik_profil %}
-                    <a href="{% url 'webbuilder:b2b_dashboard' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="flex items-center gap-2 text-emerald-600 hover:text-emerald-700 font-bold transition">
+                    <a href="{% url 'webbuilder:b2b_dashboard' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="flex items-center gap-2 {% if request.resolver_match and request.resolver_match.url_name == 'b2b_dashboard' %}text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg{% else %}text-emerald-600 hover:text-emerald-700{% endif %} font-bold transition">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
                         Môj profil
                     </a>
                     <a href="{% url 'webbuilder:b2b_logout' %}" class="text-gray-400 hover:text-red-500 transition text-sm">Odhlásiť</a>
+                {% elif request.resolver_match and request.resolver_match.url_name == 'b2b_login' %}
+                    <a href="{% url 'webbuilder:home' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="flex items-center gap-1.5 text-gray-600 hover:text-brand transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                        <span>Späť na hlavnú stránku</span>
+                    </a>
                 {% else %}
                     <a href="{% url 'webbuilder:b2b_login' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="flex items-center gap-2 text-brand hover:text-gray-900 transition">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path></svg>
@@ -143,6 +151,9 @@
 
         <div id="mobileMenu" class="hidden md:hidden bg-white border-t border-gray-100 absolute w-full shadow-2xl transition-all duration-300 origin-top max-h-[85vh] overflow-y-auto">
             <div class="flex flex-col px-6 py-6 space-y-4 font-bold text-gray-700 text-center text-base">
+                {% if request.resolver_match and request.resolver_match.url_name != 'home' and request.resolver_match.url_name != 'b2b_login' %}
+                <a href="{% url 'webbuilder:home' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="mobile-link hover:text-brand transition py-1">🏠 Úvod</a>
+                {% endif %}
                 {% for item in nav_katalog_menu %}
                 <a href="{% url item.url_name %}{% if is_preview %}?preview=ai_draft{% endif %}" class="mobile-link hover:text-brand transition py-1">{{ item.ikona }} {{ item.nazov }}</a>
                 {% endfor %}
@@ -167,6 +178,10 @@
                             Môj profil
                         </a>
                         <a href="{% url 'webbuilder:b2b_logout' %}" class="mobile-link text-gray-400 hover:text-red-500 transition text-sm text-center block">Odhlásiť</a>
+                    {% elif request.resolver_match and request.resolver_match.url_name == 'b2b_login' %}
+                        <a href="{% url 'webbuilder:home' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="mobile-link flex items-center justify-center gap-2 text-gray-700 hover:text-brand transition bg-gray-50 py-3 rounded-xl border border-gray-200">
+                            &larr; Späť na hlavnú stránku
+                        </a>
                     {% else %}
                         <a href="{% url 'webbuilder:b2b_login' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="mobile-link flex items-center justify-center gap-2 text-brand hover:text-gray-900 transition bg-gray-50 py-3 rounded-xl border border-gray-100">
                             Klientska zóna

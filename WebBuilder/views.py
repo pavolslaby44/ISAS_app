@@ -4379,6 +4379,7 @@ class NastrojeView(WebBaseMixin, TemplateView):
             'fplyn_chladiva': FPLYNY_CHLADIVA if has_fplyny_enabled else [],
             'hub_config': active_hub_config,
             'tco_profiles': TCO_PROFILES if has_tco_enabled else {},
+            'first_tco': next(iter(TCO_PROFILES.values()), {}) if has_tco_enabled else {},
             'media_quality_apps': MEDIA_QUALITY_APPS if has_media_quality_enabled else [],
             'industry_terms': get_all_industry_terms(),
             'mena': getattr(identita, 'predvolena_mena', None) or get_firemna_mena(),
