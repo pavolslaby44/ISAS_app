@@ -352,6 +352,16 @@ def get_all_industry_terms(extra_overrides: Optional[Dict[str, Any]] = None) -> 
     terms = dict(core_defaults)
     if isinstance(raw_terms, dict):
         terms.update(raw_terms)
+        for idx in (1, 2, 3):
+            base_key = f'gauge_{idx}_base'
+            max_key = f'gauge_{idx}_max'
+            if base_key in raw_terms and max_key not in raw_terms:
+                try:
+                    base_val = float(raw_terms[base_key])
+                    if base_val > 0:
+                        terms[max_key] = round(base_val * 1.5, 2)
+                except (ValueError, TypeError):
+                    pass
         for k, v in raw_terms.items():
             if isinstance(k, str) and k.endswith('_label'):
                 base_k = k[:-6]

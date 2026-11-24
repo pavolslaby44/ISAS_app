@@ -540,7 +540,7 @@ def public_web_view(request):
 
         esg_card_count = (1 if has_esg_enabled else 0) + (1 if has_rekuperacia_enabled else 0) + (1 if has_tco_enabled else 0)
         law_card_count = (1 if has_vtz_enabled else 0) + (1 if has_fplyny_enabled else 0)
-        diag_card_count = (1 if has_media_quality_enabled else 0) + (1 if has_vibro_enabled else 0) + (1 if has_capex_enabled else 0) + (1 if has_iot_demo_enabled else 0)
+        diag_card_count = (1 if has_media_quality_enabled else 0) + (1 if has_vibro_enabled else 0) + (1 if has_capex_enabled else 0)
         active_hub_tab = 'esg' if esg_card_count > 0 else ('law' if law_card_count > 0 else ('diag' if diag_card_count > 0 else None))
 
         # 💰 BIZNIS VÝPOČET: Sadzby dopravy s DPH pre dopytový košík zhodne s WebBaseMixin (Defenzívne ošetrené)
@@ -1133,7 +1133,7 @@ def public_iot_demo(request):
         },
         'digital': {
             'chod': base_1 > 0,
-            'pomocny_okruh': (val_2 > (base_2 * 1.02)) if base_2 > 0 else False,
+            'pomocny_okruh': (val_2 >= base_2) if base_2 > 0 else False,
             'porucha': False,
         }
     })
@@ -4359,7 +4359,7 @@ class NastrojeView(WebBaseMixin, TemplateView):
         except (ValueError, TypeError):
             has_iot_demo_enabled = False
 
-        diag_card_count = (1 if has_media_quality_enabled else 0) + (1 if has_vibro_enabled else 0) + (1 if has_capex_enabled else 0) + (1 if has_iot_demo_enabled else 0)
+        diag_card_count = (1 if has_media_quality_enabled else 0) + (1 if has_vibro_enabled else 0) + (1 if has_capex_enabled else 0)
         active_hub_tab = 'esg' if esg_card_count > 0 else ('law' if law_card_count > 0 else ('diag' if diag_card_count > 0 else None))
 
         context.update({

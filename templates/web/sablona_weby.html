@@ -191,8 +191,8 @@
         {% if blok.typ == 'SERVICES' and sluzby %}
         <section class="py-20 bg-gray-100 px-6" id="sluzby">
             <div class="max-w-7xl mx-auto">
-                <h2 class="text-4xl font-bold text-center mb-4 text-gray-900">{{ blok.nadpis|default:"Naše služby" }}</h2>
-                <p class="text-center text-gray-500 mb-16 max-w-2xl mx-auto">{{ blok.podnadpis }}</p>
+                <h2 class="text-4xl font-bold text-center mb-8 text-gray-900">{{ blok.nadpis|default:"Naše služby" }}</h2>
+                <p class="text-center text-gray-500 mb-16 max-w-2xl mx-auto">{{ blok.podnadpis|default:""|linebreaksbr }}</p>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {% for sluzba in sluzby|slice:":3" %}
@@ -274,8 +274,8 @@
         {% if blok.typ == 'PARTS' and eshop_diely %}
         <section class="py-20 bg-white px-6 border-t border-gray-100" id="eshop">
             <div class="max-w-7xl mx-auto">
-                <h2 class="text-4xl font-bold text-center mb-4 text-gray-900">{{ blok.nadpis|default:industry_terms.nav_katalog_label|default:"Katalóg produktov" }}</h2>
-                <p class="text-center text-gray-500 mb-8 max-w-2xl mx-auto">{{ blok.podnadpis }}</p>
+                <h2 class="text-4xl font-bold text-center mb-8 text-gray-900">{{ blok.nadpis|default:industry_terms.nav_katalog_label|default:"Katalóg produktov" }}</h2>
+                <p class="text-center text-gray-500 mb-8 max-w-2xl mx-auto">{{ blok.podnadpis|default:""|linebreaksbr }}</p>
                 
                 <!-- 🛡️ OEM GARANCIA PÔVODU -->
                 {% if has_oem_parts %}
@@ -371,8 +371,8 @@
         {% if blok.typ == 'RENTAL' and rental_flotila %}
         <section class="py-20 bg-gray-50 px-6 border-t border-gray-100" id="pozicovna">
             <div class="max-w-7xl mx-auto">
-                <h2 class="text-4xl font-bold text-center mb-4 text-gray-900">{{ blok.nadpis|default:industry_terms.rental_title|default:"Požičovňa a náhradné zariadenia" }}</h2>
-                <p class="text-center text-gray-500 mb-16 max-w-2xl mx-auto">{{ blok.podnadpis }}</p>
+                <h2 class="text-4xl font-bold text-center mb-8 text-gray-900">{{ blok.nadpis|default:industry_terms.rental_title|default:"Požičovňa a náhradné zariadenia" }}</h2>
+                <p class="text-center text-gray-500 mb-16 max-w-2xl mx-auto">{{ blok.podnadpis|default:""|linebreaksbr }}</p>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {% for stroj in rental_flotila %}
@@ -487,8 +487,8 @@
         {% if blok.typ == 'TEAM' and tim %}
         <section class="py-20 bg-white px-6 border-t border-gray-100" id="tim">
             <div class="max-w-7xl mx-auto">
-                <h2 class="text-4xl font-bold text-center mb-4 text-gray-900">{{ blok.nadpis|default:"Náš tím certifikovaných špecialistov" }}</h2>
-                <p class="text-center text-gray-500 mb-16 max-w-2xl mx-auto">{{ blok.podnadpis|default:"Odborné zázemie našej spoločnosti tvoria vyškolení interní špecialisti a technici s platnými odbornými certifikáciami." }}</p>
+                <h2 class="text-4xl font-bold text-center mb-8 text-gray-900">{{ blok.nadpis|default:"Náš tím certifikovaných špecialistov" }}</h2>
+                <p class="text-center text-gray-500 mb-16 max-w-2xl mx-auto">{{ blok.podnadpis|default:"Odborné zázemie našej spoločnosti tvoria vyškolení interní špecialisti a technici s platnými odbornými certifikáciami."|linebreaksbr }}</p>
                 
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
                     {% for clen in tim|slice:":4" %}
@@ -550,8 +550,8 @@
                     <div class="inline-flex items-center justify-center p-3 bg-gray-900 text-white rounded-2xl mb-4 shadow-md">
                         <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
                     </div>
-                    <h2 class="text-3xl sm:text-4xl font-extrabold mb-4 text-gray-900">{{ blok.nadpis|default:"Inžinierske & Diagnostické Centrum" }}</h2>
-                    <p class="text-lg text-gray-500 max-w-3xl mx-auto">{{ blok.podnadpis|default:"Využite naše B2B nástroje pre optimalizáciu prevádzky, kontrolu legislatívy a technickú diagnostiku." }}</p>
+                    <h2 class="text-3xl sm:text-4xl font-extrabold mb-8 text-gray-900">{{ blok.nadpis|default:"Inžinierske & Diagnostické Centrum" }}</h2>
+                    <p class="text-lg text-gray-500 max-w-3xl mx-auto">{{ blok.podnadpis|default:"Využite naše B2B nástroje pre optimalizáciu prevádzky, kontrolu legislatívy a technickú diagnostiku."|linebreaksbr }}</p>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -627,8 +627,8 @@
         {% if blok.typ == 'REFERENCES' and referencie %}
         <section class="py-20 bg-gray-50 px-6 border-t border-gray-100" id="referencie">
             <div class="max-w-7xl mx-auto">
-                <h2 class="text-4xl font-bold text-center mb-4 text-gray-900">{{ blok.nadpis|default:"Naše realizácie" }}</h2>
-                <p class="text-center text-gray-500 mb-16 max-w-2xl mx-auto">{{ blok.podnadpis }}</p>
+                <h2 class="text-4xl font-bold text-center mb-8 text-gray-900">{{ blok.nadpis|default:"Naše realizácie" }}</h2>
+                <p class="text-center text-gray-500 mb-16 max-w-2xl mx-auto">{{ blok.podnadpis|default:""|linebreaksbr }}</p>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {% for ref in referencie|slice:":6" %}
@@ -750,8 +750,8 @@
                     <div class="inline-flex items-center justify-center p-4 bg-brand/10 text-brand rounded-2xl mb-6">
                         <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"></path></svg>
                     </div>
-                    <h2 class="text-4xl font-bold mb-4 text-gray-900">{{ blok.nadpis|default:"Live IoT Telemetria" }}</h2>
-                    <p class="text-lg text-gray-500 max-w-2xl mx-auto">{{ blok.podnadpis }}</p>
+                    <h2 class="text-4xl font-bold mb-8 text-gray-900">{{ blok.nadpis|default:"Live IoT Telemetria" }}</h2>
+                    <p class="text-lg text-gray-500 max-w-2xl mx-auto">{{ blok.podnadpis|default:""|linebreaksbr }}</p>
                 </div>
                 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -825,7 +825,7 @@
                 <!-- Kontaktné údaje z ERP -->
                 <div>
                     <h2 class="text-4xl md:text-5xl font-bold mb-6">{{ blok.nadpis|default:"Kontaktujte nás" }}</h2>
-                    <p class="text-gray-400 mb-12 text-lg">{{ blok.podnadpis }}</p>
+                    <p class="text-gray-400 mb-12 text-lg">{{ blok.podnadpis|default:""|linebreaksbr }}</p>
                     
                     <div class="space-y-6 text-lg">
                         <div class="flex items-start gap-4">
@@ -925,8 +925,16 @@
                 <!-- Dopytový formulár -->
                 <div class="bg-white text-gray-900 rounded-3xl p-8 md:p-10 shadow-2xl">
                     <div class="flex items-start justify-between gap-3 mb-4">
-                        <h3 class="text-2xl font-bold leading-snug">Havarijná podpora & Rýchly dopyt</h3>
-                        <span class="bg-red-50 text-red-700 border border-red-200 text-[11px] font-black px-2.5 py-1 rounded-full uppercase whitespace-nowrap flex-shrink-0 mt-1">🚨 Dispečing 24/7</span>
+                        <h3 class="text-2xl font-bold leading-snug">{% if has_booking %}Rýchly dopyt &amp; Urgentná podpora{% else %}Rýchly dopyt &amp; Kontakt{% endif %}</h3>
+                        {% if sla_telemetria and sla_telemetria.status == 'MIMO_PREVADZKY' %}
+                        <span class="bg-slate-100 text-slate-700 border border-slate-200 text-[11px] font-black px-2.5 py-1 rounded-full uppercase whitespace-nowrap flex-shrink-0 mt-1">📩 Príjem dopytov 24/7</span>
+                        {% elif sla_telemetria and sla_telemetria.status == 'KRITICKA' %}
+                        <span class="bg-amber-50 text-amber-800 border border-amber-200 text-[11px] font-black px-2.5 py-1 rounded-full uppercase whitespace-nowrap flex-shrink-0 mt-1">🟠 Vysoká vyťaženosť</span>
+                        {% elif sla_telemetria %}
+                        <span class="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-black px-2.5 py-1 rounded-full uppercase whitespace-nowrap flex-shrink-0 mt-1">🟢 Dispečing online</span>
+                        {% else %}
+                        <span class="bg-gray-100 text-gray-700 border border-gray-200 text-[11px] font-black px-2.5 py-1 rounded-full uppercase whitespace-nowrap flex-shrink-0 mt-1">📩 Online dopyt</span>
+                        {% endif %}
                     </div>
                     {% if has_booking %}
                     <p class="text-xs text-gray-500 mb-6 bg-gray-50 p-2.5 rounded-xl border border-gray-100 flex items-center justify-between">
@@ -1027,13 +1035,25 @@
                             <label class="flex items-start gap-2.5 cursor-pointer">
                                 <input type="checkbox" id="dopytPrioritaCheck" name="priorita" value="VYSOKA" onchange="const tip = document.getElementById('dopytEmergencyTip'); if(tip) tip.classList.toggle('hidden', !this.checked);" class="mt-0.5 w-4 h-4 text-red-600 border-red-300 rounded focus:ring-red-500">
                                 <span class="text-xs text-red-950 font-semibold leading-relaxed">
-                                    <span class="font-extrabold text-red-900 flex items-center gap-1">🚨 Havarijná požiadavka / Odstávka technológie (Expresné SLA)</span>
-                                    <span class="block text-[11px] text-red-700 font-normal mt-0.5">Zaškrtnite výhradne v prípade havárie alebo akútneho ohrozenia prevádzky pre prioritné spracovanie dispečingom.</span>
+                                    <span class="font-extrabold text-red-900 flex items-center gap-1">🚨 Havarijná / urgentná požiadavka{% if globalne_nastavenia.pohotovostny_priplatok and globalne_nastavenia.pohotovostny_priplatok > 0 %} (Expresné SLA){% else %} (Najvyššia priorita){% endif %}</span>
+                                    <span class="block text-[11px] text-red-700 font-normal mt-0.5">Zaškrtnite výhradne v prípade havárie, výpadku alebo akútneho ohrozenia prevádzky pre prioritné spracovanie.</span>
                                 </span>
                             </label>
                             {% if identita.telefon %}
                             <div id="dopytEmergencyTip" class="hidden mt-2 pt-2 border-t border-red-200/80 text-[11px] text-red-900 flex items-center justify-between flex-wrap gap-2">
-                                <span>⚡ Pre okamžitý výjazd pohotovosti odporúčame po odoslaní aj telefonát:</span>
+                                {% if sla_telemetria and sla_telemetria.status == 'MIMO_PREVADZKY' %}
+                                    {% if globalne_nastavenia.pohotovostny_priplatok and globalne_nastavenia.pohotovostny_priplatok > 0 %}
+                                    <span>⚡ Pri akútnej havárii mimo prevádzkových hodín volajte pohotovostnú linku:</span>
+                                    {% else %}
+                                    <span>⚡ Požiadavku evidujeme s najvyššou prioritou. Pre urgentný kontakt v prevádzkových hodinách volajte:</span>
+                                    {% endif %}
+                                {% else %}
+                                    {% if globalne_nastavenia.pohotovostny_priplatok and globalne_nastavenia.pohotovostny_priplatok > 0 %}
+                                    <span>⚡ Pre okamžitý výjazd pohotovosti odporúčame po odoslaní aj telefonát:</span>
+                                    {% else %}
+                                    <span>⚡ Pre urýchlené spojenie s dispečingom odporúčame po odoslaní aj telefonát:</span>
+                                    {% endif %}
+                                {% endif %}
                                 <a href="tel:{{ identita.telefon }}" class="font-black text-red-700 hover:underline inline-flex items-center gap-1">📞 {{ identita.telefon }}</a>
                             </div>
                             {% endif %}
@@ -1069,7 +1089,7 @@
                                     {% if sla_telemetria.status == 'MIMO_PREVADZKY' %}
                                     <p class="text-[11px] text-slate-700 bg-slate-100 p-2.5 rounded-xl border border-slate-200 flex items-center justify-between flex-wrap gap-1">
                                         <span class="font-bold flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-slate-400"></span> Dispečing je offline</span>
-                                        <span>Spracujeme v najbližší pracovný deň ({{ globalne_nastavenia.pracovny_cas_od|time:"H:i" }} – {{ globalne_nastavenia.pracovny_cas_do|time:"H:i" }})</span>
+                                        <span>Spracujeme v prevádzkových hodinách ({{ globalne_nastavenia.pracovny_cas_od|time:"H:i" }} – {{ globalne_nastavenia.pracovny_cas_do|time:"H:i" }}{% if globalne_nastavenia.pracovat_vikendy %}, Po–Ne{% else %}, Po–Pi{% endif %})</span>
                                     </p>
                                     {% else %}
                                     <p class="text-[11px] text-emerald-900 bg-emerald-50 p-2.5 rounded-xl border border-emerald-200 flex items-center justify-between flex-wrap gap-1">
@@ -1121,7 +1141,7 @@
                     <div class="min-w-0">
                         <h3 class="text-base sm:text-lg font-bold text-white leading-snug">{{ blok.nadpis|default:"Rozširujeme náš servisný tím" }}</h3>
                         <p class="text-xs text-slate-400 mt-0.5 leading-relaxed">
-                            {{ blok.podnadpis|default:"Hľadáme technikov a špecialistov pre moderné technológie a systémy." }}
+                            {{ blok.podnadpis|default:"Hľadáme technikov a špecialistov pre moderné technológie a systémy."|linebreaksbr }}
                         </p>
                     </div>
                 </div>
@@ -1140,8 +1160,8 @@
                     <div class="inline-flex items-center justify-center p-4 bg-brand/10 text-brand rounded-2xl mb-6">
                         <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                     </div>
-                    <h2 class="text-4xl font-bold mb-4 text-gray-900">{{ blok.nadpis|default:"Online rezervácia termínu" }}</h2>
-                    <p class="text-lg text-gray-500">{{ blok.podnadpis|default:"Vyberte si službu, zvoľte voľný termín a my zabezpečíme výjazd." }}</p>
+                    <h2 class="text-4xl font-bold mb-8 text-gray-900">{{ blok.nadpis|default:"Online rezervácia termínu" }}</h2>
+                    <p class="text-lg text-gray-500">{{ blok.podnadpis|default:"Vyberte si službu, zvoľte voľný termín a my zabezpečíme výjazd."|linebreaksbr }}</p>
                 </div>
                 
                 <div class="bg-gray-50 p-8 rounded-3xl border border-gray-200 shadow-xl">
@@ -1266,8 +1286,8 @@
         <section class="py-20 bg-white px-6 border-t border-gray-100" id="faq">
             <div class="max-w-4xl mx-auto">
                 <div class="text-center mb-12">
-                    <h2 class="text-4xl font-bold mb-4 text-gray-900">{{ blok.nadpis|default:"Často kladené otázky" }}</h2>
-                    <p class="text-lg text-gray-500">{{ blok.podnadpis }}</p>
+                    <h2 class="text-4xl font-bold mb-8 text-gray-900">{{ blok.nadpis|default:"Často kladené otázky" }}</h2>
+                    <p class="text-lg text-gray-500">{{ blok.podnadpis|default:""|linebreaksbr }}</p>
                 </div>
                 
                 {% regroup faqs by get_kategoria_display as faq_kategorie %}
@@ -1374,8 +1394,8 @@
         <section class="py-20 bg-gray-50 px-6 border-t border-gray-100" id="blog">
             <div class="max-w-7xl mx-auto">
                 <div class="text-center mb-12">
-                    <h2 class="text-4xl font-bold mb-4 text-gray-900">{{ blok.nadpis|default:"Odborné články a novinky" }}</h2>
-                    <p class="text-lg text-gray-500">{{ blok.podnadpis }}</p>
+                    <h2 class="text-4xl font-bold mb-8 text-gray-900">{{ blok.nadpis|default:"Odborné články a novinky" }}</h2>
+                    <p class="text-lg text-gray-500">{{ blok.podnadpis|default:""|linebreaksbr }}</p>
                 </div>
                 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-8">

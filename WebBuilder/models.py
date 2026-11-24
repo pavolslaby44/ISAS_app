@@ -158,7 +158,7 @@ class WebBlok(ISASAuditMixin, models.Model):
         ('TEAM', '👥 Náš tím (Technici z ERP)'),
         ('TICKET', '🔍 Sledovanie stavu zákazky (Ticket Checker)'),
         ('CALCULATOR', '🧮 Kalkulačka ceny výjazdu'),
-        ('ENGINEERING_HUB', '🔬 Inžinierske & Diagnostické Centrum (8 Nástrojov)'),
+        ('ENGINEERING_HUB', '🔬 Inžinierske & Diagnostické Centrum (B2B Nástroje)'),
         ('CONTACT', '📞 Kontaktný a Dopytový formulár'),
         ('IOT_DEMO', '📡 Live IoT Telemetria (Demo)'),
         ('CAREER', '🤝 Kariéra a Nábor (Voľné pracovné pozície)'),
