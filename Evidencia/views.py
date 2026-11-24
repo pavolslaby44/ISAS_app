@@ -946,7 +946,7 @@ def ai_chat_view(request):
             # 'DI' = Dispečer, 'AD' = Administratíva
             if rola in ['DI', 'AD']: 
                 denny_limit = getattr(nastavenia, 'ai_limit_management', None) or 100
-            # 'TE' = Technik, 'SK' = Skladník
+            # 'TE' = Technik, 'SK' = Skladník, 'OB' = Obchodník
             else: 
                 denny_limit = getattr(nastavenia, 'ai_limit_technik', None) or 25
         else:
@@ -3402,7 +3402,7 @@ def stiahni_vzorovy_subor_importu(request, typ_importu):
         
         'SUKROMNE_OSOBY': ['Povinné', 'Povinné (Unikátne)', 'Telefón', 'Ulica a číslo', 'Mesto', 'PSČ', 'Štát', 'IBAN', 'Formát: DD.MM.RRRR', 'Číselné ID', 'Číselné ID', 'IČO predvolenej čerpačky'],
         
-        'ZAMESTNANCI': ['Povinné', 'Povinné', 'Povinné (Unikátne)', 'Telefón', 'INTERNÝ / EXTERNÝ / BRIGÁDNIK / KONATEĽ', 'TECHNIK / DISPEČER / SKLADNÍK / ADMINISTRATÍVA', 'IBAN', 'Ulica a číslo', 'Mesto', 'PSČ', 'Štát', 'Formát: DD.MM.RRRR', 'Formát: DD.MM.RRRR', 'Číslo (napr. 20)', 'Číslo (napr. 2.5)', 'HODINA / MESIAC / ÚKOL', 'Číslo (napr. 8.50)', 'Číslo (napr. 1500.00)', 'Číslo (sadzba živnosť)', 'Číslo (Dlh voči firme)', 'Poznámka k dlhu', 'Číslo OP', 'Formát: DD.MM.RRRR', 'ANO / NIE', 'ANO / NIE', 'ANO / NIE', 'ANO / NIE', 'Číselné ID', 'Číselné ID', 'IČO predvolenej čerpačky', 'ANO / NIE', 'Verejný titul / rola'],
+        'ZAMESTNANCI': ['Povinné', 'Povinné', 'Povinné (Unikátne)', 'Telefón', 'INTERNÝ / EXTERNÝ / BRIGÁDNIK / KONATEĽ', 'TECHNIK / DISPEČER / SKLADNÍK / ADMINISTRATÍVA / OBCHODNÍK', 'IBAN', 'Ulica a číslo', 'Mesto', 'PSČ', 'Štát', 'Formát: DD.MM.RRRR', 'Formát: DD.MM.RRRR', 'Číslo (napr. 20)', 'Číslo (napr. 2.5)', 'HODINA / MESIAC / ÚKOL', 'Číslo (napr. 8.50)', 'Číslo (napr. 1500.00)', 'Číslo (sadzba živnosť)', 'Číslo (Dlh voči firme)', 'Poznámka k dlhu', 'Číslo OP', 'Formát: DD.MM.RRRR', 'ANO / NIE', 'ANO / NIE', 'ANO / NIE', 'ANO / NIE', 'Číselné ID', 'Číselné ID', 'IČO predvolenej čerpačky', 'ANO / NIE', 'Verejný titul / rola'],
         
         'VOZIDLA': ['Povinné', 'Povinné (Unikátne bez medzier)', 'NAFTA / BENZÍN 95 / BENZÍN 98 / LPG / ELEKTRINA', 'Iba číslo', 'ANO / NIE', 'OSOBNÉ / NÁKLADNÉ', 'Kód z účtovníctva', 'NM / BA95 / BA98 / LPG / EL', 'Číslo (napr. 0.60)', 'Iba celé číslo (litre)', 'Číslo (max suma v mene)', 'LETNÉ / ZIMNÉ / CELOROČNÉ', 'Iba číslo (napr. 30000)', 'Iba číslo', 'Iba číslo (napr. 15000)', 'Iba číslo', 'Číslo karty', 'Formát: DD.MM.RRRR', 'Formát: DD.MM.RRRR', 'Formát: DD.MM.RRRR', 'Formát: DD.MM.RRRR', 'Formát: DD.MM.RRRR', 'E-mail zamestnanca', 'E-mail súkromnej osoby'],
         

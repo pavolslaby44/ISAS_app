@@ -1486,7 +1486,7 @@ class ISASImportStrategy:
         defaults = {
             'email': email, 'meno': meno, 'priezvisko': priezvisko, 'telefon': str(row.get('telefon') or '').strip(),
             'typ_pomeru': {'INTERNÝ': 'IN', 'EXTERNÝ': 'EX', 'BRIGÁDNIK': 'BR', 'KONATEĽ': 'KO'}.get(str(row.get('Typ_pomeru') or '').strip().upper(), 'IN'),
-            'pracovna_rola': {'TECHNIK': 'TE', 'DISPEČER': 'DI', 'SKLADNÍK': 'SK', 'ADMINISTRATÍVA': 'AD'}.get(str(row.get('Pracovna_rola') or '').strip().upper(), 'TE'),
+            'pracovna_rola': {'TECHNIK': 'TE', 'DISPEČER': 'DI', 'SKLADNÍK': 'SK', 'ADMINISTRATÍVA': 'AD', 'OBCHODNÍK': 'OB', 'OBCHODNIK': 'OB'}.get(str(row.get('Pracovna_rola') or '').strip().upper(), 'TE'),
             'iban': str(row.get('IBAN') or '').strip(), 'ulica_a_cislo': str(row.get('Ulica_a_cislo') or '').strip(),
             'mesto': str(row.get('Mesto') or '').strip(), 'psc': str(row.get('PSC') or '').strip(),
             'stat': ISASImportStrategy._resolve_stat(row.get('Stat')),

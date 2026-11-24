@@ -5079,7 +5079,7 @@ def tool_spravuj_pracovne_pozicie(akcia: str, pozicia_id: Optional[int] = None, 
     Použi na VYTVÁRANIE, ÚPRAVU alebo SPRÁVU pracovných inzerátov a náboru (Kariéra na webe).
     'akcia' musí byť jedna z: 'VYTVORIT', 'UPRAVIT', 'DEAKTIVOVAT', 'ZMAZAT'.
     'typ_uvazku' musí byť jedno z: 'TPP', 'ZIVNOST', 'DOHODA', 'DOHODOU'.
-    'cielova_rola' je systémová rola v ERP: 'TE' (Technik), 'DI' (Dispečer), 'SK' (Skladník), 'AD' (Administratíva).
+    'cielova_rola' je systémová rola v ERP: 'TE' (Technik), 'DI' (Dispečer), 'SK' (Skladník), 'AD' (Administratíva), 'OB' (Obchodník).
     'platnost_do' zadávaj vo formáte YYYY-MM-DD.
     """
     try:
@@ -5088,7 +5088,7 @@ def tool_spravuj_pracovne_pozicie(akcia: str, pozicia_id: Optional[int] = None, 
         return json.dumps({"error": "Model PracovnaPozicia nie je v systéme dostupný."})
 
     POVOLENE_UVAZKY = ['TPP', 'ZIVNOST', 'DOHODA', 'DOHODOU']
-    POVOLENE_ROLY = ['TE', 'DI', 'SK', 'AD']
+    POVOLENE_ROLY = ['TE', 'DI', 'SK', 'AD', 'OB']
 
     try:
         with transaction.atomic():
@@ -5101,18 +5101,57 @@ def tool_spravuj_pracovne_pozicie(akcia: str, pozicia_id: Optional[int] = None, 
 
                 d_platnost = to_date(platnost_do)
 
+                FALLBACK_TEXTY_PODLA_ROLY = {
+                    'TE': {
+                        'poziadavky_skratka': "Technické vzdelanie, VP sk. B",
+                        'benefity_skratka': "Služobné vozidlo, moderné náradie, bonusy",
+                        'popis_naplne': "Servis a diagnostika zariadení u zákazníkov.",
+                        'poziadavky_detail': "Samostatnosť, zodpovednosť, chuť učiť sa novým technológiám.",
+                        'ponukame_detail': "Stabilné zázemie, férové odmeňovanie, odborné školenia.",
+                    },
+                    'DI': {
+                        'poziadavky_skratka': "Organizačné schopnosti, komunikácia s klientmi, práca s PC",
+                        'benefity_skratka': "Moderné dispečerské zázemie, stravné príspevky, výkonnostné bonusy",
+                        'popis_naplne': "Plánovanie a koordinácia servisných výjazdov, komunikácia so zákazníkmi a podpora tímu v teréne.",
+                        'poziadavky_detail': "Logické myslenie, odolnosť voči stresu, samostatnosť a profesionálna komunikácia.",
+                        'ponukame_detail': "Stabilné zázemie, férové odmeňovanie, odborné zaškolenie do systémov a priateľský kolektív.",
+                    },
+                    'SK': {
+                        'poziadavky_skratka': "Precíznosť, zodpovednosť, skúsenosti so skladovým hospodárstvom",
+                        'benefity_skratka': "Stabilný pracovný čas, moderný digitálny sklad, výkonnostné bonusy",
+                        'popis_naplne': "Príjem, výdaj a evidencia náhradných dielov a technológií, príprava materiálu pre servisných technikov a inventúry.",
+                        'poziadavky_detail': "Spoľahlivosť, zmysel pre poriadok, základná práca s PC a skladovým systémom.",
+                        'ponukame_detail': "Stabilné zázemie servisno-technologickej firmy, férové odmeňovanie, pracovné pomôcky a kompletné zaškolenie.",
+                    },
+                    'AD': {
+                        'poziadavky_skratka': "Skúsenosti s administratívou, fakturáciou, práca s PC",
+                        'benefity_skratka': "Stabilná kancelárska práca, moderné ERP nástroje, príspevky a bonusy",
+                        'popis_naplne': "Správa firemnej agendy, podpora fakturácie a účtovníctva, komunikácia s klientmi a dodávateľmi.",
+                        'poziadavky_detail': "Dôslednosť, samostatnosť, výborná znalosť kancelárskych nástrojov a organizačné zručnosti.",
+                        'ponukame_detail': "Stabilné zázemie, férové odmeňovanie, flexibilita a podpora profesijného rastu.",
+                    },
+                    'OB': {
+                        'poziadavky_skratka': "Prax v B2B obchode, technické myslenie, komunikačné zručnosti, VP sk. B",
+                        'benefity_skratka': "Služobné vozidlo, výkonnostné odmeny, telefón a notebook",
+                        'popis_naplne': "Akvizícia nových B2B klientov, starostlivosť o existujúcich zákazníkov, obhliadky u klientov, príprava cenových ponúk a uzatváranie servisných a dodávateľských zmlúv.",
+                        'poziadavky_detail': "Výborné prezentačné a vyjednávacie schopnosti, samostatnosť, orientácia v technických riešeniach a proklientsky prístup.",
+                        'ponukame_detail': "Stabilné zázemie technologicko-servisnej firmy, férové finančné ohodnotenie s bonusmi za výsledky, moderné CRM/ERP nástroje a odbornú podporu technického tímu.",
+                    },
+                }
+                fb = FALLBACK_TEXTY_PODLA_ROLY.get(rola, FALLBACK_TEXTY_PODLA_ROLY['TE'])
+
                 nova_pozicia = PracovnaPozicia.objects.create(
                     nazov=str(nazov).strip()[:150],
                     typ_uvazku=uvazok,
                     cielova_rola=rola,
                     mzda=str(mzda).strip()[:100],
                     lokalita=str(lokalita).strip()[:100],
-                    nastup=str(nastup).strip()[:100] if nastup else "Ihneď",
-                    poziadavky_skratka=str(poziadavky_skratka).strip()[:255] if poziadavky_skratka else "Technické vzdelanie, VP sk. B",
-                    benefity_skratka=str(benefity_skratka).strip()[:255] if benefity_skratka else "Služobné vozidlo, moderné náradie, bonusy",
-                    popis_naplne=str(popis_naplne).strip() if popis_naplne else "Servis a diagnostika zariadení u zákazníkov.",
-                    poziadavky_detail=str(poziadavky_detail).strip() if poziadavky_detail else "Samostatnosť, zodpovednosť, chuť učiť sa novým technológiám.",
-                    ponukame_detail=str(ponukame_detail).strip() if ponukame_detail else "Stabilné zázemie, férové odmeňovanie, odborné školenia.",
+                    nastup=str(nastup or '').strip()[:100] or "Ihneď",
+                    poziadavky_skratka=str(poziadavky_skratka or '').strip()[:255] or fb['poziadavky_skratka'],
+                    benefity_skratka=str(benefity_skratka or '').strip()[:255] or fb['benefity_skratka'],
+                    popis_naplne=str(popis_naplne or '').strip() or fb['popis_naplne'],
+                    poziadavky_detail=str(poziadavky_detail or '').strip() or fb['poziadavky_detail'],
+                    ponukame_detail=str(ponukame_detail or '').strip() or fb['ponukame_detail'],
                     platnost_do=d_platnost,
                     je_aktivna=je_aktivna if je_aktivna is not None else True
                 )
@@ -6188,6 +6227,51 @@ def ask_isas_ai(user_question: Optional[str] = None, history_text: str = "", aud
             except Exception:
                 return json.dumps({"error": "Chyba bezpečnostného filtra pri spracovaní dát."})
 
+        if rola_kod == Zamestnanec.OBCHODNIK:
+            raw_res = _vykonaj_financie_crm_dotaz(
+                **kwargs,
+                povolene_sekcie={
+                    "zakaznici_crm_info",
+                    "cenove_ponuky",
+                    "prijate_objednavky_od_zakaznikov",
+                },
+            )
+            try:
+                parsed = json.loads(raw_res)
+                if isinstance(parsed, dict):
+                    povolene_zakaznik_polia_ob = {
+                        "nazov", "je_interny_profil_nasej_firmy", "ico", "kontaktna_osoba",
+                        "oslovenie", "telefon", "email", "web", "b2b_zlava_percenta",
+                        "predvolena_splatnost_dni", "reklamacna_lehota_dni",
+                        "fakturacne_udaje", "adresa", "gps_suradnice",
+                    }
+                    povolene_ponuka_polia_ob = {
+                        "cislo_ponuky", "zakaznik", "zariadenie", "typy_prac",
+                        "suma_bez_dph_pred_zlavou_eur", "suma_bez_dph_eur",
+                        "suma_dph_eur", "suma_s_dph_eur", "hodnota_zlavy_eur",
+                        "stav", "vystavil_meno", "vystavene", "prenos_danovej_povinnosti",
+                        "cas_schvalenia_klientom", "meno_schvalitela",
+                        "ma_vygenerovane_pdf", "globalna_zlava_percento",
+                        "uvodny_text", "zaverecne_podmienky", "obsah_ponuky",
+                    }
+                    povolene_objednavka_polia_ob = {
+                        "cislo_interne", "po_number_klienta", "zakaznik", "stav",
+                        "priorita", "forma_prijatia", "suma_bez_dph_eur",
+                        "datum_prijatia", "termin_dodania", "vystavil_za_klienta",
+                        "zdrojove_ponuky", "zodpovedny_dispecer",
+                        "poziadavka_klienta_text", "typy_poziadovanych_prac",
+                        "tyka_sa_zariadeni",
+                    }
+                    if "zakaznici_crm_info" in parsed:
+                        parsed["zakaznici_crm_info"] = _filtruj_polia(parsed["zakaznici_crm_info"], povolene_zakaznik_polia_ob)
+                    if "cenove_ponuky" in parsed:
+                        parsed["cenove_ponuky"] = _filtruj_polia(parsed["cenove_ponuky"], povolene_ponuka_polia_ob)
+                    if "prijate_objednavky_od_zakaznikov" in parsed:
+                        parsed["prijate_objednavky_od_zakaznikov"] = _filtruj_polia(parsed["prijate_objednavky_od_zakaznikov"], povolene_objednavka_polia_ob)
+                return json.dumps(parsed)
+            except Exception:
+                return json.dumps({"error": "Chyba bezpečnostného filtra pri spracovaní dát."})
+
         # 🔒 FAIL-CLOSED: Technici ('TE') aj neznáme roly majú prístup zamietnutý pred DB dopytom
         return json.dumps({"error": "Kritické zamietnutie: Nemáte bezpečnostné oprávnenie na finančný a obchodný modul."})
 
@@ -6328,7 +6412,7 @@ def ask_isas_ai(user_question: Optional[str] = None, history_text: str = "", aud
             tool_historicky_stav_skladu,
             tool_vypocitaj_trasu_a_logistiku,
         ]
-        if ma_financie or rola_kod_tools in {Zamestnanec.DISPECER, Zamestnanec.SKLADNIK}:
+        if ma_financie or rola_kod_tools in {Zamestnanec.DISPECER, Zamestnanec.SKLADNIK, Zamestnanec.OBCHODNIK}:
             tools_list.append(tool_financie_faktury_dodavatelia)
         if je_web_admin or ma_financie or rola_kod_tools == Zamestnanec.DISPECER:
             tools_list.extend([tool_vyhladaj_a_precitaj_email, tool_priprav_koncept_emailu])

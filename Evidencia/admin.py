@@ -1174,7 +1174,7 @@ class ZamestnanecAdmin(ISASSecurityAdminMixin, ERPExportAdminMixin, ISASPremiumA
 
     @admin.display(description='👨‍💼 Zamestnanec', ordering='priezvisko')
     def get_rich_identity(self, obj):
-        rola_avatars = {'TE': '👨‍🔧', 'DI': '🎧', 'SK': '📦', 'AD': '👩‍💼'}
+        rola_avatars = {'TE': '👨‍🔧', 'DI': '🎧', 'SK': '📦', 'AD': '👩‍💼', 'OB': '🤝'}
         emoji = rola_avatars.get(obj.pracovna_rola, '👨‍💼')
 
         bg_colors = {
@@ -13700,7 +13700,7 @@ class PracovnaPoziciaAdmin(ISASPremiumAdmin):
         badge_uvazok = render_isas_badge(escape(obj.get_typ_uvazku_display()), icon="💼", type_color=typ_color, wrapper=False)
         
         # 👔 Dynamický odznak roly v ERP
-        rola_color = 'purple' if obj.cielova_rola == 'TE' else ('warning' if obj.cielova_rola == 'DI' else ('info' if obj.cielova_rola == 'SK' else 'neutral'))
+        rola_color = 'purple' if obj.cielova_rola == 'TE' else ('warning' if obj.cielova_rola == 'DI' else ('info' if obj.cielova_rola == 'SK' else ('success' if obj.cielova_rola == 'OB' else 'neutral')))
         badge_rola = render_isas_badge(escape(obj.get_cielova_rola_display()), icon="👔", type_color=rola_color, wrapper=False)
         
         badges_html = render_isas_layout(format_html('{}{}', badge_uvazok, badge_rola), layout="row", gap=4, center=True)

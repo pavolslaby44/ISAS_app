@@ -3706,6 +3706,17 @@ async def start_ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "🧠 <b>Systém:</b> Čítanie PDF, schémy, maily.\n\n"
                 "<i>S čím ti môžem pomôcť? (Napíš text, pošli hlasovku alebo fotku)</i> 🚀"
             )
+        elif obj.pracovna_rola == 'OB':
+            text = (
+                "🧠 <b>ISAS CORE AI</b>\n━━━━━━━━━━━━━━━━━━━━\n"
+                "👋 <b>Ahoj!</b> Som tvoj obchodný asistent.\n\n"
+                "Pomôžem ti pri príprave obchodných prípadov:\n"
+                "🤝 <b>Obchod a CRM:</b> Zákazníci, cenové ponuky a stav objednávok.\n"
+                "📦 <b>Sklad:</b> Dostupnosť tovaru, predajné ceny a výpočet trás.\n"
+                f"⚙️ <b>Technika:</b> Parametre ({get_industry_term('zariadenie_genitiv', 'zariadenia')}) a katalógy.\n"
+                "🚚 <b>Fleet:</b> Moje jazdy a tankovania.\n\n"
+                "<i>S čím ti môžem pomôcť? (Napíš text, pošli hlasovku alebo fotku)</i> 🚀"
+            )
         else:
             text = (
                 "🧠 <b>ISAS CORE AI</b>\n━━━━━━━━━━━━━━━━━━━━\n"

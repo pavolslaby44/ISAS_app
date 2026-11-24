@@ -3245,6 +3245,14 @@
                     🚚 <b>Fleet:</b> Knihy jázd, tankovania a stráženie expirácií (STK, PZP, diaľničné).<br>
                     🧠 <b>AI a Systém:</b> Čítanie a analýza PDF/obrázkov, vizualizácia schém a prehľadávanie e-mailov.<br><br>
                     <i>S čím ti môžem pomôcť?</i> 🚀
+                {% elif request.user.zamestnanec.pracovna_rola == 'OB' %}
+                    👋 <b>Ahoj!</b> Som ISAS CORE AI, tvoj obchodný asistent.<br><br>
+                    Pomôžem ti s prípravou obchodných prípadov. Môžeš sa ma pýtať na:<br><br>
+                    🤝 <b>Obchod a CRM:</b> Údaje o zákazníkoch, cenové ponuky a stav prijatých objednávok.<br>
+                    📦 <b>Sklad a Logistika:</b> Dostupnosť položiek, predajné ceny a presný výpočet trás (km/čas).<br>
+                    ⚙️ <b>Technika:</b> Technické parametre zariadení a produktové katalógy.<br>
+                    🚚 <b>Fleet:</b> Moje jazdy a tankovania.<br><br>
+                    <i>S čím ti môžem pomôcť?</i> 🚀
                 {% else %}
                     👋 <b>Ahoj!</b> Som ISAS CORE AI, tvoj technický asistent.<br><br>
                     Som tu, aby som ti uľahčil prácu v teréne aj na sklade. Môžeš sa ma pýtať na:<br><br>

@@ -3388,6 +3388,17 @@ async def on_interaction(interaction: discord.Interaction):
                         "🧠 **Systém:** Čítanie PDF, schémy, maily.\n\n"
                         "*S čím ti môžem pomôcť? (Napíš text, pošli hlasovku alebo fotku)* 🚀"
                     )
+                elif obj.pracovna_rola == 'OB':
+                    text = (
+                        "🧠 **ISAS CORE AI**\n━━━━━━━━━━━━━━━━━━━━\n"
+                        "👋 **Ahoj!** Som tvoj obchodný asistent.\n\n"
+                        "Pomôžem ti pri príprave obchodných prípadov:\n"
+                        "🤝 **Obchod a CRM:** Zákazníci, cenové ponuky a stav objednávok.\n"
+                        "📦 **Sklad:** Dostupnosť tovaru, predajné ceny a výpočet trás.\n"
+                        f"⚙️ **Technika:** Parametre ({get_industry_term('zariadenie_genitiv', 'zariadenia')}) a katalógy.\n"
+                        "🚚 **Fleet:** Moje jazdy a tankovania.\n\n"
+                        "*S čím ti môžem pomôcť? (Napíš text, pošli hlasovku alebo fotku)* 🚀"
+                    )
                 else:
                     text = (
                         "🧠 **ISAS CORE AI**\n━━━━━━━━━━━━━━━━━━━━\n"

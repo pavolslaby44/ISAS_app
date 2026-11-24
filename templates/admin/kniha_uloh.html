@@ -137,7 +137,7 @@
                     <option value="" disabled {% if not vybrany_technik %}selected{% endif %}>👤 Vyberte zamestnanca...</option>
                     {% for z in zamestnanci %}
                         <option value="{{ z.id }}" {% if vybrany_technik and vybrany_technik.id == z.id %}selected{% endif %}>
-                            {% if z.pracovna_rola == 'TE' %}👨‍🔧{% elif z.pracovna_rola == 'DI' %}🎧{% elif z.pracovna_rola == 'SK' %}📦{% elif z.pracovna_rola == 'AD' %}👩‍💼{% else %}👨‍💼{% endif %} {{ z.meno }} {{ z.priezvisko }}
+                            {% if z.pracovna_rola == 'TE' %}👨‍🔧{% elif z.pracovna_rola == 'DI' %}🎧{% elif z.pracovna_rola == 'SK' %}📦{% elif z.pracovna_rola == 'AD' %}👩‍💼{% elif z.pracovna_rola == 'OB' %}🤝{% else %}👨‍💼{% endif %} {{ z.meno }} {{ z.priezvisko }}
                         </option>
                     {% endfor %}
                 </select>
@@ -154,7 +154,7 @@
     <!-- PRAVÝ PANEL: VÝPIS ÚLOH -->
     <div class="panel">
         <div class="panel-header" style="border-bottom: none; margin-bottom: 10px;">
-            <span>📝 Otvorené úlohy {% if vybrany_technik %}<span style="color: var(--primary);">({% if vybrany_technik.pracovna_rola == 'TE' %}👨‍🔧{% elif vybrany_technik.pracovna_rola == 'DI' %}🎧{% elif vybrany_technik.pracovna_rola == 'SK' %}📦{% elif vybrany_technik.pracovna_rola == 'AD' %}👩‍💼{% else %}👨‍💼{% endif %} {{ vybrany_technik.meno }} {{ vybrany_technik.priezvisko }})</span>{% endif %}</span>
+            <span>📝 Otvorené úlohy {% if vybrany_technik %}<span style="color: var(--primary);">({% if vybrany_technik.pracovna_rola == 'TE' %}👨‍🔧{% elif vybrany_technik.pracovna_rola == 'DI' %}🎧{% elif vybrany_technik.pracovna_rola == 'SK' %}📦{% elif vybrany_technik.pracovna_rola == 'AD' %}👩‍💼{% elif vybrany_technik.pracovna_rola == 'OB' %}🤝{% else %}👨‍💼{% endif %} {{ vybrany_technik.meno }} {{ vybrany_technik.priezvisko }})</span>{% endif %}</span>
             <span style="font-size: 12px; background: #f1f5f9; padding: 4px 10px; border-radius: 20px; color: var(--slate-500); font-weight: 800;">
                 📊 Počet: {{ otvorene_ulohy|length }}
             </span>

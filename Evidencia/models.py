@@ -479,12 +479,14 @@ class Zamestnanec(ISASAuditMixin, ISASGDPRMixin, ISASERPExportMixin, models.Mode
     DISPECER = 'DI'
     SKLADNIK = 'SK'
     ADMINISTRATIVA = 'AD'
+    OBCHODNIK = 'OB'
 
     ROLA_CHOICES = [
         (TECHNIK, '🛠️ Servisný technik'),
         (DISPECER, '🎧 Dispečer / Plánovač'),
         (SKLADNIK, '📦 Skladník'),
         (ADMINISTRATIVA, '📁 Administratíva'),
+        (OBCHODNIK, '🤝 Obchodník'),
     ]
 
     typ_pomeru = models.CharField(max_length=2, choices=POMER_CHOICES, default=INTERNI, verbose_name='🤝 Typ pomeru', help_text="⚖️ Právny vzťah pracovníka k firme pre mzdové, daňové a odvodové účely.")
@@ -7374,13 +7376,8 @@ class PracovnaPozicia(ISASAuditMixin, models.Model):
 
     cielova_rola = models.CharField(
         "👔 Pracovná rola v ERP", max_length=2, 
-        choices=[
-            ('TE', '🛠️ Servisný technik'),
-            ('DI', '🎧 Dispečer / Plánovač'),
-            ('SK', '📦 Skladník'),
-            ('AD', '📁 Administratíva'),
-        ], 
-        default='TE',
+        choices=Zamestnanec.ROLA_CHOICES, 
+        default=Zamestnanec.TECHNIK,
         help_text="👔 Určuje systémovú rolu, ktorú kandidát dostane pri automatickom vytvorení v ERP."
     )
     
@@ -7497,7 +7494,7 @@ class Kandidat(ISASAuditMixin, ISASGDPRMixin, models.Model):
     def preklop_na_zamestnanca(self, typ_pomeru=None, pracovna_rola=None, uloz_kandidata=True):
         """
         🧠 ISAS ONBOARDING ENGINE: Bezpečne preklopí prijatého kandidáta na zamestnanca.
-        Dynamicky odvodí rolu (Technik/Skladník/Dispečer/Admin) aj pomer (TPP/Živnosť/Dohoda) z inzerátu.
+        Dynamicky odvodí rolu (Technik/Skladník/Dispečer/Admin/Obchodník) aj pomer (TPP/Živnosť/Dohoda) z inzerátu.
         """
         if self.vytvoreny_zamestnanec:
             return self.vytvoreny_zamestnanec
