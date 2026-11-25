@@ -3812,11 +3812,13 @@ def get_available_slots(request):
     if not (work_start and midpoint and work_end):
         return JsonResponse({'status': 'success', 'slots': []})
 
-    # 2. 🧠 ISAS ABSENCE ENGINE: Zohľadníme dovolenky, PN a paragrafy
+    # 2. 🧠 ISAS ABSENCE ENGINE: Zohľadníme dovolenky, PN a paragrafy (výhradne aktívnych technikov)
     absencie_dnes = Nepritomnost.objects.filter(
         datum_od__lte=target_date,
         datum_do__gte=target_date,
-        stav__in=['SCHVALENE', 'CAKA']
+        stav__in=['SCHVALENE', 'CAKA'],
+        zamestnanec__pracovna_rola='TE',
+        zamestnanec__je_anonymizovany=False,
     )
     
     full_absences = absencie_dnes.filter(pol_dna=False).values('zamestnanec').distinct().count()
@@ -3912,6 +3914,13 @@ def submit_booking(request):
         if not _is_valid_email_address(email):
             return JsonResponse({'status': 'error', 'message': 'Zadajte platný formát e-mailovej adresy.'}, status=400)
 
+        b2b_klient_auth, _ = get_b2b_client_and_discount(request)
+        gdpr_raw = str(request.POST.get('gdpr_suhlas') or '').strip().lower()
+        gdpr_accepted = gdpr_raw in ('on', 'true', '1', 'yes', 'ano')
+
+        if not b2b_klient_auth and not gdpr_accepted:
+            return JsonResponse({'status': 'error', 'message': 'Pre odoslanie rezervácie je potrebný súhlas so spracovaním osobných údajov (GDPR).'}, status=400)
+
         # 🛡️ Rate Limiting (Ochrana pred spamovaním klikov)
         ip_adresa = get_client_ip(request)
         cache_key = f"booking_submit_limit_{ip_adresa}"
@@ -3986,7 +3995,11 @@ def submit_booking(request):
             total_techs = technici.count()
             
             absencie = Nepritomnost.objects.filter(
-                datum_od__lte=target_date, datum_do__gte=target_date, stav__in=['SCHVALENE', 'CAKA']
+                datum_od__lte=target_date,
+                datum_do__gte=target_date,
+                stav__in=['SCHVALENE', 'CAKA'],
+                zamestnanec__pracovna_rola='TE',
+                zamestnanec__je_anonymizovany=False,
             )
             full_absences = absencie.filter(pol_dna=False).values('zamestnanec').distinct().count()
             half_absences = absencie.filter(pol_dna=True).values('zamestnanec').distinct().count()
@@ -4024,7 +4037,7 @@ def submit_booking(request):
             # 💾 ZÁPIS DO DATABÁZY
             with transaction.atomic():
                 # Defenzívne vytvorenie zákazníka v savepointe
-                zakaznik = Zakaznik.objects.select_for_update().filter(email__iexact=email).first()
+                zakaznik = Zakaznik.objects.select_for_update().filter(email__iexact=email, je_interny_profil=False).first()
                 if not zakaznik:
                     try:
                         with transaction.atomic():
@@ -4035,7 +4048,7 @@ def submit_booking(request):
                                 Ostatne="Vytvorené cez Smart Booking."
                             )
                     except Exception:
-                        zakaznik = Zakaznik.objects.filter(email__iexact=email).first()
+                        zakaznik = Zakaznik.objects.filter(email__iexact=email, je_interny_profil=False).first()
                 else:
                     if not zakaznik.telefon and telefon:
                         zakaznik.telefon = telefon

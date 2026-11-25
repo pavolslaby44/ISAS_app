@@ -11,11 +11,11 @@
     /* IoT Demo CSS */
     .gauge-card { text-align: center; position: relative; background: rgba(255, 255, 255, 0.8); border: 1px solid #ffffff; border-radius: 24px; padding: 20px 10px; box-shadow: 0 10px 30px rgba(30, 41, 59, 0.04), inset 0 2px 5px rgba(255,255,255,1); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease; }
     .gauge-card:hover { transform: translateY(-5px); box-shadow: 0 20px 40px rgba(30, 41, 59, 0.08), inset 0 2px 5px rgba(255,255,255,1); }
-    .gauge-value-overlay { position: absolute; bottom: 35px; left: 0; width: 100%; text-align: center; }
-    .gauge-value-overlay .val { font-size: 34px; font-weight: 900; line-height: 1; letter-spacing: -1px; background: linear-gradient(135deg, #0f172a 0%, #475569 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .gauge-value-overlay { position: absolute; bottom: 26px; left: 0; width: 100%; text-align: center; padding: 0 12px; }
+    .gauge-value-overlay .val { font-size: clamp(22px, 2.2vw, 28px); font-weight: 900; line-height: 1; letter-spacing: -0.5px; font-variant-numeric: tabular-nums; background: linear-gradient(135deg, #0f172a 0%, #475569 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
     .gauge-value-overlay .unit { font-size: 12px; color: #64748b; font-weight: 800; text-transform: uppercase; margin-top: 2px; }
     .gauge-title { font-size: 12px; font-weight: 800; color: #475569; margin-top: 15px; text-transform: uppercase; letter-spacing: 1px; }
-    .digital-badge { padding: 10px; border-radius: 12px; text-align: center; font-size: 12px; font-weight: bold; border: 1px solid rgba(0,0,0,0.05); }
+    .digital-badge { padding: 10px; border-radius: 12px; text-align: center; font-size: 12px; font-weight: bold; border: 1px solid rgba(0,0,0,0.05); min-width: 0; overflow-wrap: anywhere; }
     .digital-badge.on { background: #dcfce7; color: #166534; }
     .digital-badge.off { background: #f1f5f9; color: #475569; }
 {% endblock %}
@@ -759,7 +759,7 @@
                             <div class="relative w-full h-36 flex items-center justify-center">
                                 <canvas id="demo-gauge-1"></canvas>
                                 <div class="gauge-value-overlay pointer-events-none">
-                                    <div class="val text-3xl font-black text-gray-900" id="demo-val-1">{{ industry_terms.gauge_1_base|default:"--" }}</div>
+                                    <div class="val font-black text-gray-900" id="demo-val-1">{{ industry_terms.gauge_1_base|default:"--" }}</div>
                                     <div class="unit text-xs font-bold text-gray-500 uppercase">{{ industry_terms.gauge_1_unit|default:"" }}</div>
                                 </div>
                             </div>
@@ -769,7 +769,7 @@
                             <div class="relative w-full h-36 flex items-center justify-center">
                                 <canvas id="demo-gauge-2"></canvas>
                                 <div class="gauge-value-overlay pointer-events-none">
-                                    <div class="val text-3xl font-black text-gray-900" id="demo-val-2">{{ industry_terms.gauge_2_base|default:"--" }}</div>
+                                    <div class="val font-black text-gray-900" id="demo-val-2">{{ industry_terms.gauge_2_base|default:"--" }}</div>
                                     <div class="unit text-xs font-bold text-gray-500 uppercase">{{ industry_terms.gauge_2_unit|default:"" }}</div>
                                 </div>
                             </div>
@@ -779,7 +779,7 @@
                             <div class="relative w-full h-36 flex items-center justify-center">
                                 <canvas id="demo-gauge-3"></canvas>
                                 <div class="gauge-value-overlay pointer-events-none">
-                                    <div class="val text-3xl font-black text-gray-900" id="demo-val-3">{{ industry_terms.gauge_3_base|default:"--" }}</div>
+                                    <div class="val font-black text-gray-900" id="demo-val-3">{{ industry_terms.gauge_3_base|default:"--" }}</div>
                                     <div class="unit text-xs font-bold text-gray-500 uppercase">{{ industry_terms.gauge_3_unit|default:"" }}</div>
                                 </div>
                             </div>
@@ -788,10 +788,10 @@
                     </div>
                     
                     <!-- Digitálne stavy a CTA -->
-                    <div class="flex flex-col justify-between bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
+                    <div class="flex flex-col justify-between bg-white p-5 sm:p-8 rounded-3xl border border-gray-100 shadow-sm min-w-0">
                         <div>
                             <h3 class="text-lg font-bold text-gray-900 mb-6">{{ industry_terms.system_status_title|default:"Stav Systému" }}</h3>
-                            <div class="grid grid-cols-2 gap-4 mb-8" id="demo-digital">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-8" id="demo-digital">
                                 <div class="digital-badge off" id="demo-dig-1">
                                     <div class="mb-1 text-gray-500">{{ industry_terms.dig_1_title|default:"Primárny okruh" }}</div>
                                     <span class="stav-text">ČAKÁM...</span>
@@ -800,14 +800,14 @@
                                     <div class="mb-1 text-gray-500">{{ industry_terms.dig_2_title|default:"Sekundárny okruh" }}</div>
                                     <span class="stav-text">ČAKÁM...</span>
                                 </div>
-                                <div class="digital-badge off col-span-2" id="demo-dig-chyba">
+                                <div class="digital-badge off sm:col-span-2" id="demo-dig-chyba">
                                     <div class="mb-1 text-gray-500">{{ industry_terms.dig_error_title|default:"Systémový stav" }}</div>
                                     <span class="stav-text">ČAKÁM...</span>
                                 </div>
                             </div>
                         </div>
                         
-                        <a href="#kontakt" class="w-full bg-brand hover-bg-brand text-white font-bold text-center py-4 rounded-xl transition duration-300 shadow-md">
+                        <a href="#kontakt" class="w-full bg-brand hover-bg-brand text-white font-bold text-center py-4 px-4 rounded-xl transition duration-300 shadow-md">
                             Chcem vedieť viac
                         </a>
                     </div>
@@ -936,7 +936,7 @@
                     </div>
                     {% if has_booking %}
                     <p class="text-xs text-gray-500 mb-6 bg-gray-50 p-2.5 rounded-xl border border-gray-100 flex items-center justify-between">
-                        <span>Potrebujete bežnú periodickú prehliadku?</span>
+                        <span>Hľadáte plánovaný termín servisu alebo konzultácie?</span>
                         <a href="#rezervacia" class="text-brand font-bold hover:underline">Rezervovať termín online &darr;</a>
                     </p>
                     {% endif %}
@@ -1159,13 +1159,13 @@
                         <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                     </div>
                     <h2 class="text-4xl font-bold mb-8 text-gray-900">{{ blok.nadpis|default:"Online rezervácia termínu" }}</h2>
-                    <p class="text-lg text-gray-500">{{ blok.podnadpis|default:"Vyberte si službu, zvoľte voľný termín a my zabezpečíme výjazd."|linebreaksbr }}</p>
+                    <p class="text-lg text-gray-500">{{ blok.podnadpis|default:"Vyberte si službu, zvoľte voľný termín a náš tím sa postará o realizáciu."|linebreaksbr }}</p>
                 </div>
                 
                 <div class="bg-gray-50 p-8 rounded-3xl border border-gray-200 shadow-xl">
                     <p class="text-xs text-amber-950 mb-6 bg-amber-50 p-3 rounded-2xl border border-amber-200 flex items-center justify-between flex-wrap gap-2">
-                        <span class="flex items-center gap-1.5 font-medium"><span>🚨</span> <strong>Akútna havária alebo odstávka technológie?</strong> Online termíny sú vyhradené na plánovaný servis od zajtra.</span>
-                        <a href="#kontakt" class="text-red-700 font-bold hover:underline">Havarijný dispečing 24/7 &rarr;</a>
+                        <span class="flex items-center gap-1.5 font-medium"><span>🚨</span> <strong>Akútna požiadavka alebo urgentný výpadok?</strong> Online termíny sú vyhradené pre plánované stretnutia a zásahy od zajtra.</span>
+                        <a href="#kontakt" class="text-red-700 font-bold hover:underline">Urgentný kontakt &rarr;</a>
                     </p>
                     <form id="bookingForm" class="space-y-6">
                         {% csrf_token %}
@@ -1189,11 +1189,11 @@
                                     <div class="grid grid-cols-2 gap-2 text-xs font-bold">
                                         <label class="flex items-center gap-2 p-3 bg-white border border-gray-200 rounded-xl cursor-pointer hover:border-brand transition">
                                             <input type="radio" name="sposob_realizacie" value="VYJAZD" checked class="text-brand focus:ring-brand">
-                                            <span>🚙 Výjazd k vám</span>
+                                            <span>📍 U vás na mieste</span>
                                         </label>
                                         <label class="flex items-center gap-2 p-3 bg-white border border-gray-200 rounded-xl cursor-pointer hover:border-brand transition">
                                             <input type="radio" name="sposob_realizacie" value="DIELNA" class="text-brand focus:ring-brand">
-                                            <span>🏢 Príjem na stredisku (0 {{ mena }})</span>
+                                            <span>🏢 Stredisko / Online (0 {{ mena }})</span>
                                         </label>
                                     </div>
 
@@ -1207,20 +1207,20 @@
                                         </div>
                                     </div>
 
-                                    <!-- Možnosť: Dielňa (Výber strediska) -->
+                                    <!-- Možnosť: Dielňa / Online (Výber strediska) -->
                                     <div id="bookingDielnaWrap" class="hidden space-y-2">
                                         <select name="stredisko_info" class="w-full bg-white border border-gray-200 rounded-xl pl-4 pr-9 py-3 truncate focus:ring-2 ring-brand outline-none text-base md:text-xs font-semibold">
                                             {% if identita.adresa_prevadzky %}
-                                                <option value="Centrála / Hlavný sklad ({{ identita.adresa_prevadzky }})">🏢 Centrála ({{ identita.adresa_prevadzky|truncatechars:32 }}) – 0 {{ mena }}</option>
+                                                <option value="Centrála / Online ({{ identita.adresa_prevadzky }})">🏢 Centrála / Online ({{ identita.adresa_prevadzky|truncatechars:32 }}) – 0 {{ mena }}</option>
                                             {% elif not servisne_strediska %}
-                                                <option value="Servisné stredisko spoločnosti">🏢 Servisné stredisko – 0 {{ mena }} doprava</option>
+                                                <option value="Pracovisko spoločnosti / Online">🏢 Pracovisko spoločnosti / Online – 0 {{ mena }} doprava</option>
                                             {% endif %}
                                             {% for stredisko in servisne_strediska %}
                                                 <option value="{{ stredisko.nazov }} ({{ stredisko.adresa|default:'' }})">🏢 {{ stredisko.nazov|truncatechars:26 }}{% if stredisko.adresa %} ({{ stredisko.adresa|truncatechars:22 }}){% endif %} – 0 {{ mena }}</option>
                                             {% endfor %}
                                         </select>
                                         <p class="text-[11px] text-emerald-800 bg-emerald-50 p-2 rounded-lg border border-emerald-200">
-                                            💡 Pri doručení na naše servisné stredisko neplatíte žiaden poplatok za dopravu (0 {{ mena }}).
+                                            💡 Pri realizácii na našom stredisku alebo online na diaľku neplatíte žiaden poplatok za dopravu (0 {{ mena }}).
                                         </p>
                                     </div>
                                 </div>
@@ -1254,14 +1254,23 @@
                                     </div>
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-bold text-gray-700 mb-2">Poznámka pre technika</label>
-                                    <textarea name="poznamka" rows="3" placeholder="Špecifikácia závady, prístupu do areálu alebo požiadavky na technológiu..." class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 ring-brand outline-none"></textarea>
+                                    <label class="block text-sm font-bold text-gray-700 mb-2">Poznámka k rezervácii</label>
+                                    <textarea name="poznamka" rows="3" placeholder="Bližší popis vašej požiadavky, rozsahu prác alebo preferovanej formy stretnutia..." class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 ring-brand outline-none"></textarea>
                                 </div>
                                 <div class="bg-blue-50 p-4 rounded-xl border border-blue-100 text-sm text-blue-800">
-                                    <span class="font-bold">ℹ️ Dôležité:</span> Váš termín je predbežný. Presný čas príchodu technika vám potvrdí náš dispečing na základe aktuálnej trasy a logistiky.
+                                    <span class="font-bold">ℹ️ Dôležité:</span> Váš termín je predbežný. Presný čas a detaily realizácie vám potvrdíme e-mailom alebo telefonicky podľa aktuálneho harmonogramu.
                                 </div>
                             </div>
                         </div>
+
+                        {% if not request.user.is_authenticated or not request.user.zakaznik_profil %}
+                        <div class="flex items-start gap-3 pt-2">
+                            <input type="checkbox" name="gdpr_suhlas" id="booking_gdpr_suhlas" required class="mt-1 w-5 h-5 text-brand border-gray-300 rounded focus:ring-brand">
+                            <label for="booking_gdpr_suhlas" class="text-sm text-gray-600">
+                                Súhlasím so spracovaním osobných údajov za účelom vybavenia tejto rezervácie v súlade s platnou legislatívou (GDPR). *
+                            </label>
+                        </div>
+                        {% endif %}
                         
                         <button type="submit" id="bookingSubmitBtn" class="w-full bg-brand hover-bg-brand text-white font-bold text-lg py-4 rounded-xl transition shadow-lg mt-4 flex justify-center items-center gap-2">
                             <svg id="bookingBtnSpinner" class="hidden animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -1811,7 +1820,7 @@
                 const el = document.getElementById(id);
                 if (!el) return;
                 const textEl = el.querySelector('.stav-text');
-                const colSpanClass = id === 'demo-dig-chyba' ? ' col-span-2' : '';
+                const colSpanClass = id === 'demo-dig-chyba' ? ' sm:col-span-2' : '';
                 if (isOn) {
                     el.className = 'digital-badge on' + colSpanClass;
                     if (textEl) textEl.innerText = textOn;
@@ -1974,7 +1983,7 @@
                     if (msgDiv) {
                         msgDiv.classList.remove('hidden', 'bg-green-50', 'border-green-200', 'text-green-700');
                         msgDiv.classList.add('bg-amber-50', 'border-amber-200', 'text-amber-800');
-                        msgDiv.innerHTML = '<b>Upozornenie:</b> Prosím, vyberte si konkrétny časový blok výjazdu.';
+                        msgDiv.innerHTML = '<b>Upozornenie:</b> Prosím, vyberte si konkrétny časový blok.';
                     }
                     return;
                 }
@@ -2001,7 +2010,7 @@
                             msgDiv.innerHTML = `
                                 <div class="text-5xl mb-4">📅</div>
                                 <h4 class="text-2xl font-bold mb-1 text-gray-900">Termín bol úspešne rezervovaný!</h4>
-                                <p class="text-gray-500 text-sm mb-4">Potvrdenie a harmonogram výjazdu vám pošle dispečing na e-mail.</p>
+                                <p class="text-gray-500 text-sm mb-4">Potvrdenie termínu a ďalšie podrobnosti vám pošleme na e-mail.</p>
                                 
                                 <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-inner mb-6 inline-flex flex-col items-center">
                                     <span class="text-xs uppercase font-bold text-gray-400 tracking-wider mb-1">Číslo rezervovanej zákazky:</span>
@@ -2125,8 +2134,8 @@
 
                         bookingSlots.innerHTML = `
                             <div class="p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 space-y-1.5">
-                                <p class="font-bold flex items-center gap-1.5"><span>⚠️</span> Cez víkendy bežný servis neposkytujeme.</p>
-                                <p class="text-[11px] leading-relaxed">Štandardné výjazdy prebiehajú v pracovné dni. Pre havarijné stavy volajte dispečing.</p>
+                                <p class="font-bold flex items-center gap-1.5"><span>⚠️</span> Cez víkendy štandardné termíny nerezervujeme.</p>
+                                <p class="text-[11px] leading-relaxed">Plánované termíny prebiehajú v pracovné dni. Pri urgentnej požiadavke nás kontaktujte priamo.</p>
                                 <button type="button" onclick="const b=document.getElementById('bookingDate'); if(b){b.value='${nextMonVal}'; b.dispatchEvent(new Event('change'));}" class="mt-1 bg-amber-700 hover:bg-amber-800 text-white font-bold py-1.5 px-3 rounded-lg transition text-xs shadow-sm">
                                     Nastaviť na pondelok (${nextD}.${nextM}.) &rarr;
                                 </button>
