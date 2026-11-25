@@ -288,6 +288,8 @@ class WebFAQ(ISASAuditMixin, models.Model):
         ('SERVIS', '🛠️ Servis a údržba'),
         ('OBCHOD', '💰 Obchod a fakturácia'),
         ('ZARUKA', '🛡️ Záruka a reklamácie'),
+        ('TECHNOLOGIA', '⚙️ Technológia a implementácia'),
+        ('KARIERA', '🤝 Kariéra a spolupráca'),
     ]
     
     kategoria = models.CharField("📂 Kategória", max_length=20, choices=KATEGORIA_CHOICES, default='VSEOBECNE', help_text="Zoskupenie otázok pre lepšiu prehľadnosť na webe.")

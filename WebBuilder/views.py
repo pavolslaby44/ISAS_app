@@ -459,8 +459,8 @@ def public_web_view(request):
             digits = re.sub(r'[^\d]', '', raw_mzda)
             p.mzda_numeric = digits if digits else None
 
-        # ❓ ISAS FAQ ENGINE: Natiahnutie aktívnych otázok
-        faqs = list(WebFAQ.objects.filter(je_aktivna=True).order_by('kategoria', 'poradie', '-id'))
+        # ❓ ISAS FAQ ENGINE: Natiahnutie aktívnych klientskych otázok (bez náborových otázok Kariéry)
+        faqs = list(WebFAQ.objects.filter(je_aktivna=True).exclude(kategoria='KARIERA').order_by('kategoria', 'poradie', '-id'))
 
         # 📰 ISAS BLOG ENGINE: Natiahnutie najnovších 3 článkov pre Teaser (V AI preview rešpektujeme koncepty v symbióze s MPA)
         dnes = timezone.now().date()
@@ -1775,8 +1775,8 @@ class SluzbyListView(WebBaseMixin, ListView):
 
         context['faqs'] = WebFAQ.objects.filter(
             je_aktivna=True, 
-            kategoria__in=['SERVIS', 'VSEOBECNE']
-        ).order_by('poradie')[:4]
+            kategoria__in=['SERVIS', 'TECHNOLOGIA']
+        ).order_by('poradie', '-id')[:4]
 
         context['meter_unit'] = get_industry_term('meter_unit', 'hod.')
 
@@ -1864,11 +1864,11 @@ class SluzbaDetailView(WebBaseMixin, DetailView):
             if getattr(r, 'hodnotenie_zakaznika', None) and r.hodnotenie_zakaznika > 0
         ]
 
-        # ❓ WebFAQ: Otázky a odpovede viazané na servis a garanciu
+        # ❓ WebFAQ: Otázky a odpovede viazané na servis, technológiu a garanciu
         context['faqs'] = WebFAQ.objects.filter(
             je_aktivna=True, 
-            kategoria__in=['SERVIS', 'ZARUKA', 'VSEOBECNE']
-        ).order_by('poradie')[:4]
+            kategoria__in=['SERVIS', 'TECHNOLOGIA', 'ZARUKA']
+        ).order_by('poradie', '-id')[:4]
 
         # ⚖️ DPH & Cena: Výpočet pre fakturovateľné položky vrátane B2B zliav
         gn = context.get('globalne_nastavenia')
@@ -2987,6 +2987,9 @@ class KarieraListView(WebBaseMixin, ListView):
         # Zero Data Leak: Na podstránke kariéry sa nezobrazujú interní zamestnanci bez povolenia na webe
 
         context['tim'] = tim
+        context['faqs'] = list(
+            WebFAQ.objects.filter(je_aktivna=True, kategoria='KARIERA').order_by('poradie', '-id')[:6]
+        )
         return context
 
 class KarieraDetailView(WebBaseMixin, DetailView):

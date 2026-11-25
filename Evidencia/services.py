@@ -4907,7 +4907,7 @@ def tool_spravuj_faq(akcia: str, faq_id: Optional[int] = None, kategoria: Option
     """
     Použi na PRIDÁVANIE, ÚPRAVU alebo MAZANIE Často kladených otázok (FAQ) na verejnom webe.
     'akcia' musí byť jedna z: 'VYTVORIT', 'UPRAVIT', 'ZMAZAT', 'DEAKTIVOVAT'.
-    'kategoria' musí byť jedna z: 'VSEOBECNE', 'SERVIS', 'OBCHOD', 'ZARUKA'.
+    'kategoria' musí byť jedna z: 'VSEOBECNE', 'SERVIS', 'OBCHOD', 'ZARUKA', 'TECHNOLOGIA', 'KARIERA'.
     """
     try:
         WebFAQ = apps.get_model('WebBuilder', 'WebFAQ')
@@ -4915,7 +4915,7 @@ def tool_spravuj_faq(akcia: str, faq_id: Optional[int] = None, kategoria: Option
     except LookupError:
         return json.dumps({"error": "Model WebFAQ nie je v systéme dostupný."})
 
-    POVOLENE_KATEGORIE = ['VSEOBECNE', 'SERVIS', 'OBCHOD', 'ZARUKA']
+    POVOLENE_KATEGORIE = ['VSEOBECNE', 'SERVIS', 'OBCHOD', 'ZARUKA', 'TECHNOLOGIA', 'KARIERA']
 
     try:
         with transaction.atomic():
