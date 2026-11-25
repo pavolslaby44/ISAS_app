@@ -13,17 +13,32 @@
             theme: {
                 extend: {
                     fontFamily: { sans: ['Inter', 'sans-serif'] },
-                    colors: { brand: '{{ nastavenia.hlavna_farba|default:"#0f172a" }}' }
+                    colors: { brand: '{{ nastavenia.hlavna_farba|default:"#0f172a"|escapejs }}' }
                 }
             }
         }
     </script>
+    <style>
+        input::placeholder {
+            text-overflow: ellipsis;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+        input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not(:focus) {
+            text-overflow: ellipsis;
+        }
+        select:not([multiple]) {
+            text-overflow: ellipsis;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+    </style>
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans antialiased min-h-screen flex flex-col">
 
     <!-- Hlavička -->
     <nav class="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-50">
-        <div class="max-w-3xl mx-auto px-6 py-4 flex justify-between items-center gap-3">
+        <div class="max-w-3xl mx-auto px-4 sm:px-6 py-4 flex flex-wrap justify-between items-center gap-3">
             <a href="{% url 'webbuilder:home' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="flex items-center">
                 {% if nastavenia.logo and nastavenia.logo.name %}
                     <img src="{{ nastavenia.logo.url }}" alt="{{ identita.nazov_spolocnosti|default:'Logo' }}" class="h-8 object-contain">
@@ -33,18 +48,18 @@
                     <span class="text-xl font-extrabold text-brand">{{ identita.nazov_spolocnosti|default:"Servisné Stredisko" }}</span>
                 {% endif %}
             </a>
-            <div class="flex items-center gap-2">
+            <div class="flex flex-wrap items-center gap-2">
                 {% if identita.email_vseobecny %}
                     <a href="mailto:{{ identita.email_vseobecny }}" class="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold text-gray-700 bg-gray-50 border border-gray-200 px-3 py-1.5 rounded-full hover:bg-gray-100 transition" title="E-mail na dispečing">
                         <span>✉️</span> {{ identita.email_vseobecny }}
                     </a>
                 {% endif %}
                 {% if identita.telefon %}
-                    <a href="tel:{{ identita.telefon|cut:' '|cut:'/' }}" class="inline-flex items-center gap-1.5 text-xs font-bold text-red-600 bg-red-50 border border-red-200 px-3 py-1.5 rounded-full hover:bg-red-100 transition">
+                    <a href="tel:{{ identita.telefon|cut:' '|cut:'/' }}" class="inline-flex items-center gap-1.5 text-xs font-bold text-red-600 bg-red-50 border border-red-200 px-3 py-1.5 rounded-full hover:bg-red-100 transition whitespace-nowrap">
                         <span>🚨 Hotline:</span> {{ identita.telefon }}
                     </a>
                 {% endif %}
-                <span class="bg-brand/10 text-brand text-xs font-bold px-3 py-1 rounded-full">{{ industry_terms.pas_title|default:"Digitálny Pas" }}</span>
+                <span class="bg-brand/10 text-brand text-xs font-bold px-3 py-1 rounded-full truncate max-w-[150px] sm:max-w-none" title="{{ industry_terms.pas_title|default:'Digitálny Pas' }}">{{ industry_terms.pas_title|default:"Digitálny Pas" }}</span>
             </div>
         </div>
     </nav>
@@ -91,7 +106,7 @@
                 {% if zariadenie.nazov %}
                     <p class="text-sm font-semibold text-gray-300 relative z-10 mt-0.5">{{ industry_terms.stanoviste|default:"Stanovište" }}: {{ zariadenie.nazov }}</p>
                 {% endif %}
-                <div class="flex items-center justify-center gap-2 mt-1 relative z-10">
+                <div class="flex flex-wrap items-center justify-center gap-2 mt-1 relative z-10">
                     <p class="text-gray-400 font-mono">SN: {{ zariadenie.vyrobne_cislo }}{% if zariadenie.kategoria %} &bull; <span class="px-2 py-0.5 rounded-md font-sans text-xs font-bold {% if not kategoria_farba %}text-gray-300 bg-white/10{% endif %}" {% if kategoria_farba %}style="background-color: {{ kategoria_farba }}33; color: {{ kategoria_farba }}; border: 1px solid {{ kategoria_farba }}66;"{% endif %}>{{ zariadenie.get_kategoria_display }}</span>{% endif %}</p>
                     {% if zariadenie.obrazok_na_webe and zariadenie.obrazok_na_webe.name %}
                         <a href="{{ zariadenie.obrazok_na_webe.url }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-[11px] font-bold text-gray-300 hover:text-white bg-white/10 hover:bg-white/20 border border-white/20 rounded-full px-2.5 py-0.5 transition" title="Zobraziť fotografiu zariadenia">
@@ -106,7 +121,7 @@
                 </div>
             </div>
             
-            <div class="p-6 grid grid-cols-2 sm:grid-cols-3 gap-4">
+            <div class="p-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 <div class="bg-gray-50 p-4 rounded-2xl border border-gray-100">
                     <p class="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">Prevádzka / Zákazník</p>
                     <p class="font-semibold text-gray-900">
@@ -202,7 +217,7 @@
             </div>
             <div class="space-y-2">
                 {% for alarm in aktivne_alarmy %}
-                    <div class="bg-white p-3.5 rounded-2xl border border-red-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-xs">
+                    <div class="bg-white p-3.5 rounded-2xl border border-red-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-sm">
                         <div>
                             <div class="flex items-center gap-2">
                                 <span class="font-mono font-bold text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded-md">{{ alarm.kod_chyby|default:"ALARM" }}</span>
@@ -211,7 +226,7 @@
                             </div>
                             <p class="text-xs font-medium text-gray-800 mt-1">{{ alarm.popis }}</p>
                         </div>
-                        <button type="button" onclick="predvyplnitAlarm('Porucha [{{ alarm.kod_chyby|default:"ALARM" }}]: {{ alarm.popis|escapejs }} (zistené: {{ alarm.casova_peciatka|date:"d.m.Y H:i" }})')" class="self-start sm:self-center text-xs font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl px-3 py-1.5 transition">
+                        <button type="button" onclick="predvyplnitAlarm('Porucha [{{ alarm.kod_chyby|default:"ALARM"|escapejs }}]: {{ alarm.popis|escapejs }} (zistené: {{ alarm.casova_peciatka|date:"d.m.Y H:i" }})')" class="self-start sm:self-center text-xs font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl px-3 py-1.5 transition">
                             Riešiť túto poruchu ↘
                         </button>
                     </div>
@@ -291,7 +306,7 @@
             </div>
 
             {% if zariadenie.zakaznik.telefon_vratnica %}
-                <div class="bg-white p-3 rounded-2xl border border-amber-200 mb-4 text-xs flex items-center justify-between">
+                <div class="bg-white p-3 rounded-2xl border border-amber-200 mb-4 text-xs flex flex-wrap items-center justify-between gap-2">
                     <span class="text-gray-600 font-medium">Dispečing / Vrátnica areálu (napr. otvorenie rampy):</span>
                     <a href="tel:{{ zariadenie.zakaznik.telefon_vratnica|cut:' '|cut:'/' }}" class="text-amber-800 font-bold hover:underline">📞 {{ zariadenie.zakaznik.telefon_vratnica }}</a>
                 </div>
@@ -537,7 +552,7 @@
                     <div class="flex flex-wrap items-center justify-between gap-2">
                         <p class="text-lg font-bold text-gray-900">{{ dalsi_servis.typ_servisu.nazov|default:"Údržba" }}</p>
                         {% if dalsi_servis.typ_servisu %}
-                            <button type="button" onclick="predvyplnitUdrzbu('{{ dalsi_servis.typ_servisu.id }}', '{{ dalsi_servis.typ_servisu.nazov|escapejs }}')" class="text-xs font-bold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl px-3 py-1 transition shadow-2xs">
+                            <button type="button" onclick="predvyplnitUdrzbu('{{ dalsi_servis.typ_servisu.id }}', '{{ dalsi_servis.typ_servisu.nazov|escapejs }}')" class="text-xs font-bold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl px-3 py-1 transition shadow-sm">
                                 Objednať údržbu ↘
                             </button>
                         {% endif %}
@@ -727,7 +742,7 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                 {% for audit in compliance_audity %}
                     <div class="p-3.5 rounded-2xl border text-xs {% if audit.stav == 'PREPADNUTA' or audit.stav == 'CHYBA_KONTROLA' or audit.stav == 'CRITICAL' %}bg-red-50/80 border-red-200 text-red-900{% elif audit.stav == 'BLIZI_SA' or audit.stav == 'WARNING' %}bg-amber-50/80 border-amber-300 text-amber-900{% elif audit.stav == 'BEZ_POVINNOSTI' %}bg-gray-50 border-gray-200 text-gray-600{% else %}bg-emerald-50/70 border-emerald-200 text-emerald-900{% endif %}" title="{{ audit.upozornenie_text|default:''|striptags }}">
-                        <div class="flex items-center justify-between mb-1">
+                        <div class="flex flex-wrap items-center justify-between gap-2 mb-1">
                             <span class="font-bold flex items-center gap-1">
                                 <span>{{ audit.ikona|default:"⚖️" }}</span>
                                 <span>{{ audit.nazov|default:"Odborná prehliadka" }}</span>
@@ -771,7 +786,7 @@
             {% if otvorene_objednavky %}
                 <div class="space-y-2 mb-2">
                     {% for obj in otvorene_objednavky %}
-                        <div class="bg-white p-3 rounded-2xl border border-sky-100 flex items-center justify-between text-xs">
+                        <div class="bg-white p-3 rounded-2xl border border-sky-100 flex flex-wrap items-center justify-between gap-2 text-xs">
                             <div>
                                 <span class="font-mono font-bold text-sky-800 bg-sky-100 px-2 py-0.5 rounded">Tiket: {{ obj.cislo_objednavky_interne }}</span>
                                 {% if obj.cislo_objednavky_klienta %}{% if je_vlastnik_stroja or je_opravneny_personal %}<span class="text-gray-500 font-mono ml-1">({{ obj.cislo_objednavky_klienta }})</span>{% endif %}{% endif %}
@@ -785,7 +800,7 @@
             {% if aktivne_ulohy %}
                 <div class="space-y-2">
                     {% for uloha in aktivne_ulohy %}
-                        <div class="bg-white p-3 rounded-2xl border border-sky-100 flex items-center justify-between text-xs">
+                        <div class="bg-white p-3 rounded-2xl border border-sky-100 flex flex-wrap items-center justify-between gap-2 text-xs">
                             <div>
                                 <span class="font-bold text-gray-900">🗓️ Naplánovaný výjazd servisného technika</span>
                                 <p class="text-gray-600 font-mono mt-0.5">Termín: {{ uloha.zaciatok|date:"d.m.Y H:i" }}</p>
@@ -827,37 +842,43 @@
                         <input type="text" id="passport_telefon" name="telefon" value="{% if b2b_klient and request.user.is_authenticated and b2b_klient.telefon %}{{ b2b_klient.telefon }}{% elif je_opravneny_personal and zariadenie.zakaznik and not zariadenie.zakaznik.je_interny_profil and zariadenie.zakaznik.telefon %}{{ zariadenie.zakaznik.telefon }}{% endif %}" placeholder="Telefónne číslo" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 ring-brand transition">
                     </div>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label for="passport_sluzba" class="block text-sm font-bold text-gray-700 mb-1">Typ požiadavky <span class="text-gray-400 font-normal">(Voliteľné)</span></label>
-                        <select id="passport_sluzba" name="sluzba_id" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 ring-brand transition appearance-none">
-                            <option value="">-- Vyberte typ --</option>
-                            {% for sluzba in sluzby %}
-                                <option value="{{ sluzba.id }}">{{ sluzba.nazov }}</option>
-                            {% endfor %}
-                        </select>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                    <div class="min-w-0">
+                        <label for="passport_sluzba" class="block truncate text-sm font-bold text-gray-700 mb-1" title="Typ požiadavky (Voliteľné)">Typ požiadavky <span class="text-gray-400 font-normal">(Voliteľné)</span></label>
+                        <div class="relative">
+                            <select id="passport_sluzba" name="sluzba_id" class="w-full bg-gray-50 border border-gray-200 rounded-xl pl-4 pr-10 py-3 truncate focus:outline-none focus:ring-2 ring-brand transition appearance-none cursor-pointer">
+                                <option value="">-- Vyberte typ --</option>
+                                {% for sluzba in sluzby %}
+                                    <option value="{{ sluzba.id }}">{{ sluzba.nazov }}</option>
+                                {% endfor %}
+                            </select>
+                            <svg class="w-4 h-4 text-gray-400 pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </div>
                     </div>
-                    <div>
-                        <label for="passport_priorita" class="block text-sm font-bold text-gray-700 mb-1">Závažnosť situácie</label>
-                        <select id="passport_priorita" name="priorita" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 ring-brand transition appearance-none font-semibold">
-                            <option value="STREDNA" selected>🟡 Štandardná požiadavka</option>
-                            <option value="VYSOKA" class="text-red-600 font-bold">🔴 Havária / Zariadenie stojí (Urgent)</option>
-                        </select>
+                    <div class="min-w-0">
+                        <label for="passport_priorita" class="block truncate text-sm font-bold text-gray-700 mb-1" title="Závažnosť situácie">Závažnosť situácie</label>
+                        <div class="relative">
+                            <select id="passport_priorita" name="priorita" class="w-full bg-gray-50 border border-gray-200 rounded-xl pl-4 pr-10 py-3 truncate focus:outline-none focus:ring-2 ring-brand transition appearance-none font-semibold cursor-pointer">
+                                <option value="STREDNA" selected>🟡 Štandardná požiadavka</option>
+                                <option value="VYSOKA" class="text-red-600 font-bold">🔴 Havária / Zariadenie stojí (Urgent)</option>
+                            </select>
+                            <svg class="w-4 h-4 text-gray-400 pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </div>
                     </div>
                 </div>
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div>
-                        <label for="passport_stav_pocitadla" class="block text-sm font-bold text-gray-700 mb-1">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+                    <div class="min-w-0">
+                        <label for="passport_stav_pocitadla" class="block truncate text-sm font-bold text-gray-700 mb-1" title="Stav: {{ zariadenie.meter_label }} ({{ zariadenie.meter_unit }})">
                             Stav: {{ zariadenie.meter_label }} <span class="text-gray-400 font-normal">({{ zariadenie.meter_unit }})</span>
                         </label>
                         <input type="number" id="passport_stav_pocitadla" name="stav_pocitadla" min="{% if zariadenie.aktualne_motohodiny is not None and zariadenie.aktualne_motohodiny >= 0 %}{{ zariadenie.aktualne_motohodiny }}{% else %}0{% endif %}" step="1" placeholder="Evidované: {{ zariadenie.meter_display }}" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 ring-brand transition font-mono">
                     </div>
-                    <div>
-                        <label for="passport_po_number" class="block text-sm font-bold text-gray-700 mb-1">Číslo objednávky / PO <span class="text-gray-400 font-normal">(B2B autorizácia)</span></label>
+                    <div class="min-w-0">
+                        <label for="passport_po_number" class="block truncate text-sm font-bold text-gray-700 mb-1" title="Číslo objednávky / PO (B2B autorizácia)">Číslo objednávky / PO <span class="text-gray-400 font-normal">(B2B autorizácia)</span></label>
                         <input type="text" id="passport_po_number" name="cislo_objednavky_klienta" placeholder="Napr. PO-{{ dnes|date:'Y' }}" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 ring-brand transition">
                     </div>
-                    <div>
-                        <label for="passport_termin" class="block text-sm font-bold text-gray-700 mb-1">Požadovaný termín servisu <span class="text-gray-400 font-normal">(Voliteľné)</span></label>
+                    <div class="min-w-0">
+                        <label for="passport_termin" class="block truncate text-sm font-bold text-gray-700 mb-1" title="Požadovaný termín servisu (Voliteľné)">Požadovaný termín servisu <span class="text-gray-400 font-normal">(Voliteľné)</span></label>
                         <input type="date" id="passport_termin" name="termin_dodania" min="{% if dnes %}{{ dnes|date:'Y-m-d' }}{% endif %}" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 ring-brand transition">
                     </div>
                 </div>
@@ -885,7 +906,7 @@
 
         <!-- 🖨️ Modálne okno: Tlačiteľný QR servisný štítok stroja -->
         {% if zariadenie.qr_kod and zariadenie.qr_kod.name %}
-        <div id="qrModal" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
+        <div id="qrModal" role="dialog" aria-modal="true" onclick="if(event.target === this) this.classList.add('hidden')" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
             <div class="bg-white rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl relative border border-gray-100">
                 <button type="button" onclick="document.getElementById('qrModal').classList.add('hidden')" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-lg font-bold p-1">✕</button>
                 <p class="text-[10px] uppercase font-extrabold text-gray-400 tracking-wider mb-1">{{ industry_terms.pas_title|default:"Digitálny pas" }} &bull; Servisný štítok</p>

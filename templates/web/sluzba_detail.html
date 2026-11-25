@@ -213,7 +213,7 @@
             
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {% for pravidlo in servisne_intervaly %}
-                <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-2xs">
+                <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
                     <span class="text-[10px] font-black uppercase tracking-wider text-brand bg-brand/10 px-2 py-0.5 rounded block w-fit mb-2">
                         {{ pravidlo.get_kategoria_zariadenia_display }}
                     </span>
@@ -246,7 +246,7 @@
 
         <div class="bg-gray-50 rounded-3xl p-8 border border-gray-200 shadow-sm mb-12">
             <h3 class="text-xl font-bold text-gray-900 mb-6 border-b border-gray-200 pb-4">Realizačné a cenové podmienky</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 {% if sluzba.normohodiny %}lg:grid-cols-4{% else %}lg:grid-cols-3{% endif %} gap-6">
                 <div>
                     <p class="text-sm text-gray-500 font-bold uppercase tracking-wider mb-1">Spôsob účtovania</p>
                     <p class="text-lg font-semibold text-gray-900">{{ sluzba.get_sposob_uctovania_display }}</p>
@@ -269,7 +269,7 @@
                     {% if is_b2b and povodna_cena %}
                     <div class="flex items-center gap-2 mb-1">
                         <span class="text-xs text-gray-400 line-through">{{ povodna_cena }} {{ mena }}</span>
-                        <span class="text-[10px] font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded">B2B -{{ b2b_zlava }}%</span>
+                        <span class="text-[10px] font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">B2B -{{ b2b_zlava }}%</span>
                     </div>
                     {% endif %}
                     <p class="text-3xl font-extrabold text-brand">
@@ -379,7 +379,7 @@
                             <p class="text-xs text-emerald-800 mt-0.5">Na realizovaný úkon a použité komponenty poskytujeme plnú zmluvnú záruku overenú v servisnom protokole.</p>
                         </div>
                     </div>
-                    <span class="text-xs font-black uppercase tracking-wider text-emerald-800 bg-white border border-emerald-200 px-3.5 py-1.5 rounded-xl shadow-xs">
+                    <span class="text-xs font-black uppercase tracking-wider text-emerald-800 bg-white border border-emerald-200 px-3.5 py-1.5 rounded-xl shadow-sm">
                         Overená firemná garancia
                     </span>
                 </div>
@@ -397,7 +397,7 @@
                     <p class="text-xs text-gray-500 mt-1">Reálne technické výsledky, výstupy z auditov a elektronicky zapečatené protokoly.</p>
                 </div>
                 {% if hodnotenie_priemer and hodnotenie_pocet %}
-                <span class="inline-flex items-center gap-1.5 bg-amber-50 border border-amber-200 text-amber-900 font-black text-sm px-3.5 py-1.5 rounded-xl shadow-xs">
+                <span class="inline-flex items-center gap-1.5 bg-amber-50 border border-amber-200 text-amber-900 font-black text-sm px-3.5 py-1.5 rounded-xl shadow-sm">
                     ⭐ {{ hodnotenie_priemer }}/5 <span class="text-xs font-semibold text-amber-700">({{ hodnotenie_pocet }} overených zásahov)</span>
                 </span>
                 {% endif %}
@@ -498,11 +498,11 @@
 
         {% if vyrobcovia %}
         <!-- 🏷️ BIZNIS TRUST: Podporované technológie danej služby -->
-        <div class="mb-14 p-6 bg-gray-50 rounded-2xl border border-gray-200 shadow-2xs">
+        <div class="mb-14 p-6 bg-gray-50 rounded-2xl border border-gray-200 shadow-sm">
             <h3 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-4 text-center">Tento typ servisu realizujeme pre technológie značiek</h3>
             <div class="flex items-center justify-center gap-6 flex-wrap">
                 {% for vyr in vyrobcovia %}
-                <div class="p-2 bg-white rounded-lg border border-gray-200 shadow-2xs flex items-center gap-2">
+                <div class="p-2 bg-white rounded-lg border border-gray-200 shadow-sm flex items-center gap-2">
                     {% if vyr.logo_na_webe and vyr.logo_na_webe.name %}
                     <img src="{{ vyr.logo_na_webe.url }}" alt="{{ vyr.nazov_vyrobcu }}" class="h-6 max-w-[90px] object-contain">
                     {% else %}
@@ -568,18 +568,18 @@
             </div>
             {% endif %}
         {% endif %}
-        <div class="text-center flex flex-col sm:flex-row items-center justify-center gap-4">
-            <button type="button" data-add-to-cart data-typ="SLUZBA" data-nazov="{{ sluzba.nazov }}" data-mena="{{ mena }}" data-detail="{% if not sluzba.je_fakturovatelna %}V cene{% elif sluzba.sposob_uctovania == 'HODINA' %}{% if cena_predaj and cena_predaj > 0 %}{{ cena_predaj }} {{ mena }} / hod{% else %}Na vyžiadanie{% endif %}{% else %}{% if cena_predaj and cena_predaj > 0 %}{{ cena_predaj }} {{ mena }} / úkon{% else %}Na vyžiadanie{% endif %}{% endif %} ({{ sluzba.get_sposob_uctovania_display }}){% if sluzba.normohodiny %} | {{ sluzba.normohodiny }} h{% endif %}{% if sluzba.zaruka_mesiace %} | Záruka {{ sluzba.zaruka_mesiace }}m{% endif %}{% if sluzba.priorita == 'VYSOKA' and globalne_nastavenia.pohotovostny_priplatok and globalne_nastavenia.pohotovostny_priplatok > 0 %} | Pohotovosť +{{ globalne_nastavenia.pohotovostny_priplatok }}%{% endif %}" data-db-id="{{ sluzba.pk }}" data-normohodiny="{{ sluzba.normohodiny|default:'' }}" data-sposob-uctovania="{{ sluzba.sposob_uctovania }}" data-orientacna-cena="{% if sluzba.sposob_uctovania == 'FIX' and cena_predaj and cena_predaj > 0 %}{{ cena_predaj }}{% else %}{{ orientacna_cena_celkom|default:'' }}{% endif %}" data-zaruka="{{ sluzba.zaruka_mesiace|default:'' }}" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-brand hover-bg-brand text-white font-bold text-lg py-4 px-10 rounded-xl transition duration-300 shadow-lg cursor-pointer">
+        <div class="text-center grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-center lg:justify-center gap-3">
+            <button type="button" data-add-to-cart data-typ="SLUZBA" data-nazov="{{ sluzba.nazov }}" data-mena="{{ mena }}" data-detail="{% if not sluzba.je_fakturovatelna %}V cene{% elif sluzba.sposob_uctovania == 'HODINA' %}{% if cena_predaj and cena_predaj > 0 %}{{ cena_predaj }} {{ mena }} / hod{% else %}Na vyžiadanie{% endif %}{% else %}{% if cena_predaj and cena_predaj > 0 %}{{ cena_predaj }} {{ mena }} / úkon{% else %}Na vyžiadanie{% endif %}{% endif %} ({{ sluzba.get_sposob_uctovania_display }}){% if sluzba.normohodiny %} | {{ sluzba.normohodiny }} h{% endif %}{% if sluzba.zaruka_mesiace %} | Záruka {{ sluzba.zaruka_mesiace }}m{% endif %}{% if sluzba.priorita == 'VYSOKA' and globalne_nastavenia.pohotovostny_priplatok and globalne_nastavenia.pohotovostny_priplatok > 0 %} | Pohotovosť +{{ globalne_nastavenia.pohotovostny_priplatok }}%{% endif %}" data-db-id="{{ sluzba.pk }}" data-normohodiny="{{ sluzba.normohodiny|default:'' }}" data-sposob-uctovania="{{ sluzba.sposob_uctovania }}" data-orientacna-cena="{% if sluzba.sposob_uctovania == 'FIX' and cena_predaj and cena_predaj > 0 %}{{ cena_predaj }}{% else %}{{ orientacna_cena_celkom|default:'' }}{% endif %}" data-zaruka="{{ sluzba.zaruka_mesiace|default:'' }}" class="w-full lg:w-auto inline-flex items-center justify-center gap-2 whitespace-nowrap bg-brand hover-bg-brand text-white font-bold text-base py-3.5 px-6 rounded-xl transition duration-300 shadow-lg cursor-pointer">
                 <span>📋</span> Pridať do dopytu
             </button>
-            <a href="{% url 'webbuilder:home' %}{% if is_preview %}?preview=ai_draft{% endif %}#kontakt" class="w-full sm:w-auto inline-block bg-gray-900 hover:bg-gray-800 text-white font-bold text-lg py-4 px-8 rounded-xl transition duration-300 shadow-md">Priamy kontakt</a>
+            <a href="{% url 'webbuilder:home' %}{% if is_preview %}?preview=ai_draft{% endif %}#kontakt" class="w-full lg:w-auto inline-flex items-center justify-center whitespace-nowrap bg-gray-900 hover:bg-gray-800 text-white font-bold text-base py-3.5 px-6 rounded-xl transition duration-300 shadow-md">Priamy kontakt</a>
             {% if identita.telefon %}
-            <a href="tel:{{ identita.telefon }}" class="inline-flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-lg py-4 px-8 rounded-xl transition duration-300 border border-gray-200">
+            <a href="tel:{{ identita.telefon }}" class="w-full lg:w-auto inline-flex items-center justify-center gap-2 whitespace-nowrap bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-base py-3.5 px-6 rounded-xl transition duration-300 border border-gray-200">
                 <span>📞</span> {{ identita.telefon }}
             </a>
             {% endif %}
             {% if identita.email_vseobecny %}
-            <a href="mailto:{{ identita.email_vseobecny }}?subject=Dopyt:%20{{ sluzba.nazov|urlencode }}" class="inline-flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-lg py-4 px-8 rounded-xl transition duration-300 border border-gray-200">
+            <a href="mailto:{{ identita.email_vseobecny }}?subject=Dopyt:%20{{ sluzba.nazov|urlencode }}" class="w-full lg:w-auto inline-flex items-center justify-center gap-2 whitespace-nowrap bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-base py-3.5 px-6 rounded-xl transition duration-300 border border-gray-200">
                 <span>✉️</span> Napísať e-mail
             </a>
             {% endif %}

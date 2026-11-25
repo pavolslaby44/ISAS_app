@@ -52,7 +52,7 @@
                     <span class="text-sm leading-none mt-0.5">🏢</span>
                     <span><strong class="text-slate-800">Ste náš zmluvný B2B partner?</strong> Prihláste sa pre automatické načítanie dokladov a záruk.</span>
                 </div>
-                <a href="{% url 'webbuilder:b2b_login' %}?{% if is_preview %}preview=ai_draft&amp;{% endif %}next={% url 'webbuilder:reklamacie' %}" class="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-brand text-brand hover:text-white border border-brand/25 hover:border-brand font-bold shadow-2xs transition whitespace-nowrap shrink-0 self-start">
+                <a href="{% url 'webbuilder:b2b_login' %}?{% if is_preview %}preview=ai_draft&amp;{% endif %}next={% url 'webbuilder:reklamacie' %}" class="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-brand text-brand hover:text-white border border-brand/25 hover:border-brand font-bold shadow-sm transition whitespace-nowrap shrink-0 self-start">
                     <span>Prihlásiť do Klientskej zóny</span>
                     <span aria-hidden="true">&rarr;</span>
                 </a>
@@ -63,7 +63,7 @@
                 <input type="text" name="website_url" class="hidden" tabindex="-1" autocomplete="off">
                 <input type="hidden" name="typ_leadu" value="WARRANTY">
                 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5 items-end">
                     <div>
                         <label class="block text-sm font-bold text-gray-700 mb-1">Názov vašej firmy *</label>
                         <input type="text" name="firma" required value="{% if b2b_klient %}{{ b2b_klient.Nazov_spolocnosti }}{% elif request.user.is_authenticated and request.user.zakaznik_profil %}{{ request.user.zakaznik_profil.Nazov_spolocnosti }}{% endif %}" placeholder="{% if b2b_klient and b2b_klient.kontaktna_osoba %}Firma (kontakt: {{ b2b_klient.kontaktna_osoba }}){% else %}Firma / Meno{% endif %}" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 ring-brand outline-none">
@@ -94,7 +94,7 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5 items-end">
                     <div>
                         <label class="block text-sm font-bold text-gray-700 mb-1">Kontaktný e-mail *</label>
                         <input type="email" name="email" required value="{% if b2b_klient %}{{ b2b_klient.email|default:request.user.email }}{% elif request.user.is_authenticated and request.user.zakaznik_profil %}{{ request.user.zakaznik_profil.email|default:request.user.email }}{% endif %}" placeholder="E-mail pre komunikáciu" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 ring-brand outline-none">
@@ -108,7 +108,7 @@
                 {% if klient_zariadenia %}
                 <div>
                     <label class="block text-sm font-bold text-gray-700 mb-1">Dotknuté {{ industry_terms.zariadenie_genitiv|default:"zariadenie" }} (z vašej evidencie)</label>
-                    <select name="zariadenie_id" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 ring-brand outline-none">
+                    <select name="zariadenie_id" class="w-full bg-gray-50 border border-gray-200 rounded-xl pl-4 pr-9 py-3 truncate focus:ring-2 ring-brand outline-none">
                         <option value="">-- Vyberte evidované {{ industry_terms.zariadenie_genitiv|default:"zariadenie" }} (voliteľné) --</option>
                         {% for z in klient_zariadenia %}
                             <option value="{{ z.bezpecnostny_kluc|default:z.id }}" data-id="{{ z.id }}">
@@ -132,9 +132,9 @@
                 <div>
                     <label class="text-sm font-bold text-gray-700 mb-1 flex items-center justify-between gap-2">
                         <span>📎 Príloha – foto, video alebo PDF (Urýchli vybavenie)</span>
-                        <span class="text-xs font-normal text-gray-400">Voliteľné (max. 10 MB)</span>
+                        <span class="text-xs font-normal text-gray-400 flex-shrink-0 text-right">Voliteľné (max. 10 MB)</span>
                     </label>
-                    <input type="file" name="priloha" accept="image/*,video/*,.pdf" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-bold file:bg-brand/10 file:text-brand hover:file:bg-brand/20 transition">
+                    <input type="file" name="priloha" accept="image/*,video/*,.pdf" onchange="const f=this.files[0]; if(f && f.size > 10*1024*1024){ alert('⚠️ Príloha prekračuje maximálny limit 10 MB. Zvoľte menší súbor.'); this.value=''; }" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-bold file:bg-brand/10 file:text-brand hover:file:bg-brand/20 transition">
                 </div>
                 
                 {% if b2b_klient and b2b_klient.vyzaduje_povolenie_vstupu %}
@@ -206,11 +206,11 @@
             <p class="text-xs text-gray-600 mb-4">Prehľad techniky s aktívnou štandardnou alebo predĺženou zárukou výrobcu/SLA:</p>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {% for szar in klient_stroje_v_zaruke %}
-                <div class="bg-white p-3.5 rounded-xl border border-sky-100 text-xs shadow-2xs flex flex-col justify-between gap-2">
+                <div class="bg-white p-3.5 rounded-xl border border-sky-100 text-xs shadow-sm flex flex-col justify-between gap-2">
                     <div>
-                        <div class="font-bold text-gray-900 flex justify-between items-center gap-2">
-                            <span>{{ szar.verejny_nazov }}</span>
-                            <div class="flex items-center gap-1.5 shrink-0">
+                        <div class="font-bold text-gray-900 flex flex-wrap justify-between items-center gap-2">
+                            <span class="min-w-0 break-words">{{ szar.verejny_nazov }}</span>
+                            <div class="flex flex-wrap items-center gap-1.5 shrink-0">
                                 {% if szar.v_servisnom_rezime %}
                                     <span class="text-amber-800 bg-amber-100 font-semibold px-2 py-0.5 rounded-full text-[11px]">🛠️ V údržbe</span>
                                 {% endif %}
@@ -237,7 +237,7 @@
                     </div>
                     <div class="pt-2 border-t border-gray-100 flex items-center justify-between">
                         {% if szar.bezpecnostny_kluc %}
-                            <a href="{% url 'webbuilder:machine_passport' kluc=szar.bezpecnostny_kluc %}" target="_blank" class="text-brand hover:underline font-semibold inline-flex items-center gap-1">📖 Pas</a>
+                            <a href="{% url 'webbuilder:machine_passport' kluc=szar.bezpecnostny_kluc %}" target="_blank" rel="noopener noreferrer" class="text-brand hover:underline font-semibold inline-flex items-center gap-1">📖 Pas</a>
                         {% else %}<span></span>{% endif %}
                         <button type="button" class="btn-prefill-rma text-xs font-semibold text-sky-800 bg-sky-100 hover:bg-sky-200 px-2.5 py-1 rounded-lg transition" data-zariadenie="{{ szar.bezpecnostny_kluc|default:szar.id }}" data-popis="Garančná požiadavka na {{ szar.verejny_nazov }}">
                             🛡️ Reklamovať
@@ -257,17 +257,17 @@
             <p class="text-xs text-gray-600 mb-4">Evidujeme platnú zmluvnú záruku na nedávno realizované odborné práce a servisné výkony:</p>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {% for az in aktivne_zaruky_prace %}
-                <div class="bg-white p-3.5 rounded-xl border border-emerald-100 text-xs shadow-2xs flex flex-col justify-between gap-2">
+                <div class="bg-white p-3.5 rounded-xl border border-emerald-100 text-xs shadow-sm flex flex-col justify-between gap-2">
                     <div>
-                        <div class="font-bold text-gray-900 flex justify-between items-center">
-                            <span>{{ az.typ_prace }}</span>
-                            <span class="text-emerald-700 bg-emerald-100 font-semibold px-2 py-0.5 rounded-full">do {{ az.zaruka_do|date:"d.m.Y" }}</span>
+                        <div class="font-bold text-gray-900 flex flex-wrap justify-between items-center gap-2">
+                            <span class="min-w-0 break-words">{{ az.typ_prace }}</span>
+                            <span class="text-emerald-700 bg-emerald-100 font-semibold px-2 py-0.5 rounded-full shrink-0">do {{ az.zaruka_do|date:"d.m.Y" }}</span>
                         </div>
                         {% if az.zariadenie %}
                         <div class="text-gray-500 mt-1">
                             {{ industry_terms.zariadenie_fallback_nazov|default:"Zariadenie" }}: <span class="text-gray-700 font-medium">{{ az.zariadenie.verejny_nazov }}</span>
                             {% if az.zariadenie.bezpecnostny_kluc %}
-                                <a href="{% url 'webbuilder:machine_passport' kluc=az.zariadenie.bezpecnostny_kluc %}" target="_blank" class="text-brand hover:underline font-semibold ml-1">📖 Pas</a>
+                                <a href="{% url 'webbuilder:machine_passport' kluc=az.zariadenie.bezpecnostny_kluc %}" target="_blank" rel="noopener noreferrer" class="text-brand hover:underline font-semibold ml-1">📖 Pas</a>
                             {% endif %}
                         </div>
                         {% endif %}
@@ -303,7 +303,7 @@
                                 <div class="text-xs text-gray-500 mt-0.5 flex flex-wrap gap-1.5 items-center">
                                     {% for rz in rek.zariadenia.all %}
                                         {% if rz.bezpecnostny_kluc %}
-                                            <a href="{% url 'webbuilder:machine_passport' kluc=rz.bezpecnostny_kluc %}" target="_blank" class="text-brand hover:underline font-medium inline-flex items-center gap-0.5">
+                                            <a href="{% url 'webbuilder:machine_passport' kluc=rz.bezpecnostny_kluc %}" target="_blank" rel="noopener noreferrer" class="text-brand hover:underline font-medium inline-flex items-center gap-0.5">
                                                 ⚙️ {{ rz.verejny_nazov }}
                                             </a>
                                         {% else %}
@@ -522,6 +522,11 @@
 
         warrantyForm.addEventListener('submit', function(e) {
             e.preventDefault();
+            const fileInput = warrantyForm.querySelector('input[type="file"][name="priloha"]');
+            if (fileInput && fileInput.files && fileInput.files[0] && fileInput.files[0].size > 10 * 1024 * 1024) {
+                alert('⚠️ Príloha prekračuje maximálny limit 10 MB. Zvoľte menší súbor.');
+                return;
+            }
             const btn = warrantyForm.querySelector('button[type="submit"]');
             const originalText = btn.innerText;
             
@@ -533,9 +538,9 @@
                 body: new FormData(warrantyForm),
                 headers: { 'X-Requested-With': 'XMLHttpRequest' }
             })
-            .then(res => res.json())
-            .then(data => {
-                if(data.status === 'success') {
+            .then(res => res.json().then(data => ({ ok: res.ok, status: res.status, data })).catch(() => ({ ok: false, status: res.status, data: null })))
+            .then(({ ok, status, data }) => {
+                if(ok && data && data.status === 'success') {
                     warrantyForm.innerHTML = `
                         <div class="text-center py-8">
                             <div class="text-5xl mb-4">✅</div>
@@ -544,7 +549,8 @@
                         </div>
                     `;
                 } else {
-                    alert(`❌ Chyba: ${data.message}`);
+                    const errMsg = (data && data.message) ? data.message : (status === 413 ? 'Priložený súbor je príliš veľký (max 10 MB).' : 'Nepodarilo sa odoslať požiadavku.');
+                    alert(`❌ Chyba: ${errMsg}`);
                     btn.disabled = false;
                     btn.innerText = originalText;
                 }

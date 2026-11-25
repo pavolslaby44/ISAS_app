@@ -23,14 +23,14 @@
             </div>
         </div>
 
-        <div class="flex items-center gap-4">
+        <div class="flex flex-wrap items-center gap-4">
             {% if klient.b2b_zlava_percenta and klient.b2b_zlava_percenta > 0 %}
             <div class="bg-gradient-to-br from-emerald-500/20 to-teal-500/10 border border-emerald-500/30 px-5 py-3 rounded-2xl text-center shadow-inner">
                 <p class="text-[10px] text-emerald-300 font-extrabold uppercase tracking-widest">Katalógová zľava</p>
                 <p class="text-3xl font-black text-emerald-400 leading-none mt-1">{{ klient.b2b_zlava_percenta }} %</p>
             </div>
             {% endif %}
-            <button onclick="openServiceModal()" class="bg-brand hover:brightness-110 text-white font-bold text-sm px-5 py-3.5 rounded-xl shadow-lg transition flex items-center gap-2">
+            <button type="button" onclick="openServiceModal()" class="bg-brand hover:brightness-110 text-white font-bold text-sm px-5 py-3.5 rounded-xl shadow-lg transition flex items-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                 Nový servisný tiket
             </button>
@@ -51,7 +51,7 @@
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             {% for al in aktivne_alarmy %}
-            <div class="bg-white p-3.5 rounded-xl border border-red-200 flex items-start justify-between gap-3 shadow-xs">
+            <div class="bg-white p-3.5 rounded-xl border border-red-200 flex flex-col sm:flex-row sm:items-start justify-between gap-3 shadow-sm">
                 <div class="min-w-0 flex-1">
                     <div class="flex items-center gap-2">
                         <span class="font-bold text-gray-900 text-xs truncate">{{ al.zariadenie.model_zariadenia|default:al.zariadenie.nazov }}</span>
@@ -60,7 +60,7 @@
                     <p class="text-xs text-red-700 mt-1 line-clamp-1">{{ al.popis }}</p>
                     <span class="text-[10px] text-gray-400 block mt-0.5">{{ al.casova_peciatka|date:"d.m.Y H:i" }}</span>
                 </div>
-                <div class="flex items-center gap-2 flex-shrink-0">
+                <div class="flex flex-wrap items-center gap-2 flex-shrink-0">
                     {% if klient.subdomena %}
                     <a href="{{ request.scheme }}://{{ klient.subdomena }}.{{ telemetry_domain }}/iot-dashboard/?zariadenie_id={{ al.zariadenie.id }}" target="_blank" rel="noopener noreferrer" class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold px-2.5 py-2 rounded-lg transition whitespace-nowrap" title="Zobraziť živé budíky a telemetriu">
                         📡 Live Monitoring
@@ -219,8 +219,8 @@
                         </div>
                     </div>
 
-                    <div class="px-6 py-3 bg-gray-50/50 border-t border-gray-100 flex items-center justify-between gap-2 text-xs">
-                        <div class="flex items-center gap-2">
+                    <div class="px-6 py-3 bg-gray-50/50 border-t border-gray-100 flex flex-wrap items-center justify-between gap-2 text-xs">
+                        <div class="flex flex-wrap items-center gap-2">
                             {% if stroj.obrazok_na_webe and stroj.obrazok_na_webe.name %}
                             <a href="{{ stroj.obrazok_na_webe.url }}" target="_blank" rel="noopener noreferrer" class="font-bold text-gray-500 hover:text-brand flex items-center gap-1" title="Zobraziť fotografiu zariadenia">
                                 📸 Foto
@@ -486,6 +486,7 @@
         </div>
 
     </div>
+    </div>
 </section>
 
 <!-- 🛠️ B2B SERVISNÝ MODAL -->
@@ -541,8 +542,8 @@
             {% endif %}
 
             <div id="modalSelectMachineDropdown">
-                <label for="modalManualSelect" class="block text-xs font-bold text-gray-700 mb-1">Týka sa {{ industry_terms.zariadenie_genitiv }}:</label>
-                <select id="modalManualSelect" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-xs focus:ring-2 ring-brand outline-none">
+                <label for="modalManualSelect" class="block truncate text-xs font-bold text-gray-700 mb-1" title="Týka sa {{ industry_terms.zariadenie_genitiv }}">Týka sa {{ industry_terms.zariadenie_genitiv }}:</label>
+                <select id="modalManualSelect" class="w-full bg-gray-50 border border-gray-200 rounded-xl pl-3 pr-9 py-2.5 text-xs truncate focus:ring-2 ring-brand outline-none">
                     <option value="">-- Všeobecná servisná požiadavka (Nevybrané) --</option>
                     {% for s in zariadenia %}
                     <option value="{{ s.id }}">{{ s.model_zariadenia|default:s.nazov|default:"Zariadenie" }} (SN: {{ s.vyrobne_cislo }})</option>
@@ -550,14 +551,14 @@
                 </select>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                    <label for="modalPoNumber" class="block text-xs font-bold text-gray-700 mb-1">Číslo vašej objednávky (PO Number)</label>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
+                <div class="min-w-0">
+                    <label for="modalPoNumber" class="block truncate text-xs font-bold text-gray-700 mb-1" title="Číslo vašej objednávky (PO Number)">Číslo vašej objednávky (PO Number)</label>
                     <input type="text" name="cislo_objednavky_klienta" id="modalPoNumber" placeholder="napr. PO-{{ dnes|date:'Y' }}-089" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-2 ring-brand outline-none">
                 </div>
-                <div>
-                    <label for="modalPriorita" class="block text-xs font-bold text-gray-700 mb-1">Dôležitosť zásahu</label>
-                    <select name="priorita" id="modalPriorita" onchange="toggleSlaWarning(this.value)" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-2 ring-brand outline-none font-semibold">
+                <div class="min-w-0">
+                    <label for="modalPriorita" class="block truncate text-xs font-bold text-gray-700 mb-1" title="Dôležitosť zásahu">Dôležitosť zásahu</label>
+                    <select name="priorita" id="modalPriorita" onchange="toggleSlaWarning(this.value)" class="w-full bg-gray-50 border border-gray-200 rounded-xl pl-3 pr-9 py-2 text-xs truncate focus:ring-2 ring-brand outline-none font-semibold">
                         <option value="STREDNA">🟡 Štandardná požiadavka / Údržba</option>
                         <option value="VYSOKA">🔴 SLA Havária (Kritický výpadok prevádzky)</option>
                     </select>
@@ -578,14 +579,14 @@
             </div>
 
             <!-- 📅 SMART BOOKING DÁTUMU A ČASU -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-gray-50 p-3 rounded-2xl border border-gray-200">
-                <div>
-                    <label for="modalBookingDate" class="block text-[11px] font-bold text-gray-700 mb-1">Preferovaný dátum zásahu (voliteľné)</label>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end bg-gray-50 p-3 rounded-2xl border border-gray-200">
+                <div class="min-w-0">
+                    <label for="modalBookingDate" class="block truncate text-[11px] font-bold text-gray-700 mb-1" title="Preferovaný dátum zásahu (voliteľné)">Preferovaný dátum zásahu (voliteľné)</label>
                     <input type="date" name="termin_dodania" id="modalBookingDate" min="{% if dnes %}{{ dnes|date:'Y-m-d' }}{% endif %}" class="w-full bg-white border border-gray-200 rounded-xl px-2.5 py-1.5 text-xs font-semibold focus:ring-2 ring-brand outline-none">
                 </div>
-                <div>
-                    <label for="modalBookingSlot" class="block text-[11px] font-bold text-gray-700 mb-1">Dostupný časový blok</label>
-                    <select name="preferovany_cas" id="modalBookingSlot" class="w-full bg-white border border-gray-200 rounded-xl px-2.5 py-1.5 text-xs font-semibold focus:ring-2 ring-brand outline-none" disabled>
+                <div class="min-w-0">
+                    <label for="modalBookingSlot" class="block truncate text-[11px] font-bold text-gray-700 mb-1" title="Dostupný časový blok">Dostupný časový blok</label>
+                    <select name="preferovany_cas" id="modalBookingSlot" class="w-full bg-white border border-gray-200 rounded-xl pl-2.5 pr-8 py-1.5 text-xs font-semibold truncate focus:ring-2 ring-brand outline-none" disabled>
                         <option value="">Najprv zvoľte dátum</option>
                     </select>
                 </div>

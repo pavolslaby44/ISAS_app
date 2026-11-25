@@ -62,7 +62,7 @@
             <div class="mb-4 flex flex-wrap items-center gap-2 bg-blue-50 border border-blue-200 px-3 py-2 rounded-xl text-xs font-semibold text-blue-800">
                 <span>🏢</span> <span>Overené v ostrej prevádzke:</span>
                 {% for ref in overene_referencie %}
-                    <span class="font-bold bg-white px-2 py-0.5 rounded border border-blue-100 shadow-xs">{{ ref }}</span>
+                    <span class="font-bold bg-white px-2 py-0.5 rounded border border-blue-100 shadow-sm">{{ ref }}</span>
                 {% endfor %}
             </div>
             {% endif %}
@@ -194,7 +194,7 @@
                 </div>
                 <div class="flex flex-wrap gap-2">
                     {% for rev in platne_revizie %}
-                    <span class="inline-flex items-center gap-1.5 bg-white border border-emerald-300 text-emerald-800 text-xs font-semibold px-2.5 py-1 rounded-lg shadow-2xs">
+                    <span class="inline-flex items-center gap-1.5 bg-white border border-emerald-300 text-emerald-800 text-xs font-semibold px-2.5 py-1 rounded-lg shadow-sm">
                         <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                         <span>{{ rev.nazov }}</span>
                         {% if rev.datum_exspiracie %}<span class="text-[10px] text-gray-400 font-normal">({{ rev.datum_exspiracie|date:"d.m.Y" }})</span>{% endif %}
@@ -287,7 +287,7 @@
                 <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2.5">Doplnkové služby k prenájmu (Voliteľné)</h3>
                 <div class="space-y-2">
                     {% for sluzba in doplnkove_sluzby %}
-                    <div class="p-2.5 bg-white rounded-xl border border-gray-200 flex items-center justify-between gap-3 text-xs">
+                    <div class="p-2.5 bg-white rounded-xl border border-gray-200 flex flex-wrap items-center justify-between gap-3 text-xs">
                         <div>
                             <span class="font-bold text-gray-900 block">{{ sluzba.nazov }}</span>
                             {% if sluzba.popis %}<span class="text-gray-500 text-[11px] block mt-0.5">{{ sluzba.popis|truncatechars:50 }}</span>{% endif %}
@@ -341,7 +341,7 @@
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {% for alt in alternativne_stroje %}
-            <div class="bg-white rounded-2xl border border-gray-200 shadow-xs hover:shadow-md transition p-5 flex flex-col justify-between">
+            <div class="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition p-5 flex flex-col justify-between">
                 <div>
                     <div class="h-40 bg-gray-50 rounded-xl mb-4 flex items-center justify-center p-3 overflow-hidden">
                         {% if alt.obrazok_na_webe and alt.obrazok_na_webe.name %}
@@ -404,9 +404,11 @@
   "@context": "https://schema.org/",
   "@type": "Product",
   "name": "{{ stroj.vyrobca.nazov_vyrobcu|default:''|escapejs }} {{ stroj.model_zariadenia|escapejs }}",
+  {% if stroj.obrazok_na_webe and stroj.obrazok_na_webe.name %}
   "image": [
-    "{% if stroj.obrazok_na_webe and stroj.obrazok_na_webe.name %}{% if '://' in stroj.obrazok_na_webe.url %}{{ stroj.obrazok_na_webe.url }}{% else %}{{ request.scheme }}://{{ request.get_host }}{{ stroj.obrazok_na_webe.url }}{% endif %}{% endif %}"
+    "{% if '://' in stroj.obrazok_na_webe.url %}{{ stroj.obrazok_na_webe.url|escapejs }}{% else %}{{ request.scheme }}://{{ request.get_host }}{{ stroj.obrazok_na_webe.url|escapejs }}{% endif %}"
   ],
+  {% endif %}
   "description": "{{ stroj.poznamka|linebreaksbr|striptags|escapejs }}",
   "brand": {
     "@type": "Brand",

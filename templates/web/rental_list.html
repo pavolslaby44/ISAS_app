@@ -65,22 +65,22 @@
             <div class="flex flex-wrap items-center gap-2">
                 {% if servisne_strediska|length > 1 %}
                 <!-- 📍 FILTER DEPA / STREDISKA -->
-                <div class="flex items-center gap-1 bg-gray-50 border border-gray-200 rounded-xl p-1 text-xs">
+                <div class="flex flex-wrap items-center gap-1 bg-gray-50 border border-gray-200 rounded-xl p-1 text-xs max-w-full">
                     <span class="text-gray-400 font-bold px-2">Depo:</span>
-                    <a href="?{% if zvolena_kategoria %}kategoria={{ zvolena_kategoria }}&{% endif %}{% if iba_volne %}iba_volne=1&{% endif %}{% if zoradenie %}zoradenie={{ zoradenie }}&{% endif %}{% if is_preview %}preview=ai_draft&{% endif %}" class="px-2.5 py-1 rounded-lg font-semibold {% if not zvolene_stredisko %}bg-white text-gray-900 shadow-2xs{% else %}text-gray-500 hover:text-gray-900{% endif %}">Všetky</a>
+                    <a href="?{% if zvolena_kategoria %}kategoria={{ zvolena_kategoria }}&{% endif %}{% if iba_volne %}iba_volne=1&{% endif %}{% if zoradenie %}zoradenie={{ zoradenie }}&{% endif %}{% if is_preview %}preview=ai_draft&{% endif %}" class="px-2.5 py-1 rounded-lg font-semibold {% if not zvolene_stredisko %}bg-white text-gray-900 shadow-sm{% else %}text-gray-500 hover:text-gray-900{% endif %}">Všetky</a>
                     {% for stredisko in servisne_strediska %}
-                    <a href="?{% if zvolena_kategoria %}kategoria={{ zvolena_kategoria }}&{% endif %}stredisko={{ stredisko.kod_pobocky|default:stredisko.nazov }}{% if iba_volne %}&iba_volne=1{% endif %}{% if zoradenie %}&zoradenie={{ zoradenie }}{% endif %}{% if is_preview %}&preview=ai_draft{% endif %}" class="px-2.5 py-1 rounded-lg font-semibold {% if zvolene_stredisko == stredisko.kod_pobocky or zvolene_stredisko == stredisko.nazov %}bg-white text-gray-900 shadow-2xs{% else %}text-gray-500 hover:text-gray-900{% endif %}">{{ stredisko.nazov }}</a>
+                    <a href="?{% if zvolena_kategoria %}kategoria={{ zvolena_kategoria }}&{% endif %}stredisko={{ stredisko.kod_pobocky|default:stredisko.nazov }}{% if iba_volne %}&iba_volne=1{% endif %}{% if zoradenie %}&zoradenie={{ zoradenie }}{% endif %}{% if is_preview %}&preview=ai_draft{% endif %}" class="px-2.5 py-1 rounded-lg font-semibold {% if zvolene_stredisko == stredisko.kod_pobocky or zvolene_stredisko == stredisko.nazov %}bg-white text-gray-900 shadow-sm{% else %}text-gray-500 hover:text-gray-900{% endif %}">{{ stredisko.nazov }}</a>
                     {% endfor %}
                 </div>
                 {% endif %}
 
                 <!-- 🎛️ RADENIE FLOTILY -->
-                <div class="flex items-center gap-1 bg-gray-50 border border-gray-200 rounded-xl p-1 text-xs">
+                <div class="flex flex-wrap items-center gap-1 bg-gray-50 border border-gray-200 rounded-xl p-1 text-xs max-w-full">
                     <span class="text-gray-400 font-bold px-2">Zoradiť:</span>
-                    <a href="?{% if zvolena_kategoria %}kategoria={{ zvolena_kategoria }}&{% endif %}{% if zvolene_stredisko %}stredisko={{ zvolene_stredisko }}&{% endif %}{% if iba_volne %}iba_volne=1&{% endif %}{% if is_preview %}preview=ai_draft&{% endif %}" class="px-2.5 py-1 rounded-lg font-semibold {% if not zoradenie %}bg-white text-gray-900 shadow-2xs{% else %}text-gray-500 hover:text-gray-900{% endif %}">Predvolené</a>
-                    <a href="?{% if zvolena_kategoria %}kategoria={{ zvolena_kategoria }}&{% endif %}{% if zvolene_stredisko %}stredisko={{ zvolene_stredisko }}&{% endif %}{% if iba_volne %}iba_volne=1&{% endif %}zoradenie=cena_asc{% if is_preview %}&preview=ai_draft{% endif %}" class="px-2.5 py-1 rounded-lg font-semibold {% if zoradenie == 'cena_asc' %}bg-white text-gray-900 shadow-2xs{% else %}text-gray-500 hover:text-gray-900{% endif %}">Od najlacnejších</a>
-                    <a href="?{% if zvolena_kategoria %}kategoria={{ zvolena_kategoria }}&{% endif %}{% if zvolene_stredisko %}stredisko={{ zvolene_stredisko }}&{% endif %}{% if iba_volne %}iba_volne=1&{% endif %}zoradenie=cena_desc{% if is_preview %}&preview=ai_draft{% endif %}" class="px-2.5 py-1 rounded-lg font-semibold {% if zoradenie == 'cena_desc' %}bg-white text-gray-900 shadow-2xs{% else %}text-gray-500 hover:text-gray-900{% endif %}">Od najdrahších</a>
-                    <a href="?{% if zvolena_kategoria %}kategoria={{ zvolena_kategoria }}&{% endif %}{% if zvolene_stredisko %}stredisko={{ zvolene_stredisko }}&{% endif %}{% if iba_volne %}iba_volne=1&{% endif %}zoradenie=dostupnost{% if is_preview %}&preview=ai_draft{% endif %}" class="px-2.5 py-1 rounded-lg font-semibold {% if zoradenie == 'dostupnost' %}bg-white text-gray-900 shadow-2xs{% else %}text-gray-500 hover:text-gray-900{% endif %}">Skladom</a>
+                    <a href="?{% if zvolena_kategoria %}kategoria={{ zvolena_kategoria }}&{% endif %}{% if zvolene_stredisko %}stredisko={{ zvolene_stredisko }}&{% endif %}{% if iba_volne %}iba_volne=1&{% endif %}{% if is_preview %}preview=ai_draft&{% endif %}" class="px-2.5 py-1 rounded-lg font-semibold {% if not zoradenie %}bg-white text-gray-900 shadow-sm{% else %}text-gray-500 hover:text-gray-900{% endif %}">Predvolené</a>
+                    <a href="?{% if zvolena_kategoria %}kategoria={{ zvolena_kategoria }}&{% endif %}{% if zvolene_stredisko %}stredisko={{ zvolene_stredisko }}&{% endif %}{% if iba_volne %}iba_volne=1&{% endif %}zoradenie=cena_asc{% if is_preview %}&preview=ai_draft{% endif %}" class="px-2.5 py-1 rounded-lg font-semibold {% if zoradenie == 'cena_asc' %}bg-white text-gray-900 shadow-sm{% else %}text-gray-500 hover:text-gray-900{% endif %}">Od najlacnejších</a>
+                    <a href="?{% if zvolena_kategoria %}kategoria={{ zvolena_kategoria }}&{% endif %}{% if zvolene_stredisko %}stredisko={{ zvolene_stredisko }}&{% endif %}{% if iba_volne %}iba_volne=1&{% endif %}zoradenie=cena_desc{% if is_preview %}&preview=ai_draft{% endif %}" class="px-2.5 py-1 rounded-lg font-semibold {% if zoradenie == 'cena_desc' %}bg-white text-gray-900 shadow-sm{% else %}text-gray-500 hover:text-gray-900{% endif %}">Od najdrahších</a>
+                    <a href="?{% if zvolena_kategoria %}kategoria={{ zvolena_kategoria }}&{% endif %}{% if zvolene_stredisko %}stredisko={{ zvolene_stredisko }}&{% endif %}{% if iba_volne %}iba_volne=1&{% endif %}zoradenie=dostupnost{% if is_preview %}&preview=ai_draft{% endif %}" class="px-2.5 py-1 rounded-lg font-semibold {% if zoradenie == 'dostupnost' %}bg-white text-gray-900 shadow-sm{% else %}text-gray-500 hover:text-gray-900{% endif %}">Skladom</a>
                 </div>
 
                 <a href="?{% if zvolena_kategoria %}kategoria={{ zvolena_kategoria }}&{% endif %}{% if zvolene_stredisko %}stredisko={{ zvolene_stredisko }}&{% endif %}{% if not iba_volne %}iba_volne=1{% endif %}{% if zoradenie %}&zoradenie={{ zoradenie }}{% endif %}{% if is_preview %}&preview=ai_draft{% endif %}" class="px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 border {% if iba_volne %}bg-emerald-600 text-white border-emerald-600 shadow-sm{% else %}bg-white text-gray-700 border-gray-300 hover:bg-gray-50{% endif %}">
@@ -211,6 +211,7 @@
                         </div>
                     </div>
                 </div>
+            </div>
             {% empty %}
             <p class="text-gray-500 italic col-span-full">{{ industry_terms.rental_empty_text|default:"Zatiaľ neboli pridané žiadne zariadenia do požičovne." }}</p>
             {% endfor %}
@@ -261,14 +262,14 @@
                     <input type="text" name="znacka" required placeholder="{{ industry_terms.buyback_device_placeholder|default:'Značka a presný model zariadenia' }}" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 ring-brand outline-none transition">
                 </div>
                 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">{{ industry_terms.rok_vyroby|default:'Rok výroby' }}</label>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+                    <div class="min-w-0">
+                        <label class="block truncate text-xs font-bold text-gray-500 uppercase mb-1">{{ industry_terms.rok_vyroby|default:'Rok výroby' }}</label>
                         <input type="number" name="rok" min="1900" max="{% now 'Y' %}" placeholder="Napr. {% now 'Y' %}" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 ring-brand outline-none transition">
                     </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Technický stav</label>
-                        <select name="stav" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 ring-brand outline-none transition">
+                    <div class="min-w-0">
+                        <label class="block truncate text-xs font-bold text-gray-500 uppercase mb-1">Technický stav</label>
+                        <select name="stav" class="w-full bg-gray-50 border border-gray-200 rounded-xl pl-4 pr-9 py-3 text-sm truncate focus:ring-2 ring-brand outline-none transition">
                             <option value="Funkčný">Funkčný (v prevádzke)</option>
                             <option value="Nutný servis">Nutný servis / oprava</option>
                             <option value="Nefunkčný / Na diely">Nefunkčný / Na súčiastky</option>
@@ -282,9 +283,9 @@
                 </div>
                 
                 <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1 flex items-center justify-between">
+                    <label class="text-xs font-bold text-gray-500 uppercase mb-1 flex items-center justify-between gap-2">
                         <span>{{ industry_terms.buyback_photo_label|default:'📸 Fotografia zariadenia alebo štítku' }}</span>
-                        <span class="text-[10px] text-gray-400 font-normal">Voliteľné (max 10 MB)</span>
+                        <span class="text-[10px] text-gray-400 font-normal flex-shrink-0 text-right">Voliteľné (max 10 MB)</span>
                     </label>
                     <input type="file" name="priloha" accept="image/*,.pdf" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-brand/10 file:text-brand hover:file:bg-brand/20 transition focus:outline-none">
                 </div>

@@ -166,12 +166,12 @@
                 <h2 class="text-3xl font-bold mb-12 text-gray-900">{{ blok.nadpis|default:"Značky, ktoré servisujeme" }}</h2>
                 <div class="flex flex-wrap justify-center items-center gap-6 md:gap-8">
                     {% for znacka in znacky %}
-                        {% if znacka.logo_na_webe %}
+                        {% if znacka.logo_na_webe and znacka.logo_na_webe.name %}
                             <a href="#kontakt" onclick="selectBrandInForm('{{ znacka.id }}')" class="bg-gray-50 hover:bg-white border border-gray-100 hover:border-brand/40 rounded-2xl p-6 flex flex-col items-center justify-center w-44 h-28 shadow-sm hover:shadow-md transition duration-300 group relative cursor-pointer" title="Dopytovať servis a podporu pre značku {{ znacka.nazov_vyrobcu }}">
                                 {% if znacka.typ_vyroby == 'O' %}
                                 <span class="absolute top-2 right-2 bg-blue-100 text-blue-800 text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider" title="Certifikovaný OEM partner a dodávateľ">OEM</span>
                                 {% endif %}
-                                <img src="{{ MEDIA_URL }}{{ znacka.logo_na_webe }}" alt="{{ znacka.nazov_vyrobcu }}" loading="lazy" class="max-h-12 max-w-full object-contain grayscale group-hover:grayscale-0 transition duration-300 opacity-60 group-hover:opacity-100">
+                                <img src="{{ znacka.logo_na_webe.url }}" alt="{{ znacka.nazov_vyrobcu }}" loading="lazy" class="max-h-12 max-w-full object-contain grayscale group-hover:grayscale-0 transition duration-300 opacity-60 group-hover:opacity-100">
                             </a>
                         {% else %}
                             <a href="#kontakt" onclick="selectBrandInForm('{{ znacka.id }}')" class="bg-gray-50 hover:bg-white border border-gray-100 hover:border-brand/40 rounded-2xl p-6 flex flex-col items-center justify-center w-44 h-28 shadow-sm hover:shadow-md transition duration-300 relative group cursor-pointer" title="Dopytovať servis a podporu pre značku {{ znacka.nazov_vyrobcu }}">
@@ -515,7 +515,7 @@
                         
                         <div class="mt-4 flex flex-wrap justify-center gap-2">
                             {% for cert in clen.certifikaty.all %}
-                            <span class="text-xs text-gray-700 font-semibold bg-white py-1.5 px-3 rounded-lg border border-gray-200 shadow-xs" title="Odborné osvedčenie a certifikácia">
+                            <span class="text-xs text-gray-700 font-semibold bg-white py-1.5 px-3 rounded-lg border border-gray-200 shadow-sm" title="Odborné osvedčenie a certifikácia">
                                 {{ cert.nazov }}
                             </span>
                             {% endfor %}
@@ -530,7 +530,7 @@
                 </div>
                 {% if tim|length > 4 %}
                 <div class="text-center mt-12">
-                    <a href="{% url 'webbuilder:kariera_list' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="inline-block bg-white border border-gray-300 hover:border-gray-900 hover:bg-gray-900 hover:text-white text-gray-800 font-bold py-3 px-8 rounded-xl transition duration-300 text-sm shadow-xs">
+                    <a href="{% url 'webbuilder:kariera_list' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="inline-block bg-white border border-gray-300 hover:border-gray-900 hover:bg-gray-900 hover:text-white text-gray-800 font-bold py-3 px-8 rounded-xl transition duration-300 text-sm shadow-sm">
                         Zobraziť celý náš servisný tím ({{ tim|length }}) &rarr;
                     </a>
                 </div>
@@ -566,7 +566,7 @@
                                 {% if has_tco %}<li class="flex items-center gap-2"><span class="text-emerald-600 font-bold">✓</span> {{ industry_terms.tco_title|default:"TCO model celkových nákladov životného cyklu" }}</li>{% endif %}
                             </ul>
                         </div>
-                        <a href="{% url 'webbuilder:nastroje' %}{% if is_preview %}?preview=ai_draft{% endif %}#esg" class="w-full text-center bg-white border border-gray-300 hover:border-gray-900 hover:bg-gray-900 hover:text-white text-gray-900 font-bold py-3 rounded-xl transition text-sm block shadow-xs">
+                        <a href="{% url 'webbuilder:nastroje' %}{% if is_preview %}?preview=ai_draft{% endif %}#esg" class="w-full text-center bg-white border border-gray-300 hover:border-gray-900 hover:bg-gray-900 hover:text-white text-gray-900 font-bold py-3 rounded-xl transition text-sm block shadow-sm">
                             {% if has_esg_audit or has_rekuperacia %}Spustiť ESG & Energetický kalkulátor{% else %}Spustiť {{ industry_terms.tco_title|default:"TCO kalkulátor" }}{% endif %} &rarr;
                         </a>
                     </div>
@@ -585,7 +585,7 @@
                                 <li class="flex items-center gap-2"><span class="text-emerald-600 font-bold">✓</span> Garancia súladu s predpismi a normami</li>
                             </ul>
                         </div>
-                        <a href="{% url 'webbuilder:nastroje' %}{% if is_preview %}?preview=ai_draft{% endif %}#law" class="w-full text-center bg-white border border-gray-300 hover:border-gray-900 hover:bg-gray-900 hover:text-white text-gray-900 font-bold py-3 rounded-xl transition text-sm block shadow-xs">
+                        <a href="{% url 'webbuilder:nastroje' %}{% if is_preview %}?preview=ai_draft{% endif %}#law" class="w-full text-center bg-white border border-gray-300 hover:border-gray-900 hover:bg-gray-900 hover:text-white text-gray-900 font-bold py-3 rounded-xl transition text-sm block shadow-sm">
                             Overiť {{ industry_terms.hub_tab_law_clean|default:"legislatívu a revízie"|striptags }} &rarr;
                         </a>
                     </div>
@@ -604,7 +604,7 @@
                                 {% if has_capex %}<li class="flex items-center gap-2"><span class="text-emerald-600 font-bold">✓</span> {{ industry_terms.capex_title|default:"Finančné porovnanie CAPEX vs. OPEX" }}</li>{% endif %}
                             </ul>
                         </div>
-                        <a href="{% url 'webbuilder:nastroje' %}{% if is_preview %}?preview=ai_draft{% endif %}#diag" class="w-full text-center bg-white border border-gray-300 hover:border-gray-900 hover:bg-gray-900 hover:text-white text-gray-900 font-bold py-3 rounded-xl transition text-sm block shadow-xs">
+                        <a href="{% url 'webbuilder:nastroje' %}{% if is_preview %}?preview=ai_draft{% endif %}#diag" class="w-full text-center bg-white border border-gray-300 hover:border-gray-900 hover:bg-gray-900 hover:text-white text-gray-900 font-bold py-3 rounded-xl transition text-sm block shadow-sm">
                             Otvoriť {{ industry_terms.hub_tab_diag_clean|default:"technickú diagnostiku"|striptags }} &rarr;
                         </a>
                     </div>
@@ -979,7 +979,7 @@
                         <div>
                             <label class="block text-sm font-bold text-gray-700 mb-2">Vaše evidované zariadenie <span class="text-xs text-gray-400 font-normal">(Voliteľné)</span></label>
                             <div class="relative">
-                                <select name="zariadenie_id" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 pr-10 py-3 focus:outline-none focus:ring-2 ring-brand transition appearance-none cursor-pointer">
+                                <select name="zariadenie_id" class="w-full bg-gray-50 border border-gray-200 rounded-xl pl-4 pr-10 py-3 truncate focus:outline-none focus:ring-2 ring-brand transition appearance-none cursor-pointer">
                                     <option value="">-- Vyberte zariadenie z vašej evidencie --</option>
                                     {% for zar in klient_zariadenia %}
                                     <option value="{{ zar.id }}">{{ zar.vyrobca.nazov_vyrobcu|default:'' }} {{ zar.model_zariadenia|default:zar.nazov }} [SN: {{ zar.vyrobne_cislo }}]</option>
@@ -1003,7 +1003,7 @@
                             <div>
                                 <label class="block text-sm font-bold text-gray-700 mb-2">Značka zariadenia <span class="text-xs text-gray-400 font-normal">(Voliteľné)</span></label>
                                 <div class="relative">
-                                    <select name="znacka_id" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 pr-10 py-3 focus:outline-none focus:ring-2 ring-brand transition appearance-none cursor-pointer">
+                                    <select name="znacka_id" class="w-full bg-gray-50 border border-gray-200 rounded-xl pl-4 pr-10 py-3 truncate focus:outline-none focus:ring-2 ring-brand transition appearance-none cursor-pointer">
                                         <option value="">Neviem / Iná</option>
                                         {% for znacka in znacky %}
                                             <option value="{{ znacka.id }}">{{ znacka.nazov_vyrobcu }}</option>
@@ -1015,7 +1015,7 @@
                             <div>
                                 <label class="block text-sm font-bold text-gray-700 mb-2">Typ požiadavky <span class="text-xs text-gray-400 font-normal">(Voliteľné)</span></label>
                                 <div class="relative">
-                                    <select name="sluzba_id" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 pr-10 py-3 focus:outline-none focus:ring-2 ring-brand transition appearance-none cursor-pointer">
+                                    <select name="sluzba_id" class="w-full bg-gray-50 border border-gray-200 rounded-xl pl-4 pr-10 py-3 truncate focus:outline-none focus:ring-2 ring-brand transition appearance-none cursor-pointer">
                                         <option value="">Vyberte typ</option>
                                         {% for sluzba in sluzby %}
                                             <option value="{{ sluzba.id }}">{{ sluzba.nazov }}</option>
@@ -1176,7 +1176,7 @@
                             <div class="space-y-6">
                                 <div>
                                     <label class="block text-sm font-bold text-gray-700 mb-2">1. Akú službu potrebujete? *</label>
-                                    <select name="sluzba_id" required class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 ring-brand outline-none">
+                                    <select name="sluzba_id" required class="w-full bg-white border border-gray-200 rounded-xl pl-4 pr-9 py-3 truncate focus:ring-2 ring-brand outline-none">
                                         <option value="">Vyberte službu</option>
                                         {% for sluzba in sluzby %}
                                             <option value="{{ sluzba.id }}">{{ sluzba.nazov }}</option>
@@ -1209,14 +1209,14 @@
 
                                     <!-- Možnosť: Dielňa (Výber strediska) -->
                                     <div id="bookingDielnaWrap" class="hidden space-y-2">
-                                        <select name="stredisko_info" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 ring-brand outline-none text-base md:text-xs font-semibold">
+                                        <select name="stredisko_info" class="w-full bg-white border border-gray-200 rounded-xl pl-4 pr-9 py-3 truncate focus:ring-2 ring-brand outline-none text-base md:text-xs font-semibold">
                                             {% if identita.adresa_prevadzky %}
-                                                <option value="Centrála / Hlavný sklad ({{ identita.adresa_prevadzky }})">🏢 Centrála a hlavné stredisko ({{ identita.adresa_prevadzky }}) – 0 {{ mena }} doprava</option>
+                                                <option value="Centrála / Hlavný sklad ({{ identita.adresa_prevadzky }})">🏢 Centrála ({{ identita.adresa_prevadzky|truncatechars:32 }}) – 0 {{ mena }}</option>
                                             {% elif not servisne_strediska %}
-                                                <option value="Servisné stredisko spoločnosti">🏢 Servisné stredisko spoločnosti – 0 {{ mena }} doprava</option>
+                                                <option value="Servisné stredisko spoločnosti">🏢 Servisné stredisko – 0 {{ mena }} doprava</option>
                                             {% endif %}
                                             {% for stredisko in servisne_strediska %}
-                                                <option value="{{ stredisko.nazov }} ({{ stredisko.adresa|default:'' }})">🏢 Pobočka: {{ stredisko.nazov }}{% if stredisko.adresa %} – {{ stredisko.adresa }}{% endif %} – 0 {{ mena }} doprava</option>
+                                                <option value="{{ stredisko.nazov }} ({{ stredisko.adresa|default:'' }})">🏢 {{ stredisko.nazov|truncatechars:26 }}{% if stredisko.adresa %} ({{ stredisko.adresa|truncatechars:22 }}){% endif %} – 0 {{ mena }}</option>
                                             {% endfor %}
                                         </select>
                                         <p class="text-[11px] text-emerald-800 bg-emerald-50 p-2 rounded-lg border border-emerald-200">
@@ -1243,7 +1243,7 @@
                                     <label class="block text-sm font-bold text-gray-700 mb-2">Firma / Meno *</label>
                                     <input type="text" name="firma" required value="{% if request.user.is_authenticated and request.user.zakaznik_profil %}{{ request.user.zakaznik_profil.Nazov_spolocnosti }}{% endif %}" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 ring-brand outline-none">
                                 </div>
-                                <div class="grid grid-cols-2 gap-4">
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div>
                                         <label class="block text-sm font-bold text-gray-700 mb-2">E-mail *</label>
                                         <input type="email" name="email" required value="{% if request.user.is_authenticated and request.user.zakaznik_profil %}{{ request.user.zakaznik_profil.email|default:request.user.email }}{% endif %}" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 ring-brand outline-none">
@@ -1519,6 +1519,10 @@
                 
                 const btnSpinner = document.getElementById('btnSpinner');
                 const btnText = document.getElementById('btnText');
+                if (btnText && !btnText.getAttribute('data-default-text')) {
+                    btnText.setAttribute('data-default-text', btnText.innerText.trim());
+                }
+                const originalBtnText = btnText ? (btnText.getAttribute('data-default-text') || 'Odoslať požiadavku') : 'Odoslať požiadavku';
                 
                 // Zablokovanie tlačidla počas odosielania
                 btn.disabled = true;
@@ -1550,8 +1554,8 @@
                             <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-inner mb-6 inline-flex flex-col items-center">
                                 <span class="text-xs uppercase font-bold text-gray-400 tracking-wider mb-1">Vaše číslo zákazky:</span>
                                 <div class="flex items-center gap-2">
-                                    <span class="font-mono text-xl font-extrabold text-brand" id="ticketNumberSpan">${data.cislo_objednavky}</span>
-                                    <button type="button" onclick="if(navigator.clipboard){navigator.clipboard.writeText('${data.cislo_objednavky}'); this.innerText='Skopírované! ✅'; setTimeout(()=>this.innerText='Kopírovať 📋', 2000);}else{alert('Váš prehliadač nepodporuje kopírovanie.');}" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-1 px-2.5 rounded-lg border border-gray-300 transition">
+                                    <span class="font-mono text-xl font-extrabold text-brand" id="ticketNumberSpan"></span>
+                                    <button type="button" id="copyTicketBtn" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-1 px-2.5 rounded-lg border border-gray-300 transition">
                                         Kopírovať 📋
                                     </button>
                                 </div>
@@ -1561,6 +1565,21 @@
                                 Odoslať ďalší dopyt
                             </button>
                         `;
+                        const ticketNum = String(data.cislo_objednavky || '');
+                        const ticketSpan = document.getElementById('ticketNumberSpan');
+                        if (ticketSpan) ticketSpan.textContent = ticketNum;
+                        const copyTicketBtn = document.getElementById('copyTicketBtn');
+                        if (copyTicketBtn) {
+                            copyTicketBtn.addEventListener('click', function() {
+                                if (navigator.clipboard) {
+                                    navigator.clipboard.writeText(ticketNum);
+                                    this.innerText = 'Skopírované! ✅';
+                                    setTimeout(() => { this.innerText = 'Kopírovať 📋'; }, 2000);
+                                } else {
+                                    alert('Váš prehliadač nepodporuje kopírovanie.');
+                                }
+                            });
+                        }
 
                         // Logika pre tlačidlo "Odoslať ďalší dopyt"
                         document.getElementById('resetFormBtn').addEventListener('click', function() {
@@ -1572,7 +1591,7 @@
                             btn.disabled = false;
                             btn.classList.remove('opacity-75', 'cursor-not-allowed');
                             btnSpinner.classList.add('hidden');
-                            btnText.innerText = 'Odoslať požiadavku';
+                            btnText.innerText = originalBtnText;
                         });
 
                     } else {
@@ -1585,7 +1604,7 @@
                         btn.disabled = false;
                         btn.classList.remove('opacity-75', 'cursor-not-allowed');
                         btnSpinner.classList.add('hidden');
-                        btnText.innerText = 'Odoslať požiadavku';
+                        btnText.innerText = originalBtnText;
                     }
                 })
                 .catch(error => {
@@ -1597,7 +1616,7 @@
                     btn.disabled = false;
                     btn.classList.remove('opacity-75', 'cursor-not-allowed');
                     btnSpinner.classList.add('hidden');
-                    btnText.innerText = 'Odoslať požiadavku';
+                    btnText.innerText = originalBtnText;
                 });
             });
         }
@@ -1947,8 +1966,8 @@
                                 <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-inner mb-6 inline-flex flex-col items-center">
                                     <span class="text-xs uppercase font-bold text-gray-400 tracking-wider mb-1">Číslo rezervovanej zákazky:</span>
                                     <div class="flex items-center gap-2">
-                                        <span class="font-mono text-xl font-extrabold text-brand" id="bookingTicketSpan">${data.cislo_objednavky}</span>
-                                        <button type="button" onclick="if(navigator.clipboard){navigator.clipboard.writeText('${data.cislo_objednavky}'); this.innerText='Skopírované! ✅'; setTimeout(()=>this.innerText='Kopírovať 📋', 2000);}else{prompt('Skopírujte si číslo zákazky:', '${data.cislo_objednavky}');}" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-1 px-2.5 rounded-lg border border-gray-300 transition">
+                                        <span class="font-mono text-xl font-extrabold text-brand" id="bookingTicketSpan"></span>
+                                        <button type="button" id="copyBookingTicketBtn" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-1 px-2.5 rounded-lg border border-gray-300 transition">
                                             Kopírovať 📋
                                         </button>
                                     </div>
@@ -1958,6 +1977,21 @@
                                     Rezervovať ďalší termín
                                 </button>
                             `;
+                            const bookingTicketNum = String(data.cislo_objednavky || '');
+                            const bookingTicketSpan = document.getElementById('bookingTicketSpan');
+                            if (bookingTicketSpan) bookingTicketSpan.textContent = bookingTicketNum;
+                            const copyBookingBtn = document.getElementById('copyBookingTicketBtn');
+                            if (copyBookingBtn) {
+                                copyBookingBtn.addEventListener('click', function() {
+                                    if (navigator.clipboard) {
+                                        navigator.clipboard.writeText(bookingTicketNum);
+                                        this.innerText = 'Skopírované! ✅';
+                                        setTimeout(() => { this.innerText = 'Kopírovať 📋'; }, 2000);
+                                    } else {
+                                        prompt('Skopírujte si číslo zákazky:', bookingTicketNum);
+                                    }
+                                });
+                            }
 
                             document.getElementById('resetBookingBtn').addEventListener('click', function() {
                                 bookingForm.reset();
@@ -2050,7 +2084,7 @@
                         const nextMonVal = `${nextY}-${nextM}-${nextD}`;
 
                         bookingSlots.innerHTML = `
-                            <div class="col-span-2 p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 space-y-1.5">
+                            <div class="p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 space-y-1.5">
                                 <p class="font-bold flex items-center gap-1.5"><span>⚠️</span> Cez víkendy bežný servis neposkytujeme.</p>
                                 <p class="text-[11px] leading-relaxed">Štandardné výjazdy prebiehajú v pracovné dni. Pre havarijné stavy volajte dispečing.</p>
                                 <button type="button" onclick="const b=document.getElementById('bookingDate'); if(b){b.value='${nextMonVal}'; b.dispatchEvent(new Event('change'));}" class="mt-1 bg-amber-700 hover:bg-amber-800 text-white font-bold py-1.5 px-3 rounded-lg transition text-xs shadow-sm">
@@ -2063,7 +2097,7 @@
                     }
                 }
 
-                bookingSlots.innerHTML = '<p class="text-sm text-gray-500 col-span-2">⏳ Načítavam voľné termíny...</p>';
+                bookingSlots.innerHTML = '<p class="text-sm text-gray-500">⏳ Načítavam voľné termíny...</p>';
                 bookingTime.value = '';
 
                 if (slotsAbortController) {
@@ -2084,7 +2118,7 @@
                 .then(data => {
                     if (data.status === 'success') {
                         if (data.slots.length === 0) {
-                            bookingSlots.innerHTML = '<p class="text-sm text-red-500 font-bold col-span-2">❌ V tento deň už nemáme voľné kapacity.</p>';
+                            bookingSlots.innerHTML = '<p class="text-sm text-red-500 font-bold">❌ V tento deň už nemáme voľné kapacity.</p>';
                             return;
                         }
                         
@@ -2108,13 +2142,13 @@
                             bookingSlots.appendChild(btn);
                         });
                     } else {
-                        bookingSlots.innerHTML = '<p class="text-sm text-red-500 col-span-2 error-text"></p>';
+                        bookingSlots.innerHTML = '<p class="text-sm text-red-500 error-text"></p>';
                         bookingSlots.querySelector('.error-text').textContent = data.message; // 🛡️ XSS Ochrana
                     }
                 })
                 .catch(err => {
                     if (err && err.name === 'AbortError') return;
-                    bookingSlots.innerHTML = '<p class="text-sm text-red-500 col-span-2">Chyba pri načítavaní termínov.</p>';
+                    bookingSlots.innerHTML = '<p class="text-sm text-red-500">Chyba pri načítavaní termínov.</p>';
                 });
             });
         }

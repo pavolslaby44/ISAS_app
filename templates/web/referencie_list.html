@@ -68,7 +68,7 @@
                 <span class="text-xs font-bold text-gray-500">
                     Aktívne filtre: <strong class="text-gray-900">{% if is_paginated %}{{ paginator.count }}{% else %}{{ referencie|length }}{% endif %}</strong> overených realizácií
                 </span>
-                <a href="{% url 'webbuilder:referencie_list' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100 transition shadow-2xs">
+                <a href="{% url 'webbuilder:referencie_list' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100 transition shadow-sm">
                     <span>✕</span> Zrušiť všetky filtre
                 </a>
             </div>
@@ -77,11 +77,11 @@
             {% if dostupne_kategorie %}
             <div class="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
                 <span class="text-xs font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap mr-1">⚙️ Technológia:</span>
-                <a href="?{% if aktivna_sluzba %}sluzba={{ aktivna_sluzba }}&{% endif %}{% if aktivny_vyrobca %}vyrobca={{ aktivny_vyrobca }}&{% endif %}{% if is_preview %}preview=ai_draft{% endif %}" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap {% if not aktivna_kategoria %}bg-gray-900 text-white shadow-2xs{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+                <a href="?{% if aktivna_sluzba %}sluzba={{ aktivna_sluzba }}&{% endif %}{% if aktivny_vyrobca %}vyrobca={{ aktivny_vyrobca }}&{% endif %}{% if is_preview %}preview=ai_draft{% endif %}" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap {% if not aktivna_kategoria %}bg-gray-900 text-white shadow-sm{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
                     Všetky technológie
                 </a>
                 {% for kat in dostupne_kategorie %}
-                <a href="?kategoria={{ kat.kod }}{% if aktivna_sluzba %}&sluzba={{ aktivna_sluzba }}{% endif %}{% if aktivny_vyrobca %}&vyrobca={{ aktivny_vyrobca }}{% endif %}{% if is_preview %}&preview=ai_draft{% endif %}" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap {% if aktivna_kategoria == kat.kod %}bg-gray-900 text-white shadow-2xs{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+                <a href="?kategoria={{ kat.kod }}{% if aktivna_sluzba %}&sluzba={{ aktivna_sluzba }}{% endif %}{% if aktivny_vyrobca %}&vyrobca={{ aktivny_vyrobca }}{% endif %}{% if is_preview %}&preview=ai_draft{% endif %}" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap {% if aktivna_kategoria == kat.kod %}bg-gray-900 text-white shadow-sm{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
                     {{ kat.nazov }}{% if kat.pocet %} ({{ kat.pocet }}){% endif %}
                 </a>
                 {% endfor %}
@@ -91,11 +91,11 @@
             {% if dostupni_vyrobcovia %}
             <div class="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
                 <span class="text-xs font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap mr-1">🏭 Výrobca:</span>
-                <a href="?{% if aktivna_kategoria %}kategoria={{ aktivna_kategoria }}&{% endif %}{% if aktivna_sluzba %}sluzba={{ aktivna_sluzba }}&{% endif %}{% if is_preview %}preview=ai_draft{% endif %}" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap {% if not aktivny_vyrobca %}bg-blue-900 text-white shadow-2xs{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+                <a href="?{% if aktivna_kategoria %}kategoria={{ aktivna_kategoria }}&{% endif %}{% if aktivna_sluzba %}sluzba={{ aktivna_sluzba }}&{% endif %}{% if is_preview %}preview=ai_draft{% endif %}" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap {% if not aktivny_vyrobca %}bg-blue-900 text-white shadow-sm{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
                     Všetky značky
                 </a>
                 {% for vyr in dostupni_vyrobcovia %}
-                <a href="?vyrobca={{ vyr.id }}{% if aktivna_kategoria %}&kategoria={{ aktivna_kategoria }}{% endif %}{% if aktivna_sluzba %}&sluzba={{ aktivna_sluzba }}{% endif %}{% if is_preview %}&preview=ai_draft{% endif %}" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap {% if aktivny_vyrobca == vyr.id|stringformat:'s' %}bg-blue-900 text-white shadow-2xs{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+                <a href="?vyrobca={{ vyr.id }}{% if aktivna_kategoria %}&kategoria={{ aktivna_kategoria }}{% endif %}{% if aktivna_sluzba %}&sluzba={{ aktivna_sluzba }}{% endif %}{% if is_preview %}&preview=ai_draft{% endif %}" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap {% if aktivny_vyrobca == vyr.id|stringformat:'s' %}bg-blue-900 text-white shadow-sm{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
                     {{ vyr.nazov_vyrobcu }}{% if vyr.pocet %} ({{ vyr.pocet }}){% endif %}
                 </a>
                 {% endfor %}
@@ -105,11 +105,11 @@
             {% if dostupne_sluzby %}
             <div class="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
                 <span class="text-xs font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap mr-1">🛠️ Rozsah prác:</span>
-                <a href="?{% if aktivna_kategoria %}kategoria={{ aktivna_kategoria }}&{% endif %}{% if aktivny_vyrobca %}vyrobca={{ aktivny_vyrobca }}&{% endif %}{% if is_preview %}preview=ai_draft{% endif %}" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap {% if not aktivna_sluzba %}bg-brand text-white shadow-2xs{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+                <a href="?{% if aktivna_kategoria %}kategoria={{ aktivna_kategoria }}&{% endif %}{% if aktivny_vyrobca %}vyrobca={{ aktivny_vyrobca }}&{% endif %}{% if is_preview %}preview=ai_draft{% endif %}" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap {% if not aktivna_sluzba %}bg-brand text-white shadow-sm{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
                     Všetky úkony
                 </a>
                 {% for sluzba in dostupne_sluzby %}
-                <a href="?sluzba={{ sluzba.slug }}{% if aktivna_kategoria %}&kategoria={{ aktivna_kategoria }}{% endif %}{% if aktivny_vyrobca %}&vyrobca={{ aktivny_vyrobca }}{% endif %}{% if is_preview %}&preview=ai_draft{% endif %}" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap {% if aktivna_sluzba == sluzba.slug %}bg-brand text-white shadow-2xs{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+                <a href="?sluzba={{ sluzba.slug }}{% if aktivna_kategoria %}&kategoria={{ aktivna_kategoria }}{% endif %}{% if aktivny_vyrobca %}&vyrobca={{ aktivny_vyrobca }}{% endif %}{% if is_preview %}&preview=ai_draft{% endif %}" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap {% if aktivna_sluzba == sluzba.slug %}bg-brand text-white shadow-sm{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
                     {{ sluzba.nazov }}{% if sluzba.pocet %} ({{ sluzba.pocet }}){% endif %}
                 </a>
                 {% endfor %}
@@ -170,7 +170,7 @@
                                 <span class="font-extrabold text-indigo-900 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded text-[9px]" title="Technologický retrofit / Modernizácia">🚀 Retrofit</span>
                                 {% endif %}
                                 {% if ref.zariadenie and ref.zariadenie.bezpecnostny_kluc %}
-                                <a href="{% url 'webbuilder:machine_passport' ref.zariadenie.bezpecnostny_kluc %}{% if is_preview %}?preview=ai_draft{% endif %}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-0.5 font-bold text-gray-700 hover:text-brand bg-white border border-gray-300 hover:border-brand px-1.5 py-0.5 rounded text-[9px] shadow-2xs transition" title="Zobraziť overený {{ industry_terms.pas_title|default:'digitálny pas'|lower }} a históriu zariadenia">
+                                <a href="{% url 'webbuilder:machine_passport' ref.zariadenie.bezpecnostny_kluc %}{% if is_preview %}?preview=ai_draft{% endif %}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-0.5 font-bold text-gray-700 hover:text-brand bg-white border border-gray-300 hover:border-brand px-1.5 py-0.5 rounded text-[9px] shadow-sm transition" title="Zobraziť overený {{ industry_terms.pas_title|default:'digitálny pas'|lower }} a históriu zariadenia">
                                     <span>📑</span> Pas
                                 </a>
                                 {% endif %}
@@ -195,7 +195,7 @@
                             <span class="inline-flex items-center gap-1 text-[10px] font-semibold bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
                                 <span>🛠️ {{ sluzba.nazov }}</span>
                                 {% if sluzba.zaruka_mesiace > 0 %}
-                                <span class="inline-flex items-center text-[9px] font-extrabold bg-emerald-50 text-emerald-800 border border-emerald-200 px-1 py-0.2 rounded" title="Záruka na prácu">🛡️ {{ sluzba.zaruka_mesiace }}m</span>
+                                <span class="inline-flex items-center text-[9px] font-extrabold bg-emerald-50 text-emerald-800 border border-emerald-200 px-1 py-0.5 rounded" title="Záruka na prácu">🛡️ {{ sluzba.zaruka_mesiace }}m</span>
                                 {% endif %}
                             </span>
                             {% endfor %}
@@ -221,10 +221,10 @@
                 <p class="text-gray-800 font-bold text-lg mb-2">Pre zvolené kritériá filtrovania zatiaľ nebola publikovaná žiadna prípadová štúdia.</p>
                 <p class="text-gray-500 text-sm mb-6 max-w-md mx-auto">Všetky naše servisné zásahy a realizácie vykonávame v súlade s predpismi výrobcu a s certifikovanou zárukou na prácu.</p>
                 <div class="flex items-center justify-center gap-3 flex-wrap">
-                    <a href="{% url 'webbuilder:referencie_list' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="px-4 py-2 bg-white border border-gray-300 hover:border-gray-400 text-gray-700 font-bold text-xs rounded-xl shadow-2xs transition">
+                    <a href="{% url 'webbuilder:referencie_list' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="px-4 py-2 bg-white border border-gray-300 hover:border-gray-400 text-gray-700 font-bold text-xs rounded-xl shadow-sm transition">
                         Zobraziť všetky realizácie
                     </a>
-                    <a href="{% url 'webbuilder:home' %}#kontakt{% if is_preview %}?preview=ai_draft{% endif %}" class="px-4 py-2 bg-brand hover-bg-brand text-white font-bold text-xs rounded-xl shadow-2xs transition">
+                    <a href="{% url 'webbuilder:home' %}{% if is_preview %}?preview=ai_draft{% endif %}#kontakt" class="px-4 py-2 bg-brand hover-bg-brand text-white font-bold text-xs rounded-xl shadow-sm transition">
                         Dopytovať realizáciu &rarr;
                     </a>
                 </div>
@@ -269,7 +269,7 @@
                 {% endif %}
             </div>
             <div class="w-full md:w-auto flex items-center justify-start md:justify-end">
-                <a href="{% url 'webbuilder:home' %}#kontakt{% if is_preview %}?preview=ai_draft{% endif %}" class="w-full sm:w-auto text-center px-6 py-3.5 bg-brand hover-bg-brand text-white font-extrabold rounded-xl transition shadow-lg whitespace-nowrap">
+                <a href="{% url 'webbuilder:home' %}{% if is_preview %}?preview=ai_draft{% endif %}#kontakt" class="w-full sm:w-auto text-center px-6 py-3.5 bg-brand hover-bg-brand text-white font-extrabold rounded-xl transition shadow-lg whitespace-nowrap">
                     Kontaktovať dispečing &rarr;
                 </a>
             </div>

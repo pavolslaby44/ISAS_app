@@ -112,8 +112,8 @@
                 Máte pocit, že by ste boli pre náš tím prínosom? Pošlite nám svoj životopis a profil ako otvorenú žiadosť.
             </p>
             {% if identita.email_vseobecny %}
-            <a href="mailto:{{ identita.email_vseobecny }}?subject=Otvoren%C3%A1%20%C5%BEiados%C5%A5%20o%20zamestnanie%20%E2%80%93%20{{ identita.nazov_spolocnosti|urlencode }}" class="inline-block bg-brand hover-bg-brand text-white font-bold py-3.5 px-8 rounded-xl shadow-lg transition duration-200">
-                <span>✉️</span> Odoslať otvorenú žiadosť e-mailom
+            <a href="mailto:{{ identita.email_vseobecny }}?subject=Otvoren%C3%A1%20%C5%BEiados%C5%A5%20o%20zamestnanie%20%E2%80%93%20{{ identita.nazov_spolocnosti|urlencode }}" class="inline-flex items-center justify-center gap-2 bg-brand hover-bg-brand text-white font-bold py-3.5 px-8 rounded-xl shadow-lg transition duration-200">
+                <span>✉️</span> <span>Odoslať otvorenú žiadosť e-mailom</span>
             </a>
             {% else %}
             <a href="{% url 'webbuilder:home' %}{% if is_preview %}?preview=ai_draft{% endif %}#kontakt" class="inline-block bg-brand hover-bg-brand text-white font-bold py-3.5 px-8 rounded-xl shadow-lg transition duration-200">
@@ -131,7 +131,7 @@
             </div>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
                 {% for clen in tim %}
-                <div class="text-center p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                <div class="text-center p-4 bg-gray-50 rounded-2xl border border-gray-100 min-w-0">
                     <div class="w-20 h-20 mx-auto mb-3 rounded-full overflow-hidden bg-gray-200">
                         {% if clen.profilova_fotka and clen.profilova_fotka.name %}
                         <img src="{{ clen.profilova_fotka.url }}" alt="{{ clen.meno }} {{ clen.priezvisko }}" loading="lazy" class="w-full h-full object-cover">
@@ -141,8 +141,8 @@
                         </div>
                         {% endif %}
                     </div>
-                    <div class="font-bold text-gray-900 text-sm">{{ clen.meno }} {{ clen.priezvisko }}</div>
-                    <div class="text-xs text-brand font-medium">{{ clen.verejna_rola|default:"Odborný špecialista" }}</div>
+                    <div class="font-bold text-gray-900 text-sm break-words">{{ clen.meno }} {{ clen.priezvisko }}</div>
+                    <div class="text-xs text-brand font-medium break-words">{{ clen.verejna_rola|default:"Odborný špecialista" }}</div>
                     <div class="flex flex-wrap items-center justify-center gap-1.5 mt-2">
                         {% if clen.prax_roky is not None and clen.prax_roky > 0 %}
                         <span class="inline-block px-2 py-0.5 bg-blue-50 text-blue-700 text-[10px] font-bold rounded-md border border-blue-200">

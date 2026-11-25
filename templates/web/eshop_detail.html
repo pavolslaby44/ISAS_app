@@ -137,8 +137,8 @@
                 <p class="text-gray-600 leading-relaxed">{{ diel.popis_na_webe|default:"Podrobné technické informácie a špecifikáciu tejto položky vám radi poskytneme na vyžiadanie."|linebreaksbr }}</p>
             </div>
 
-            <div class="flex gap-4 items-center print:hidden">
-                <div class="w-40">
+            <div class="flex flex-col sm:flex-row gap-4 sm:items-end print:hidden">
+                <div class="w-full sm:w-40">
                     <label for="qtyInput" class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Množstvo{% if diel.merna_jednotka %} ({{ diel.merna_jednotka }}){% endif %}</label>
                     <div class="relative flex items-center bg-gray-50 border border-gray-200 rounded-xl">
                         <button type="button" aria-label="Znížiť množstvo" onclick="const q = document.getElementById('qtyInput'); q.value = Math.max(1, (parseInt(q.value, 10) || 1) - 1);" class="px-3 py-4 text-gray-500 hover:text-gray-900 font-bold text-lg focus:outline-none select-none">–</button>
@@ -146,7 +146,7 @@
                         <button type="button" aria-label="Zvýšiť množstvo" onclick="const q = document.getElementById('qtyInput'); q.value = Math.min(999, (parseInt(q.value, 10) || 1) + 1);" class="px-3 py-4 text-gray-500 hover:text-gray-900 font-bold text-lg focus:outline-none select-none">+</button>
                     </div>
                 </div>
-                <button type="button" onclick="addToCart('POLOZKA', '{{ diel.nazov|default:industry_terms.polozka_fallback_nazov|striptags|escapejs }}', 'SKU: {{ diel.katalogove_cislo|default:diel.seriove_cislo|default:'N/A'|escapejs }}', (document.getElementById('qtyInput') ? parseInt(document.getElementById('qtyInput').value, 10) : 1) || 1)" class="flex-grow block text-center mt-5 {% if is_b2b or request.user.zakaznik_profil %}bg-emerald-600 hover:bg-emerald-700{% else %}bg-gray-900 hover:bg-brand{% endif %} text-white font-bold text-lg py-4 rounded-xl transition duration-300 shadow-lg">
+                <button type="button" onclick="addToCart('POLOZKA', '{{ diel.nazov|default:industry_terms.polozka_fallback_nazov|striptags|escapejs }}', 'SKU: {{ diel.katalogove_cislo|default:diel.seriove_cislo|default:'N/A'|escapejs }}', (document.getElementById('qtyInput') ? parseInt(document.getElementById('qtyInput').value, 10) : 1) || 1)" class="w-full sm:w-auto sm:flex-grow text-center px-6 {% if is_b2b or request.user.zakaznik_profil %}bg-emerald-600 hover:bg-emerald-700{% else %}bg-gray-900 hover:bg-brand{% endif %} text-white font-bold text-lg py-4 rounded-xl transition duration-300 shadow-lg">
                     {{ industry_terms.cart_inquiry_btn|default:"Pridať do dopytu" }}
                 </button>
             </div>

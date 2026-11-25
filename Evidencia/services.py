@@ -3510,10 +3510,10 @@ def tool_erp_hlbkova_analyza_a_vykazy(typ_analyzy: str, identifikator: str, datu
             if je_nepriestupny_posledny_februar:
                 meniny_29 = MENINY_KALENDAR.get("29.02.", {})
                 if isinstance(meniny_29, dict):
-                    for k, v in meniny_29.items():
-                        if v:
-                            povodna = dnesne_meniny.get(k, "")
-                            dnesne_meniny[k] = f"{povodna}, {v}".strip(", ") if povodna else v
+                    for lang_key, meno_29 in meniny_29.items():
+                        if meno_29:
+                            povodna = dnesne_meniny.get(lang_key, "")
+                            dnesne_meniny[lang_key] = f"{povodna}, {meno_29}".strip(", ") if povodna else meno_29
 
             sviatky_blacklist = {
                 "nový rok", "sviatok práce", "svátek práce", "státní svátek",
@@ -3994,12 +3994,12 @@ def tool_vygeneruj_obrazok_strany(model_name: str, object_id: int, nazov_pola: s
         elif ext in ['.jpg', '.jpeg', '.png', '.webp']:
             from PIL import Image, ImageOps
             with Image.open(file_path) as img:
-                img = ImageOps.exif_transpose(img)
-                if img.mode not in ('RGB', 'RGBA'):
-                    img = img.convert('RGBA' if 'A' in img.getbands() else 'RGB')
+                processed_img = ImageOps.exif_transpose(img)
+                if processed_img.mode not in ('RGB', 'RGBA'):
+                    processed_img = processed_img.convert('RGBA' if 'A' in processed_img.getbands() else 'RGB')
                 filename = f"pdf_render_{safe_model_name}_{safe_obj_id}_strana_1_{int(aktualny_cas)}_{secrets.token_hex(8)}.png"
                 save_path = os.path.join(cache_dir, filename)
-                img.save(save_path, format='PNG')
+                processed_img.save(save_path, format='PNG')
 
             img_url = reverse('evidencia:ai_pdf_cache_image', args=[filename])
         else:
@@ -5030,7 +5030,7 @@ def tool_vytvor_pripadovu_studiu_z_vyjazdu(zaznam_id: int, verejny_marketingovy_
                 ma_suhlas_klienta = bool(zaznam.zakaznik and getattr(zaznam.zakaznik, 'zobrazit_ako_referenciu', False))
                 klient_str = (
                     zaznam.zakaznik.Nazov_spolocnosti
-                    if (not anonymizovat_klienta and ma_suhlas_klienta)
+                    if (zaznam.zakaznik is not None and not anonymizovat_klienta and ma_suhlas_klienta)
                     else "Významný obchodný partner"
                 )
                 stroj_str = str(zaznam.zariadenie) if zaznam.zariadenie else get_industry_term('zariadenie_fallback_nazov', 'Zariadenie')
