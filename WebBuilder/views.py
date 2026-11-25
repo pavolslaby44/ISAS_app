@@ -1776,7 +1776,7 @@ class SluzbyListView(WebBaseMixin, ListView):
         context['faqs'] = WebFAQ.objects.filter(
             je_aktivna=True, 
             kategoria__in=['SERVIS', 'TECHNOLOGIA']
-        ).order_by('poradie', '-id')[:4]
+        ).order_by('poradie', '-id')[:6]
 
         context['meter_unit'] = get_industry_term('meter_unit', 'hod.')
 
@@ -1868,7 +1868,7 @@ class SluzbaDetailView(WebBaseMixin, DetailView):
         context['faqs'] = WebFAQ.objects.filter(
             je_aktivna=True, 
             kategoria__in=['SERVIS', 'TECHNOLOGIA', 'ZARUKA']
-        ).order_by('poradie', '-id')[:4]
+        ).order_by('poradie', '-id')[:6]
 
         # ⚖️ DPH & Cena: Výpočet pre fakturovateľné položky vrátane B2B zliav
         gn = context.get('globalne_nastavenia')
@@ -2553,7 +2553,7 @@ class RentalDetailView(WebBaseMixin, DetailView):
         # ❓ NÁVRH 5: FAQ K PRENÁJMU A PODMIENKAM ZÁRUKY
         WebFAQModel = apps.get_model('WebBuilder', 'WebFAQ')
         context['rental_faqs'] = list(
-            WebFAQModel.objects.filter(je_aktivna=True, kategoria__in=['OBCHOD', 'SERVIS']).order_by('poradie', '-id')[:4]
+            WebFAQModel.objects.filter(je_aktivna=True, kategoria__in=['OBCHOD', 'SERVIS']).order_by('poradie', '-id')[:6]
         ) if WebFAQModel else []
 
         return context
