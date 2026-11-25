@@ -265,7 +265,7 @@
                     <p class="text-lg font-semibold text-gray-900">{{ sluzba.get_priorita_display }}</p>
                 </div>
                 <div>
-                    <p class="text-sm text-gray-500 font-bold uppercase tracking-wider mb-1">{% if identita.je_platca_dph %}Cena bez DPH{% else %}Konečná cena{% endif %}</p>
+                    <p class="text-sm text-gray-500 font-bold uppercase tracking-wider mb-1">{% if not sluzba.je_fakturovatelna %}Podmienky{% elif identita.je_platca_dph %}Cena od (bez DPH){% else %}Cena od{% endif %}</p>
                     {% if is_b2b and povodna_cena %}
                     <div class="flex items-center gap-2 mb-1">
                         <span class="text-xs text-gray-400 line-through">{{ povodna_cena }} {{ mena }}</span>

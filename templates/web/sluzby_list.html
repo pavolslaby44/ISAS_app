@@ -274,8 +274,8 @@
                 <div class="mt-auto pt-6 border-t border-gray-100">
                     <div class="flex items-center justify-between">
                         <span class="text-sm text-gray-400 uppercase tracking-wider font-bold">{% if sluzba.je_fakturovatelna %}Cena od{% else %}Podmienky{% endif %}</span>
-                        {% if sluzba.je_fakturovatelna %}
-                        <span class="text-[11px] text-gray-400 font-medium">{% if identita.je_platca_dph %}bez DPH{% if sadzba_dph and sadzba_dph > 0 %} ({{ sadzba_dph }}%){% endif %}{% else %}Konečná cena{% endif %}</span>
+                        {% if sluzba.je_fakturovatelna and identita.je_platca_dph %}
+                        <span class="text-[11px] text-gray-400 font-medium">bez DPH{% if sadzba_dph and sadzba_dph > 0 %} ({{ sadzba_dph }}%){% endif %}</span>
                         {% endif %}
                     </div>
                     {% if is_b2b and sluzba.povodna_cena %}
@@ -431,7 +431,7 @@
                     <span>💎</span> Prémiová garancia prevádzky
                 </div>
                 <h2 class="text-3xl md:text-4xl font-extrabold mb-4">{{ sla_blok.nadpis|default:"Získajte istotu so servisným paušálom (SLA)" }}</h2>
-                <p class="text-gray-400 mb-10 max-w-2xl mx-auto text-sm md:text-base leading-relaxed">{{ sla_blok.podnadpis|default:"Máte kľúčové zariadenia alebo technologické celky? Nastavíme vám zmluvný servis s garantovaným reakčným časom, prednostným nasadením technikov a zvýhodnenými podmienkami." }}</p>
+                <p class="text-gray-400 mb-10 max-w-2xl mx-auto text-sm md:text-base leading-relaxed">{{ sla_blok.podnadpis|default:"Máte kľúčové zariadenia alebo technologické celky? Nastavíme vám zmluvný servis s garantovaným reakčným časom, prednostným nasadením technikov a zvýhodnenými podmienkami."|linebreaksbr }}</p>
                 
                 <div class="bg-gray-800 p-6 md:p-8 rounded-2xl border border-gray-700 shadow-xl text-left">
                     <form id="slaForm" class="space-y-6">

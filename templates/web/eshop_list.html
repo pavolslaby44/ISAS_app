@@ -96,7 +96,7 @@
                                     {% else %}
                                         <div class="text-2xl font-extrabold text-brand">{{ diel.cena_bez_dph }} {{ mena }}</div>
                                     {% endif %}
-                                    <div class="text-xs text-gray-400 font-medium">bez DPH{% if diel.merna_jednotka %} / {{ diel.merna_jednotka }}{% endif %}</div>
+                                    <div class="text-xs text-gray-400 font-medium">{% if identita.je_platca_dph %}bez DPH{% else %}konečná cena{% endif %}{% if diel.merna_jednotka %} / {{ diel.merna_jednotka }}{% endif %}</div>
                                 {% else %}
                                     <div class="text-lg font-bold text-brand">Na vyžiadanie</div>
                                 {% endif %}

@@ -299,7 +299,10 @@ class WebBlokAdmin(ISASPremiumAdmin):
             'BOOKING': _cta_media_lock,
             'FAQ': _cta_media_lock,
             'BLOG_TEASER': _cta_media_lock,
-            'SLA_CALCULATOR': _subpage_lock,
+            'SLA_CALCULATOR': {
+                'lock': ['poradie', 'tlacidlo_text', 'obrazok'],
+                'unlock': ['nadpis', 'podnadpis'],
+            },
             'BUYBACK': _subpage_lock,
         },
         'default_rule': {
