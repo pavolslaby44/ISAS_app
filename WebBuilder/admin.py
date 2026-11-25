@@ -269,6 +269,45 @@ class WebBlokAdmin(ISASPremiumAdmin):
         'typ': '🧱 Zvoľte typ bloku',
         'verzia': '🏷️ Zvoľte verziu bloku',
     }
+    _full_lock = ['poradie', 'nadpis', 'podnadpis', 'tlacidlo_text', 'obrazok']
+    _cta_media_lock = {
+        'lock': ['tlacidlo_text', 'obrazok'],
+        'unlock': ['poradie', 'nadpis', 'podnadpis'],
+    }
+    _subpage_lock = {
+        'lock': ['poradie'],
+        'unlock': ['nadpis', 'podnadpis', 'tlacidlo_text', 'obrazok'],
+    }
+    isas_value_based_locks = {
+        'trigger_field': 'typ',
+        'soft_lock': True,
+        'rules': {
+            'WARRANTY_CLAIM': {'lock': _full_lock},
+            'TICKET': {'lock': _full_lock},
+            'BRANDS': {
+                'lock': ['podnadpis', 'tlacidlo_text', 'obrazok'],
+                'unlock': ['poradie', 'nadpis'],
+            },
+            'SERVICES': _cta_media_lock,
+            'RENTAL': _cta_media_lock,
+            'PARTS': _cta_media_lock,
+            'REFERENCES': _cta_media_lock,
+            'TEAM': _cta_media_lock,
+            'ENGINEERING_HUB': _cta_media_lock,
+            'CONTACT': _cta_media_lock,
+            'IOT_DEMO': _cta_media_lock,
+            'BOOKING': _cta_media_lock,
+            'FAQ': _cta_media_lock,
+            'BLOG_TEASER': _cta_media_lock,
+            'SLA_CALCULATOR': _subpage_lock,
+            'BUYBACK': _subpage_lock,
+        },
+        'default_rule': {
+            'unlock': _full_lock,
+        },
+    }
+    del _full_lock, _cta_media_lock, _subpage_lock
+
     isas_delete_success_message = "✨ Webové bloky boli úspešne odstránené!"
     isas_magia_kwargs = {
         'live_search_endpoint': "detective-search/",
@@ -346,7 +385,6 @@ class WebBlokAdmin(ISASPremiumAdmin):
             'REFERENCES': 'primary',
             'TEAM': 'info',
             'TICKET': 'dark',
-            'CALCULATOR': 'success',
             'ENGINEERING_HUB': 'dark',
             'CONTACT': 'danger',
             'IOT_DEMO': 'info',

@@ -230,9 +230,9 @@
                                         <span class="text-xs text-gray-400 line-through font-normal block">{{ sluzba.povodna_cena }} {{ mena }}</span>
                                     {% endif %}
                                     {% if sluzba.sposob_uctovania == 'HODINA' %}
-                                        {% if sluzba.cena_predaj and sluzba.cena_predaj > 0 %}{{ sluzba.cena_predaj }} {{ mena }} <span class="text-sm text-gray-500 font-medium">/ hod</span> <span class="text-xs text-gray-400 font-normal">{% if identita.je_platca_dph %}bez DPH{% else %}konečná cena{% endif %}</span>{% else %}Na vyžiadanie{% endif %}
+                                        {% if sluzba.cena_predaj and sluzba.cena_predaj > 0 %}{{ sluzba.cena_predaj }} {{ mena }} <span class="text-sm text-gray-500 font-medium">/ hod</span>{% if identita.je_platca_dph %} <span class="text-xs text-gray-400 font-normal">bez DPH</span>{% endif %}{% else %}Na vyžiadanie{% endif %}
                                     {% else %}
-                                        {% if sluzba.cena_predaj and sluzba.cena_predaj > 0 %}{{ sluzba.cena_predaj }} {{ mena }} <span class="text-xs text-gray-400 font-normal">{% if identita.je_platca_dph %}bez DPH{% else %}konečná cena{% endif %}</span>{% else %}Na vyžiadanie{% endif %}
+                                        {% if sluzba.cena_predaj and sluzba.cena_predaj > 0 %}{{ sluzba.cena_predaj }} {{ mena }}{% if identita.je_platca_dph %} <span class="text-xs text-gray-400 font-normal">bez DPH</span>{% endif %}{% else %}Na vyžiadanie{% endif %}
                                     {% endif %}
                                 </div>
                                 {% if sluzba.sposob_uctovania == 'HODINA' and sluzba.normohodiny and sluzba.normohodiny > 0 %}
@@ -538,8 +538,6 @@
             </div>
         </section>
         {% endif %}
-
-        <!-- Samostatný blok CALCULATOR bol plnohodnotne integrovaný priamo do Smart Bookingu nižšie -->
 
         <!-- 🔬 ENGINEERING HUB TEASER (Inžinierske & Diagnostické Centrum) -->
         {% if blok.typ == 'ENGINEERING_HUB' %}

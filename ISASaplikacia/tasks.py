@@ -79,7 +79,7 @@ def sync_isas_mail_task():
     
         ucty = EmailovyUcet.objects.filter(je_aktivny=True)
         if not ucty:
-            logger.error("❌ Nie je nastavený žiadny aktívny e-mailový účet.")
+            logger.warning("⚠️ Nie je nastavený žiadny aktívny e-mailový účet.")
             return
 
         # 🛡️ DEFENSIVE CHECK: Overenie konfigurácie Gemini AI pred inicializáciou (DB/Cache -> Fallback .env)

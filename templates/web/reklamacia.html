@@ -19,10 +19,12 @@
 <section class="py-16 bg-white px-6 flex-grow">
     <div class="max-w-3xl mx-auto">
         <div class="text-center mb-10">
-            <div class="inline-flex items-center justify-center p-4 bg-slate-50 text-slate-600 rounded-2xl mb-4 border border-slate-200 shadow-sm text-3xl">🛡️</div>
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-brand/10 text-brand rounded-2xl mb-4 border border-brand/20 shadow-sm">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+            </div>
             <h1 class="text-3xl md:text-4xl font-extrabold mb-4 text-gray-900">{{ titulok_stranky|default:"Garančný servis a reklamácie" }}</h1>
             <p class="text-gray-600 text-lg">
-                Za každým servisným zásahom si stojíme. 
+                Za každým naším riešením, dodávkou aj zásahom si stojíme. 
                 {% if platna_reklamacna_lehota %}
                     Pre vašu spoločnosť evidujeme zmluvnú lehotu spracovania do <span class="font-bold text-gray-900">{{ platna_reklamacna_lehota }} dní</span>.
                 {% elif globalne_nastavenia and globalne_nastavenia.pracovny_cas_od and globalne_nastavenia.pracovny_cas_do %}
@@ -44,6 +46,14 @@
         </div>
         
         <div class="bg-white p-8 rounded-3xl border border-gray-200 shadow-xl">
+            {% if not b2b_klient %}
+            <div class="mb-6 p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-600">
+                <span>Ste náš zmluvný B2B partner? Prihláste sa pre automatické načítanie dokladov a záruk.</span>
+                <a href="{% url 'webbuilder:b2b_login' %}?{% if is_preview %}preview=ai_draft&amp;{% endif %}next={% url 'webbuilder:reklamacie' %}" class="font-bold text-brand hover:underline whitespace-nowrap">
+                    Prihlásiť do Klientskej zóny &rarr;
+                </a>
+            </div>
+            {% endif %}
             <form id="warrantyForm" class="space-y-5" enctype="multipart/form-data">
                 {% csrf_token %}
                 <input type="text" name="website_url" class="hidden" tabindex="-1" autocomplete="off">
@@ -105,19 +115,22 @@
                 </div>
                 {% else %}
                 <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-1">Identifikácia {{ industry_terms.zariadenie_genitiv|default:"zariadenia" }} (Výrobné číslo / Typ zo štítku)</label>
-                    <input type="text" name="zariadenie_manual" placeholder="Napr. Výrobné číslo (S/N), typové označenie zo štítku..." class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 ring-brand outline-none">
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Identifikácia {{ industry_terms.zariadenie_genitiv|default:"zariadenia" }} (Identifikátor / S/N / Typ)</label>
+                    <input type="text" name="zariadenie_manual" placeholder="Napr. sériové číslo (S/N), názov systému alebo typové označenie..." class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 ring-brand outline-none">
                 </div>
                 {% endif %}
                 
                 <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-1">Presný popis vady *</label>
-                    <textarea name="popis" rows="5" required class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 ring-brand outline-none" placeholder="{{ industry_terms.poziadavka_placeholder|default:'Popíšte prosím detailne, čo presne nefunguje alebo aký chybový stav zariadenie vykazuje...' }}"></textarea>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Presný popis vady alebo incidentu *</label>
+                    <textarea name="popis" rows="5" required class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 ring-brand outline-none" placeholder="{{ industry_terms.poziadavka_placeholder|default:'Popíšte prosím detailne zistený problém, okolnosti alebo chybový stav...' }}"></textarea>
                 </div>
                 
                 <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-1">📸 Fotografia / Video vady (Urýchli vybavenie)</label>
-                    <input type="file" name="priloha" accept="image/*,video/*" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-bold file:bg-brand/10 file:text-brand">
+                    <label class="text-sm font-bold text-gray-700 mb-1 flex items-center justify-between gap-2">
+                        <span>📎 Príloha – foto, video alebo PDF (Urýchli vybavenie)</span>
+                        <span class="text-xs font-normal text-gray-400">Voliteľné (max. 10 MB)</span>
+                    </label>
+                    <input type="file" name="priloha" accept="image/*,video/*,.pdf" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-bold file:bg-brand/10 file:text-brand hover:file:bg-brand/20 transition">
                 </div>
                 
                 {% if b2b_klient and b2b_klient.vyzaduje_povolenie_vstupu %}
@@ -157,13 +170,25 @@
                 </div>
                 {% endif %}
 
-                <button type="submit" class="w-full bg-gray-900 hover:bg-brand text-white font-bold text-lg py-4 rounded-xl transition shadow-md mt-2">Odoslať na garančné oddelenie</button>
+                <button type="submit" class="w-full bg-gray-900 hover:bg-brand text-white font-bold text-lg py-4 rounded-xl transition shadow-md mt-2">Odoslať garančnú požiadavku</button>
 
                 {% if email_reklamacie or identita.telefon %}
-                <div class="mt-4 pt-4 border-t border-gray-100 text-center text-xs text-gray-500">
-                    Priamy kontakt na garančný dispečing: 
-                    {% if identita.telefon %}<span class="font-medium text-gray-700">{{ identita.telefon }}</span>{% endif %}
-                    {% if email_reklamacie %}{% if identita.telefon %}<span class="mx-1">•</span>{% endif %}<span class="font-medium text-gray-700">{{ email_reklamacie }}</span>{% endif %}
+                <div class="mt-5 pt-5 border-t border-gray-100 flex flex-col items-center gap-2.5 text-xs text-gray-500">
+                    <span class="font-semibold uppercase tracking-wider text-[11px] text-gray-400">Priamy kontakt na garančný dispečing</span>
+                    <div class="flex flex-wrap items-center justify-center gap-2">
+                        {% if identita.telefon %}
+                        <a href="tel:{{ identita.telefon }}" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-gray-50 hover:bg-brand/10 border border-gray-200 hover:border-brand/30 text-gray-700 hover:text-brand font-semibold transition">
+                            <span>📞</span>
+                            <span>{{ identita.telefon }}</span>
+                        </a>
+                        {% endif %}
+                        {% if email_reklamacie %}
+                        <a href="mailto:{{ email_reklamacie }}" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-gray-50 hover:bg-brand/10 border border-gray-200 hover:border-brand/30 text-gray-700 hover:text-brand font-semibold transition">
+                            <span>✉️</span>
+                            <span>{{ email_reklamacie }}</span>
+                        </a>
+                        {% endif %}
+                    </div>
                 </div>
                 {% endif %}
             </form>

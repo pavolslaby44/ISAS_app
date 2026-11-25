@@ -4252,9 +4252,9 @@ def tool_spravuj_verejny_web(akcia: str, ulozit_ako_draft: bool = True, domena: 
     'ulozit_ako_draft' nechaj VŽDY True, pokiaľ ťa šéf vyslovene nepožiada o okamžitý prepis ostrej verzie.
     'akcia' musí byť: 'UPRAVIT_NASTAVENIA' (mení len farby/SEO), 'UPRAVIT_ALEBO_PRIDAT_BLOK' (upraví texty/pridá konkrétne bloky bez zmazania ostatných), 'DEAKTIVOVAT_BLOK' (skryje blok) alebo 'VYGENEROVAT_CELY_WEB' (zmaže staré bloky a vytvorí nové podľa bloky_json).
     'bloky_json' musí byť validný JSON string poľa objektov: [{"typ": "HERO", "nadpis": "...", "podnadpis": "...", "tlacidlo_text": "...", "poradie": 10}, ...]
-    Povolené typy blokov: HERO, ABOUT, SERVICES, RENTAL, PARTS, BRANDS, REFERENCES, TEAM, TICKET, CALCULATOR, ENGINEERING_HUB, CONTACT, IOT_DEMO, CAREER, SLA_CALCULATOR, BUYBACK, WARRANTY_CLAIM, BOOKING, FAQ, BLOG_TEASER.
+    Povolené typy blokov: HERO, ABOUT, SERVICES, RENTAL, PARTS, BRANDS, REFERENCES, TEAM, TICKET, ENGINEERING_HUB, CONTACT, IOT_DEMO, CAREER, SLA_CALCULATOR, BUYBACK, WARRANTY_CLAIM, BOOKING, FAQ, BLOG_TEASER.
     """
-    
+
     try:
         WebNastavenia = apps.get_model('WebBuilder', 'WebNastavenia')
         WebBlok = apps.get_model('WebBuilder', 'WebBlok')
@@ -4262,8 +4262,8 @@ def tool_spravuj_verejny_web(akcia: str, ulozit_ako_draft: bool = True, domena: 
         return json.dumps({"error": "Modely pre web nie sú v systéme dostupné."})
 
     POVOLENE_BLOKY = [
-        'HERO', 'ABOUT', 'SERVICES', 'RENTAL', 'PARTS', 'BRANDS', 'REFERENCES', 
-        'TEAM', 'TICKET', 'CALCULATOR', 'ENGINEERING_HUB', 'CONTACT', 'IOT_DEMO',
+        'HERO', 'ABOUT', 'SERVICES', 'RENTAL', 'PARTS', 'BRANDS', 'REFERENCES',
+        'TEAM', 'TICKET', 'ENGINEERING_HUB', 'CONTACT', 'IOT_DEMO',
         'CAREER', 'SLA_CALCULATOR', 'BUYBACK', 'WARRANTY_CLAIM', 'BOOKING', 'FAQ', 'BLOG_TEASER'
     ]
 
@@ -4545,7 +4545,7 @@ def tool_najdi_a_nastav_ilustracny_obrazok(typ_bloku: str, hladany_vyraz: str, c
         WebBlok = apps.get_model('WebBuilder', 'WebBlok')
         POVOLENE_BLOKY = {
             'HERO', 'ABOUT', 'SERVICES', 'RENTAL', 'PARTS', 'BRANDS', 'REFERENCES',
-            'TEAM', 'TICKET', 'CALCULATOR', 'ENGINEERING_HUB', 'CONTACT', 'IOT_DEMO',
+            'TEAM', 'TICKET', 'ENGINEERING_HUB', 'CONTACT', 'IOT_DEMO',
             'CAREER', 'SLA_CALCULATOR', 'BUYBACK', 'WARRANTY_CLAIM', 'BOOKING', 'FAQ', 'BLOG_TEASER'
         }
         typ_bloku_upper = (typ_bloku or '').strip().upper()

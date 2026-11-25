@@ -387,6 +387,7 @@ def get_web_nav_flags(cache_ver=1, is_preview=False, aktivne_bloky=None):
         'show_blog': show_blog,
         'show_kariera': show_kariera,
         'show_ticket': 'TICKET' in aktivne_bloky,
+        'show_reklamacie': 'WARRANTY_CLAIM' in aktivne_bloky,
         'show_kontakt': 'CONTACT' in aktivne_bloky,
         'show_services_block': 'SERVICES' in aktivne_bloky,
     }

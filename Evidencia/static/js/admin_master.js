@@ -189,18 +189,55 @@ document.addEventListener("DOMContentLoaded", function() {
         return intervalId;
     };
 
-    window.setISASFieldState = function(elId, isLocked, clearVal) {
+    window.setISASFieldState = function(elId, isLocked, clearVal, softLock = false) {
         const el = document.getElementById('id_' + elId);
         if (!el) return;
         const container = el.closest('.fieldBox') || el.closest('.form-row');
-        el.disabled = isLocked;
-        isLocked ? el.setAttribute('readonly', 'readonly') : el.removeAttribute('readonly');
+
+        if (softLock) {
+            el.disabled = false;
+            isLocked ? el.setAttribute('readonly', 'readonly') : el.removeAttribute('readonly');
+            if (isLocked) {
+                el.dataset.softLocked = '1';
+                if (el.required && !String(el.value || '').trim()) {
+                    el.value = el.defaultValue || (el.type === 'number' ? '10' : '');
+                }
+            } else {
+                delete el.dataset.softLocked;
+            }
+
+            if (!el.dataset.softLockBound) {
+                el.dataset.softLockBound = '1';
+                const blockIfLocked = (ev) => {
+                    if (el.dataset.softLocked === '1' && ev.key !== 'Tab') ev.preventDefault();
+                };
+                el.addEventListener('keydown', blockIfLocked);
+                el.addEventListener('mousedown', blockIfLocked);
+                el.addEventListener('click', blockIfLocked);
+            }
+
+            const focusables = container ? container.querySelectorAll('a, input, select, textarea, button') : [el];
+            focusables.forEach(node => {
+                if (isLocked) {
+                    if (!('origTabindex' in node.dataset)) node.dataset.origTabindex = node.getAttribute('tabindex') ?? '';
+                    node.setAttribute('tabindex', '-1');
+                } else if ('origTabindex' in node.dataset) {
+                    if (node.dataset.origTabindex !== '') node.setAttribute('tabindex', node.dataset.origTabindex);
+                    else node.removeAttribute('tabindex');
+                    delete node.dataset.origTabindex;
+                }
+            });
+        } else {
+            el.disabled = isLocked;
+            isLocked ? el.setAttribute('readonly', 'readonly') : el.removeAttribute('readonly');
+        }
+
         if (isLocked && clearVal !== undefined) el.value = clearVal;
-        
+
         if (container) {
             Object.assign(container.style, { transition: "all 0.3s ease", opacity: isLocked ? "0.4" : "1", filter: isLocked ? "grayscale(100%)" : "none", pointerEvents: isLocked ? "none" : "auto" });
         }
-        if (typeof django !== 'undefined' && django.jQuery) {
+        if (!softLock && typeof django !== 'undefined' && django.jQuery) {
             const $sel = django.jQuery(el);
             if ($sel.hasClass('select2-hidden-accessible')) $sel.prop('disabled', isLocked);
         }
@@ -2254,11 +2291,12 @@ document.addEventListener("DOMContentLoaded", function() {
     // M. VALUE BASED LOCKS
     if (isasConfig.value_based_locks) {
         const cfg = isasConfig.value_based_locks;
+        const useSoftLock = Boolean(cfg.soft_lock);
         window.ISASBindFieldEvent(cfg.trigger_field, 'change', (e) => {
             const rule = cfg.rules[e.target.value] || cfg.default_rule;
             if (rule) {
-                rule.lock?.forEach(f => window.setISASFieldState(f, true, rule.clear_value));
-                rule.unlock?.forEach(f => window.setISASFieldState(f, false));
+                rule.lock?.forEach(f => window.setISASFieldState(f, true, rule.clear_value, useSoftLock));
+                rule.unlock?.forEach(f => window.setISASFieldState(f, false, undefined, useSoftLock));
             }
         });
     }

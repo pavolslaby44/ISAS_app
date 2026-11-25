@@ -1241,7 +1241,7 @@ def process_imap_mailbox(lock_key, config_keys, processor_func):
     nastavenia = GlobalneNastavenia_model.objects.first()
     
     if not nastavenia:
-        logger.error(f"❌ ISAS Poštár ({name}): Chýbajú globálne nastavenia.")
+        logger.warning(f"⚠️ ISAS Poštár ({name}): Chýbajú globálne nastavenia.")
         cache.delete(lock_key)
         return
         
@@ -1250,7 +1250,7 @@ def process_imap_mailbox(lock_key, config_keys, processor_func):
     imap_server = getattr(nastavenia, config_keys.get('server', ''), 'imap.gmail.com') or 'imap.gmail.com'
     
     if not imap_user or not imap_password:
-        logger.error(f"❌ ISAS Poštár ({name}): Klient nemá nastavené prihlasovacie údaje.")
+        logger.warning(f"⚠️ ISAS Poštár ({name}): Klient nemá nastavené prihlasovacie údaje.")
         cache.delete(lock_key)
         return
 

@@ -315,9 +315,11 @@
                     {% if identita.veduci_skladu or identita.zodpovedny_zamestnanec_sklad %}<p class="text-[11px] text-gray-400">Vedúci skladu: {{ identita.veduci_skladu|default:identita.zodpovedny_zamestnanec_sklad }}</p>{% endif %}
                     
                     <div class="pt-3 mt-3 border-t border-gray-800 space-y-2">
+                        {% if nav_flags.show_reklamacie %}
                         <a href="{% url 'webbuilder:reklamacie' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="text-gray-300 hover:text-white transition flex items-center gap-1.5 font-semibold">
                             <span>🛡️</span> Garančný servis a reklamácie (RMA)
                         </a>
+                        {% endif %}
                         {% if nav_flags.show_ticket %}
                         <button type="button" onclick="toggleTicketModal(true)" class="text-gray-300 hover:text-white transition flex items-center gap-1.5 font-semibold text-left">
                             <span>🔍</span> Overiť stav zákazky (Ticket Checker)
