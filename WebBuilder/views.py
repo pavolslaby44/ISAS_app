@@ -467,46 +467,6 @@ def public_web_view(request):
         clanky_qs = Clanok.objects.all() if is_preview else Clanok.objects.filter(je_aktivny=True, datum_vydania__lte=dnes)
         clanky = list(clanky_qs.exclude(slug__isnull=True).exclude(slug__exact='').order_by('-datum_vydania', '-id')[:3])
 
-        # 🧠 ISAS LIVE SLA: Plne dátovo riadený výpočet vyťaženosti zhodný s jadrom systému
-        sla_telemetria = None
-        if nastavenia and nastavenia.zobrazit_live_sla and gn:
-            limit_zvysena = getattr(gn, 'limit_uloh_zvysena', 3) or 3
-            limit_kriticka = getattr(gn, 'limit_uloh_kriticka', 5) or 5
-
-            dnes = timezone.now().date()
-            otvorene_ulohy_dnes = Uloha.objects.filter(dokoncene=False, zaciatok__date=dnes).count()
-            pocet_technikov = Uloha.objects.filter(zaciatok__date=dnes).values('technici').distinct().count()
-            pocet_technikov = max(1, pocet_technikov)
-            zataz_na_technika = otvorene_ulohy_dnes / pocet_technikov
-
-            teraz = timezone.now()
-            cas_teraz = teraz.time()
-            je_vikend = teraz.weekday() in (5, 6)
-            je_mimo_prevadzky = False
-            if je_vikend and not getattr(gn, 'pracovat_vikendy', False):
-                je_mimo_prevadzky = True
-            elif getattr(gn, 'pracovny_cas_od', None) and getattr(gn, 'pracovny_cas_do', None):
-                if cas_teraz < gn.pracovny_cas_od or cas_teraz > gn.pracovny_cas_do:
-                    je_mimo_prevadzky = True
-
-            if je_mimo_prevadzky:
-                sla_status_kod = 'MIMO_PREVADZKY'
-                sla_sprava = 'Mimo prevádzkových hodín dispečingu (príjem dopytov online 24/7)'
-            elif zataz_na_technika >= limit_kriticka:
-                sla_status_kod = 'KRITICKA'
-                sla_sprava = getattr(nastavenia, 'sla_text_kriticka', None) or 'Vysoká vyťaženosť kapacít – prednostné riešenie urgentných požiadaviek'
-            elif zataz_na_technika >= limit_zvysena:
-                sla_status_kod = 'ZVYSENA'
-                sla_sprava = getattr(nastavenia, 'sla_text_zvysena', None) or 'Štandardná vyťaženosť kapacít – bežné lehoty vybavenia'
-            else:
-                sla_status_kod = 'OPTIMALNA'
-                sla_sprava = getattr(nastavenia, 'sla_text_optimalna', None) or 'Voľné kapacity – prijímame nové požiadavky'
-
-            sla_telemetria = {
-                'status': sla_status_kod,
-                'sprava': sla_sprava
-            }
-
         # 🧠 DYNAMICKÝ ENGINEERING HUB: Zlúčenie technologických koeficientov z odvetvovej konfigurácie a compliance
         active_hub_config = dict(HUB_CONFIG)
         krajina_iso = FiremnaIdentita.get_aktivna_krajina_iso() if hasattr(FiremnaIdentita, 'get_aktivna_krajina_iso') else None
@@ -558,7 +518,7 @@ def public_web_view(request):
         context = {
             'nastavenia': nastavenia,
             'identita': identita,
-            'sla_telemetria': sla_telemetria,
+            'sla_telemetria': None,
             'bloky': bloky,
             'sluzby': sluzby,
             'znacky': znacky,
@@ -621,6 +581,72 @@ def public_web_view(request):
     if not is_preview:
         cache.set(cache_key, context, 900)
 
+    # 🧠 ISAS LIVE SLA: Aktuálny výpočet mimo 15-minútovú cache (časová brána beží vždy naživo)
+    sla_telemetria = None
+    ctx_nastavenia = context.get('nastavenia')
+    ctx_gn = context.get('globalne_nastavenia')
+    if ctx_nastavenia and getattr(ctx_nastavenia, 'zobrazit_live_sla', False) and ctx_gn:
+        teraz = timezone.now()
+        dnes = teraz.date()
+        cas_teraz = teraz.time()
+        je_vikend = teraz.weekday() in (5, 6)
+        je_mimo_prevadzky = False
+
+        if je_vikend and not getattr(ctx_gn, 'pracovat_vikendy', False):
+            je_mimo_prevadzky = True
+        elif not getattr(ctx_gn, 'pracovat_sviatky', False):
+            sviatok_cache_key = f"isas_sla_sviatok_{dnes.isoformat()}"
+            je_sviatok = cache.get(sviatok_cache_key)
+            if je_sviatok is None:
+                je_sviatok = dnes in get_holidays_for_location(dnes)
+                cache.set(sviatok_cache_key, je_sviatok, 3600)
+            if je_sviatok:
+                je_mimo_prevadzky = True
+
+        if not je_mimo_prevadzky and getattr(ctx_gn, 'pracovny_cas_od', None) and getattr(ctx_gn, 'pracovny_cas_do', None):
+            if cas_teraz < ctx_gn.pracovny_cas_od or cas_teraz > ctx_gn.pracovny_cas_do:
+                je_mimo_prevadzky = True
+
+        if je_mimo_prevadzky:
+            sla_telemetria = {
+                'status': 'MIMO_PREVADZKY',
+                'sprava': 'Mimo prevádzkových hodín dispečingu (príjem dopytov online 24/7)'
+            }
+        else:
+            zataz_cache_key = f"isas_sla_zataz_{dnes.isoformat()}"
+            zataz_na_technika = cache.get(zataz_cache_key)
+            if zataz_na_technika is None:
+                otvorene_ulohy_dnes = (
+                    Uloha.objects.filter(dokoncene=False, zaciatok__date=dnes)
+                    .annotate(
+                        _ma_zamietnutu=Exists(PrijataObjednavka.objects.filter(vytvorene_ulohy=OuterRef('pk'), stav='ZAMIETNUTA')),
+                        _ma_aktivnu=Exists(PrijataObjednavka.objects.filter(vytvorene_ulohy=OuterRef('pk')).exclude(stav='ZAMIETNUTA')),
+                    )
+                    .exclude(_ma_zamietnutu=True, _ma_aktivnu=False)
+                    .count()
+                )
+                pocet_technikov = max(1, Uloha.objects.filter(zaciatok__date=dnes).values('technici').distinct().count())
+                zataz_na_technika = otvorene_ulohy_dnes / pocet_technikov
+                cache.set(zataz_cache_key, zataz_na_technika, 60)
+
+            limit_zvysena = getattr(ctx_gn, 'limit_uloh_zvysena', 3) or 3
+            limit_kriticka = getattr(ctx_gn, 'limit_uloh_kriticka', 5) or 5
+            if zataz_na_technika >= limit_kriticka:
+                sla_status_kod = 'KRITICKA'
+                sla_sprava = getattr(ctx_nastavenia, 'sla_text_kriticka', None) or 'Vysoká vyťaženosť kapacít – prednostné riešenie urgentných požiadaviek'
+            elif zataz_na_technika >= limit_zvysena:
+                sla_status_kod = 'ZVYSENA'
+                sla_sprava = getattr(ctx_nastavenia, 'sla_text_zvysena', None) or 'Štandardná vyťaženosť kapacít – bežné lehoty vybavenia'
+            else:
+                sla_status_kod = 'OPTIMALNA'
+                sla_sprava = getattr(ctx_nastavenia, 'sla_text_optimalna', None) or 'Voľné kapacity – prijímame nové požiadavky'
+
+            sla_telemetria = {
+                'status': sla_status_kod,
+                'sprava': sla_sprava
+            }
+
+    context = {**context, 'sla_telemetria': sla_telemetria}
     return render(request, 'web/sablona_weby.html', context)
 
 @transaction.atomic
@@ -1534,7 +1560,19 @@ class WebBaseMixin:
             limit_kriticka = getattr(gn, 'limit_uloh_kriticka', 5) or 5
 
             dnes = timezone.now().date()
-            otvorene_ulohy_dnes = UlohaModel.objects.filter(dokoncene=False, zaciatok__date=dnes).count() if UlohaModel else 0
+            PrijataObjednavkaModel = apps.get_model('Evidencia', 'PrijataObjednavka')
+            if UlohaModel and PrijataObjednavkaModel:
+                otvorene_ulohy_dnes = (
+                    UlohaModel.objects.filter(dokoncene=False, zaciatok__date=dnes)
+                    .annotate(
+                        _ma_zamietnutu=Exists(PrijataObjednavkaModel.objects.filter(vytvorene_ulohy=OuterRef('pk'), stav='ZAMIETNUTA')),
+                        _ma_aktivnu=Exists(PrijataObjednavkaModel.objects.filter(vytvorene_ulohy=OuterRef('pk')).exclude(stav='ZAMIETNUTA')),
+                    )
+                    .exclude(_ma_zamietnutu=True, _ma_aktivnu=False)
+                    .count()
+                )
+            else:
+                otvorene_ulohy_dnes = UlohaModel.objects.filter(dokoncene=False, zaciatok__date=dnes).count() if UlohaModel else 0
             pocet_technikov = UlohaModel.objects.filter(zaciatok__date=dnes).values('technici').distinct().count() if UlohaModel else 1
             zataz_na_technika = otvorene_ulohy_dnes / max(1, pocet_technikov)
 
@@ -1545,7 +1583,15 @@ class WebBaseMixin:
             if gn:
                 if je_vikend and not getattr(gn, 'pracovat_vikendy', False):
                     je_mimo_prevadzky = True
-                elif getattr(gn, 'pracovny_cas_od', None) and getattr(gn, 'pracovny_cas_do', None):
+                elif not getattr(gn, 'pracovat_sviatky', False):
+                    sviatok_cache_key = f"isas_sla_sviatok_{dnes.isoformat()}"
+                    je_sviatok = cache.get(sviatok_cache_key)
+                    if je_sviatok is None:
+                        je_sviatok = dnes in get_holidays_for_location(dnes)
+                        cache.set(sviatok_cache_key, je_sviatok, 3600)
+                    if je_sviatok:
+                        je_mimo_prevadzky = True
+                if not je_mimo_prevadzky and getattr(gn, 'pracovny_cas_od', None) and getattr(gn, 'pracovny_cas_do', None):
                     if cas_teraz < gn.pracovny_cas_od or cas_teraz > gn.pracovny_cas_do:
                         je_mimo_prevadzky = True
 
@@ -3753,6 +3799,44 @@ def get_holidays_for_location(target_date: date, location_str: str = "", b2b_kli
         return {}
 
 
+def _build_booking_slots(work_start, midpoint, work_end, sluzba_id=None, sposob_realizacie='VYJAZD'):
+    """Vypočíta povolené časové okná pre daný deň: pre DIELNA s definovaným oknom v minútach presné bloky, inak 2 poldenné bloky."""
+    trvanie_min = None
+    if sposob_realizacie == 'DIELNA' and sluzba_id and str(sluzba_id).strip().isdigit():
+        trvanie_min = (
+            TypServisuPrace.objects.filter(pk=int(str(sluzba_id).strip()), zobrazit_na_webe=True)
+            .values_list('booking_trvanie_min', flat=True)
+            .first()
+        )
+
+    if trvanie_min and trvanie_min >= 15:
+        slot_delta = timedelta(minutes=int(trvanie_min))
+        if slot_delta <= (work_end - work_start):
+            custom_slots = []
+            cur = work_start
+            while cur + slot_delta <= work_end:
+                s_end = cur + slot_delta
+                s_start_str = cur.strftime('%H:%M')
+                s_end_str = s_end.strftime('%H:%M')
+                custom_slots.append({
+                    'id': f'{s_start_str}-{s_end_str}',
+                    'label': f'{s_start_str} - {s_end_str}',
+                    'start': cur,
+                    'end': s_end,
+                })
+                cur = s_end
+            if custom_slots:
+                return custom_slots
+
+    str_start = work_start.strftime('%H:%M')
+    str_mid = midpoint.strftime('%H:%M')
+    str_end = work_end.strftime('%H:%M')
+    return [
+        {'id': 'DOPOLUDNIA', 'label': f'Dopoludnia ({str_start} - {str_mid})', 'start': work_start, 'end': midpoint},
+        {'id': 'POPOLUDNI', 'label': f'Popoludní ({str_mid} - {str_end})', 'start': midpoint, 'end': work_end},
+    ]
+
+
 def get_available_slots(request):
     """📅 ISAS SMART BOOKING: Vráti voľné termíny pre daný deň (Zero Data Leak)."""
     date_str = request.GET.get('date')
@@ -3827,16 +3911,18 @@ def get_available_slots(request):
     # Základná kapacita (Počet technikov mínus celodenné absencie)
     base_capacity = total_techs - full_absences
 
-    # 3. Vytiahneme všetky nedokončené úlohy na daný deň
+    # 3. Vytiahneme všetky nedokončené úlohy na daný deň (okrem úloh patriacich výhradne zamietnutým objednávkam)
     ulohy_vsetky = Uloha.objects.filter(
         dokoncene=False
+    ).annotate(
+        _ma_zamietnutu=Exists(PrijataObjednavka.objects.filter(vytvorene_ulohy=OuterRef('pk'), stav='ZAMIETNUTA')),
+        _ma_aktivnu=Exists(PrijataObjednavka.objects.filter(vytvorene_ulohy=OuterRef('pk')).exclude(stav='ZAMIETNUTA')),
+    ).exclude(
+        _ma_zamietnutu=True, _ma_aktivnu=False
     ).filter(
         Q(zaciatok__date__lte=target_date) & 
         (Q(koniec__date__gte=target_date) | Q(koniec__isnull=True, zaciatok__date=target_date))
     ).prefetch_related('technici')
-
-    tasks_slot1_count = 0
-    tasks_slot2_count = 0
 
     # 4. 🧠 ISAS FIELD SERVICE ENGINE: Výpočet obsadenosti blokov (Defenzívna normalizácia naive/aware pre USE_TZ=False)
     use_tz = getattr(settings, 'USE_TZ', False)
@@ -3847,6 +3933,16 @@ def get_available_slots(request):
             midpoint = midpoint.replace(tzinfo=None)
         if work_end and timezone.is_aware(work_end):
             work_end = work_end.replace(tzinfo=None)
+
+    sluzba_id = request.GET.get('sluzba_id')
+    sposob_realizacie = request.GET.get('sposob_realizacie', 'VYJAZD')
+    candidate_slots = _build_booking_slots(
+        work_start, midpoint, work_end,
+        sluzba_id=sluzba_id,
+        sposob_realizacie=sposob_realizacie
+    )
+
+    normalized_tasks = []
     for u in ulohy_vsetky:
         u_start = u.zaciatok
         if u_start and not use_tz and timezone.is_aware(u_start):
@@ -3857,31 +3953,21 @@ def get_available_slots(request):
         u_end = u.koniec or (u_start + timedelta(hours=3))
         if u_end and not use_tz and timezone.is_aware(u_end):
             u_end = u_end.replace(tzinfo=None)
-        
-        # Overlap s Dopoludnia
-        if u_start < midpoint and u_end > work_start:
-            tech_count = u.technici.count()
-            tasks_slot1_count += tech_count if tech_count > 0 else 1
-            
-        # Overlap s Popoludní
-        if u_start < work_end and u_end > midpoint:
-            tech_count = u.technici.count()
-            tasks_slot2_count += tech_count if tech_count > 0 else 1
 
-    # 🛡️ DEFENZÍVNA LOGIKA: Poldenná absencia znižuje kapacitu oboch blokov, 
+        tech_count = len(u.technici.all())
+        normalized_tasks.append((u_start, u_end, tech_count if tech_count > 0 else 1))
+
+    # 🛡️ DEFENZÍVNA LOGIKA: Poldenná absencia znižuje kapacitu všetkých blokov,
     # pretože nevieme, ktorú polovicu dňa technik chýba.
-    cap1 = base_capacity - half_absences - tasks_slot1_count
-    cap2 = base_capacity - half_absences - tasks_slot2_count
-
-    str_start = work_start.strftime('%H:%M')
-    str_mid = midpoint.strftime('%H:%M')
-    str_end = work_end.strftime('%H:%M')
-
     available_slots = []
-    if cap1 >= 1:
-        available_slots.append({'id': 'DOPOLUDNIA', 'label': f'Dopoludnia ({str_start} - {str_mid})'})
-    if cap2 >= 1:
-        available_slots.append({'id': 'POPOLUDNI', 'label': f'Popoludní ({str_mid} - {str_end})'})
+    for slot in candidate_slots:
+        tasks_overlap = sum(
+            t_count for u_start, u_end, t_count in normalized_tasks
+            if u_start < slot['end'] and u_end > slot['start']
+        )
+        cap = base_capacity - half_absences - tasks_overlap
+        if cap >= 1:
+            available_slots.append({'id': slot['id'], 'label': slot['label']})
 
     return JsonResponse({'status': 'success', 'slots': available_slots})
 
@@ -3908,8 +3994,7 @@ def submit_booking(request):
         if not datum or not cas or not email or not mesto:
             return JsonResponse({'status': 'error', 'message': 'Dátum, čas, lokalita a e-mail sú povinné.'}, status=400)
 
-        if cas not in ['DOPOLUDNIA', 'POPOLUDNI']:
-            return JsonResponse({'status': 'error', 'message': 'Neplatný časový blok rezervácie.'}, status=400)
+        cas = str(cas).strip()
 
         if not _is_valid_email_address(email):
             return JsonResponse({'status': 'error', 'message': 'Zadajte platný formát e-mailovej adresy.'}, status=400)
@@ -3974,18 +4059,25 @@ def submit_booking(request):
                 if timezone.is_aware(work_end):
                     work_end = work_end.replace(tzinfo=None)
 
-            if cas == 'DOPOLUDNIA':
-                zaciatok = work_start
-                koniec = midpoint
-            else:
-                zaciatok = midpoint
-                koniec = work_end
+            candidate_slots = _build_booking_slots(
+                work_start, midpoint, work_end,
+                sluzba_id=sluzba_id,
+                sposob_realizacie=sposob_realizacie
+            )
+            selected_slot = next((s for s in candidate_slots if s['id'] == cas), None)
+            if not selected_slot:
+                cache.delete(cache_key)
+                return JsonResponse({'status': 'error', 'message': 'Neplatný alebo neaktuálny časový blok rezervácie.'}, status=400)
+
+            zaciatok = selected_slot['start']
+            koniec = selected_slot['end']
+            slot_label = selected_slot['label']
                 
         except Exception:
             return JsonResponse({'status': 'error', 'message': 'Neplatný formát dátumu alebo času.'}, status=400)
 
-        # 🛡️ RACE CONDITION LOCK: Zámok na konkrétny deň a blok
-        lock_id = f"booking_lock_{target_date.strftime('%Y%m%d')}_{cas}"
+        # 🛡️ RACE CONDITION LOCK: Zámok na konkrétny deň chráni aj proti súbehu rôzne dlhých blokov
+        lock_id = f"booking_lock_{target_date.strftime('%Y%m%d')}"
         if not cache.add(lock_id, 'locked', timeout=10):
             return JsonResponse({'status': 'error', 'message': 'Tento termín sa práve spracováva iným zákazníkom. Skúste to o chvíľu.'}, status=409)
 
@@ -4006,7 +4098,12 @@ def submit_booking(request):
             
             base_capacity = total_techs - full_absences - half_absences
             
-            ulohy_vsetky = Uloha.objects.filter(dokoncene=False).filter(
+            ulohy_vsetky = Uloha.objects.filter(dokoncene=False).annotate(
+                _ma_zamietnutu=Exists(PrijataObjednavka.objects.filter(vytvorene_ulohy=OuterRef('pk'), stav='ZAMIETNUTA')),
+                _ma_aktivnu=Exists(PrijataObjednavka.objects.filter(vytvorene_ulohy=OuterRef('pk')).exclude(stav='ZAMIETNUTA')),
+            ).exclude(
+                _ma_zamietnutu=True, _ma_aktivnu=False
+            ).filter(
                 Q(zaciatok__date__lte=target_date) & 
                 (Q(koniec__date__gte=target_date) | Q(koniec__isnull=True, zaciatok__date=target_date))
             ).prefetch_related('technici')
@@ -4023,11 +4120,8 @@ def submit_booking(request):
                 if u_end and not use_tz_submit and timezone.is_aware(u_end):
                     u_end = u_end.replace(tzinfo=None)
                 
-                if cas == 'DOPOLUDNIA' and u_start < midpoint and u_end > work_start:
-                    tech_count = u.technici.count()
-                    tasks_count += tech_count if tech_count > 0 else 1
-                elif cas == 'POPOLUDNI' and u_start < work_end and u_end > midpoint:
-                    tech_count = u.technici.count()
+                if u_start < koniec and u_end > zaciatok:
+                    tech_count = len(u.technici.all())
                     tasks_count += tech_count if tech_count > 0 else 1
                     
             if (base_capacity - tasks_count) < 1:
@@ -4066,7 +4160,7 @@ def submit_booking(request):
                     termin_dodania=target_date,
                     forma_prijatia='WEB',
                     specificky_email_pre_fakturu=email,
-                    poznamka_klienta=f"ONLINE REZERVÁCIA TERMÍNU: {datum} ({cas})\nSpôsob realizácie: {logistika_popis}\n\n{poznamka}",
+                    poznamka_klienta=f"ONLINE REZERVÁCIA TERMÍNU: {datum} ({slot_label})\nSpôsob realizácie: {logistika_popis}\n\n{poznamka}",
                     interna_poznamka=f"📅 SMART BOOKING: {logistika_popis}. Potvrdiť harmonogram."
                 )
 
@@ -4074,7 +4168,7 @@ def submit_booking(request):
                     zakaznik=zakaznik,
                     zaciatok=zaciatok,
                     koniec=koniec,
-                    blizsie_informacie=f"📍 Realizácia: {logistika_popis}\nOnline rezervácia z webu.\nPreferovaný blok: {cas}\n\n{poznamka}\n\n⚠️ DISPEČER: Skontrolovať logistiku a potvrdiť zákazníkovi čas!",
+                    blizsie_informacie=f"📍 Realizácia: {logistika_popis}\nOnline rezervácia z webu.\nPreferovaný blok: {slot_label}\n\n{poznamka}\n\n⚠️ DISPEČER: Skontrolovať logistiku a potvrdiť zákazníkovi čas!",
                     farba='#10b981',
                     dokoncene=False
                 )

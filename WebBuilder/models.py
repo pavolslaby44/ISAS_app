@@ -131,10 +131,11 @@ class WebNastavenia(ISASAuditMixin, models.Model):
                         # 🛡️ Zmazanie správneho kľúča, ktorý reálne načítava PublicWebRoutingMiddleware
                         cache.delete('isas_public_web_domain')
                         cache.delete('isas_dynamicky_web_firmy')
+                        cache.add('web_cache_version', 1, None)
                         try:
                             cache.incr('web_cache_version')
                         except ValueError:
-                            cache.set('web_cache_version', 1, None)
+                            cache.set('web_cache_version', 2, None)
                     except Exception:
                         pass  # 🛡️ Výpadok cache nesmie zhodiť request po úspešnom DB commite
 
@@ -251,10 +252,11 @@ class WebBlok(ISASAuditMixin, models.Model):
 
             def _invaliduj_cache():
                 try:
+                    cache.add('web_cache_version', 1, None)
                     try:
                         cache.incr('web_cache_version')
                     except ValueError:
-                        cache.set('web_cache_version', 1, None)
+                        cache.set('web_cache_version', 2, None)
                 except Exception:
                     pass  # 🛡️ Výpadok cache nesmie zhodiť transakciu po úspešnom uložení
 
@@ -273,10 +275,11 @@ class WebBlok(ISASAuditMixin, models.Model):
 
         def _invaliduj_cache():
             try:
+                cache.add('web_cache_version', 1, None)
                 try:
                     cache.incr('web_cache_version')
                 except ValueError:
-                    cache.set('web_cache_version', 1, None)
+                    cache.set('web_cache_version', 2, None)
             except Exception:
                 pass  # 🛡️ Výpadok cache nesmie zhodiť transakciu po úspešnom zmazaní
 
@@ -341,10 +344,11 @@ class WebFAQ(ISASAuditMixin, models.Model):
             # 🧹 ISAS WEB BUILDER: Bezpečná invalidácia cache až po úspešnom commite do DB
             def _invaliduj_cache():
                 try:
+                    cache.add('web_cache_version', 1, None)
                     try:
                         cache.incr('web_cache_version')
                     except ValueError:
-                        cache.set('web_cache_version', 1, None)
+                        cache.set('web_cache_version', 2, None)
                 except Exception:
                     pass  # 🛡️ Výpadok cache nesmie zhodiť transakciu po úspešnom uložení
 
@@ -355,10 +359,11 @@ class WebFAQ(ISASAuditMixin, models.Model):
 
         def _invaliduj_cache():
             try:
+                cache.add('web_cache_version', 1, None)
                 try:
                     cache.incr('web_cache_version')
                 except ValueError:
-                    cache.set('web_cache_version', 1, None)
+                    cache.set('web_cache_version', 2, None)
             except Exception:
                 pass  # 🛡️ Výpadok cache nesmie zhodiť transakciu po úspešnom zmazaní
 
@@ -498,10 +503,11 @@ class Clanok(ISASAuditMixin, models.Model):
 
             def _invaliduj_cache():
                 try:
+                    cache.add('web_cache_version', 1, None)
                     try:
                         cache.incr('web_cache_version')
                     except ValueError:
-                        cache.set('web_cache_version', 1, None)
+                        cache.set('web_cache_version', 2, None)
                 except Exception:
                     pass  # 🛡️ Výpadok cache nesmie zhodiť transakciu po úspešnom uložení
 
@@ -520,10 +526,11 @@ class Clanok(ISASAuditMixin, models.Model):
 
         def _invaliduj_cache():
             try:
+                cache.add('web_cache_version', 1, None)
                 try:
                     cache.incr('web_cache_version')
                 except ValueError:
-                    cache.set('web_cache_version', 1, None)
+                    cache.set('web_cache_version', 2, None)
             except Exception:
                 pass  # 🛡️ Výpadok cache nesmie zhodiť transakciu po úspešnom zmazaní
 

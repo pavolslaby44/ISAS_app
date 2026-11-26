@@ -8,6 +8,12 @@
     <link rel="canonical" href="{{ request.scheme }}://{{ request.get_host }}{% url 'webbuilder:nastroje' %}">
 {% endblock %}
 
+{% block extra_css %}
+    select:has(option[value=""][hidden]:checked),
+    select:has(option[value=""][disabled]:checked) { color: #9ca3af; }
+    select option { color: #111827; background-color: #ffffff; }
+{% endblock %}
+
 {% block content %}
 <section class="py-16 md:py-24 bg-white px-6" id="engineering-hub">
     {% csrf_token %}
@@ -46,10 +52,10 @@
                     <div>
                         <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2"><span class="text-2xl">💸</span> {{ industry_terms.esg_idle_title|default:"Chod bez záťaže & CO₂" }}</h2>
                         <div class="space-y-4">
-                            <div><label class="text-xs font-bold text-gray-500 uppercase">{{ industry_terms.esg_audit_stroj_label|default:"Príkon zariadenia (kW)" }}</label><input type="number" id="esg-kw" class="w-full mt-1 p-2 rounded-lg border border-gray-300" value="{{ hub_config.esg_default_kw|default:'' }}"></div>
-                            <div><label class="text-xs font-bold text-gray-500 uppercase">{{ industry_terms.esg_audit_podiel_label|default:"Chod bez záťaže / naprázdno (%)" }}</label><input type="number" id="esg-percent" class="w-full mt-1 p-2 rounded-lg border border-gray-300" value="{{ hub_config.esg_default_percent|default:'' }}"></div>
-                            <div><label class="text-xs font-bold text-gray-500 uppercase flex items-center justify-between"><span>{{ industry_terms.esg_energy_price_label|default:"Cena energie" }} ({{ mena }}/kWh)</span>{% if request.user.is_authenticated and request.user.zakaznik_profil.cena_za_kwh_eur %}<span class="text-[10px] text-emerald-600 font-extrabold normal-case">✓ Zo zmluvy</span>{% endif %}</label><input type="number" id="esg-price" step="0.01" class="w-full mt-1 p-2 rounded-lg border border-gray-300" value="{{ hub_config.esg_default_price|default:'' }}"></div>
-                            <button onclick="calcEsg()" class="w-full bg-brand text-white font-bold py-2.5 rounded-lg hover-bg-brand transition">Vypočítať stratu</button>
+                            <div><label class="text-xs font-bold text-gray-500 uppercase">{{ industry_terms.esg_audit_stroj_label|default:"Príkon zariadenia (kW)" }}</label><input type="number" id="esg-kw" class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-white border border-gray-200 hover:border-gray-300 focus:border-brand text-gray-900 shadow-sm focus:outline-none focus:ring-4 focus:ring-brand/15 transition-all duration-200" value="{{ hub_config.esg_default_kw|default:'' }}"></div>
+                            <div><label class="text-xs font-bold text-gray-500 uppercase">{{ industry_terms.esg_audit_podiel_label|default:"Chod bez záťaže / naprázdno (%)" }}</label><input type="number" id="esg-percent" class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-white border border-gray-200 hover:border-gray-300 focus:border-brand text-gray-900 shadow-sm focus:outline-none focus:ring-4 focus:ring-brand/15 transition-all duration-200" value="{{ hub_config.esg_default_percent|default:'' }}"></div>
+                            <div><label class="text-xs font-bold text-gray-500 uppercase flex items-center justify-between"><span>{{ industry_terms.esg_energy_price_label|default:"Cena energie" }} ({{ mena }}/kWh)</span>{% if request.user.is_authenticated and request.user.zakaznik_profil.cena_za_kwh_eur %}<span class="text-[10px] text-emerald-600 font-extrabold normal-case">✓ Zo zmluvy</span>{% endif %}</label><input type="number" id="esg-price" step="0.01" class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-white border border-gray-200 hover:border-gray-300 focus:border-brand text-gray-900 shadow-sm focus:outline-none focus:ring-4 focus:ring-brand/15 transition-all duration-200" value="{{ hub_config.esg_default_price|default:'' }}"></div>
+                            <button onclick="calcEsg()" class="w-full bg-brand text-white font-bold py-2.5 rounded-xl hover-bg-brand shadow-sm transition">Vypočítať stratu</button>
                             <div id="esg-result" class="hidden mt-4 p-4 bg-red-50 border border-red-100 rounded-xl text-center">
                                 <p class="text-xs text-red-600 font-bold uppercase">{{ industry_terms.kpi_strata_label|default:"Ročná finančná strata" }}</p>
                                 <p class="text-2xl font-extrabold text-red-700" id="esg-res-eur">0 {{ mena }}</p>
@@ -59,8 +65,8 @@
                                 <div class="border-t border-red-200 pt-4 mt-2">
                                     <p class="text-xs font-bold text-gray-700 mb-2">Stiahnuť detailný report v PDF:</p>
                                     <div class="flex gap-2">
-                                        <input type="email" id="esg-lead-email" placeholder="Váš e-mail" class="w-full text-sm p-2 rounded-lg border border-gray-300 focus:ring-2 ring-brand outline-none">
-                                        <button onclick="downloadEsgPdf()" id="esg-pdf-btn" class="bg-gray-900 hover:bg-brand text-white px-3 py-2 rounded-lg font-bold text-sm transition whitespace-nowrap">📥 PDF</button>
+                                        <input type="email" id="esg-lead-email" placeholder="Váš e-mail" class="w-full text-base md:text-sm px-3.5 py-2 rounded-xl bg-white border border-gray-200 hover:border-gray-300 focus:border-brand text-gray-900 shadow-sm focus:outline-none focus:ring-4 focus:ring-brand/15 transition-all duration-200">
+                                        <button onclick="downloadEsgPdf()" id="esg-pdf-btn" class="bg-gray-900 hover:bg-brand text-white px-3.5 py-2 rounded-xl font-bold text-sm transition whitespace-nowrap shadow-sm">📥 PDF</button>
                                     </div>
                                     <p id="esg-lead-msg" class="text-xs mt-2 font-bold hidden"></p>
                                 </div>
@@ -76,10 +82,10 @@
                     <div>
                         <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2"><span class="text-2xl">🔥</span> {{ industry_terms.rekuperacia_title|default:"Rekuperácia tepla" }}</h2>
                         <div class="space-y-4">
-                            <div><label class="text-xs font-bold text-gray-500 uppercase">{{ industry_terms.esg_audit_stroj_label|default:"Menovitý výkon zariadenia (kW)" }}</label><input type="number" id="rek-kw" class="w-full mt-1 p-2 rounded-lg border border-gray-300" value="{{ hub_config.rekuperacia_default_kw|default:'' }}"></div>
-                            <div><label class="text-xs font-bold text-gray-500 uppercase">Prevádzka (hod/rok)</label><input type="number" id="rek-hours" class="w-full mt-1 p-2 rounded-lg border border-gray-300" value="{{ hub_config.rekuperacia_default_hours|default:'' }}"></div>
-                            <div><label class="text-xs font-bold text-gray-500 uppercase">{{ industry_terms.rekuperacia_fuel_label|default:"Cena nahrádzanej energie" }} ({{ mena }}/kWh)</label><input type="number" id="rek-price" step="0.01" class="w-full mt-1 p-2 rounded-lg border border-gray-300" value="{{ hub_config.rekuperacia_default_price|default:'' }}"></div>
-                            <button onclick="calcRekuperacia()" class="w-full bg-brand text-white font-bold py-2.5 rounded-lg hover-bg-brand transition">Vypočítať úsporu</button>
+                            <div><label class="text-xs font-bold text-gray-500 uppercase">{{ industry_terms.esg_audit_stroj_label|default:"Menovitý výkon zariadenia (kW)" }}</label><input type="number" id="rek-kw" class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-white border border-gray-200 hover:border-gray-300 focus:border-brand text-gray-900 shadow-sm focus:outline-none focus:ring-4 focus:ring-brand/15 transition-all duration-200" value="{{ hub_config.rekuperacia_default_kw|default:'' }}"></div>
+                            <div><label class="text-xs font-bold text-gray-500 uppercase">Prevádzka (hod/rok)</label><input type="number" id="rek-hours" class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-white border border-gray-200 hover:border-gray-300 focus:border-brand text-gray-900 shadow-sm focus:outline-none focus:ring-4 focus:ring-brand/15 transition-all duration-200" value="{{ hub_config.rekuperacia_default_hours|default:'' }}"></div>
+                            <div><label class="text-xs font-bold text-gray-500 uppercase">{{ industry_terms.rekuperacia_fuel_label|default:"Cena nahrádzanej energie" }} ({{ mena }}/kWh)</label><input type="number" id="rek-price" step="0.01" class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-white border border-gray-200 hover:border-gray-300 focus:border-brand text-gray-900 shadow-sm focus:outline-none focus:ring-4 focus:ring-brand/15 transition-all duration-200" value="{{ hub_config.rekuperacia_default_price|default:'' }}"></div>
+                            <button onclick="calcRekuperacia()" class="w-full bg-brand text-white font-bold py-2.5 rounded-xl hover-bg-brand shadow-sm transition">Vypočítať úsporu</button>
                             <div id="rek-result" class="hidden mt-4 p-4 bg-emerald-50 border border-emerald-100 rounded-xl text-center">
                                 <p class="text-xs text-emerald-600 font-bold uppercase">Potenciálna ročná úspora</p>
                                 <p class="text-2xl font-extrabold text-emerald-700" id="rek-res-eur">0 {{ mena }}</p>
@@ -98,12 +104,15 @@
                         <p class="text-xs text-gray-500 mb-4">{{ industry_terms.tco_desc|default:"Rozpad celkových nákladov na vlastníctvo podľa profilu prevádzky a technológie." }}</p>
                         
                         <div class="mb-4">
-                            <label class="text-[11px] font-extrabold text-gray-500 uppercase tracking-wider block mb-1">{{ industry_terms.tco_profile_label|default:"Typ prevádzky / Technológia" }}</label>
-                            <select id="tco-profile" onchange="calcTcoProfile()" class="w-full text-xs font-bold bg-white border border-gray-300 rounded-xl pl-3 pr-9 py-2.5 truncate outline-none focus:ring-2 ring-brand text-gray-900 shadow-sm">
-                                {% for key, item in tco_profiles.items %}
-                                <option value="{{ key }}" {% if forloop.first %}selected{% endif %}>{{ item.label }}</option>
-                                {% endfor %}
-                            </select>
+                            <label class="text-[11px] font-extrabold text-gray-500 uppercase tracking-wider block mb-1.5">{{ industry_terms.tco_profile_label|default:"Typ prevádzky / Technológia" }}</label>
+                            <div class="relative group">
+                                <select id="tco-profile" onchange="calcTcoProfile()" class="w-full text-base md:text-xs font-bold bg-white border border-gray-200 hover:border-gray-300 focus:border-brand rounded-xl pl-3.5 pr-10 py-2.5 truncate outline-none focus:ring-4 focus:ring-brand/15 text-gray-900 shadow-sm appearance-none cursor-pointer transition-all duration-200">
+                                    {% for key, item in tco_profiles.items %}
+                                    <option value="{{ key }}" {% if forloop.first %}selected{% endif %}>{{ item.label }}</option>
+                                    {% endfor %}
+                                </select>
+                                <svg class="w-4 h-4 text-gray-400 group-focus-within:text-brand pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </div>
                         </div>
 
                         <div class="space-y-3 my-2">
@@ -154,8 +163,8 @@
                     <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2"><span class="text-2xl">🛡️</span> {{ industry_terms.revizie_title|default:"Strážca revízií a odborných prehliadok" }}</h2>
                     <p class="text-sm text-gray-500 mb-4">{{ industry_terms.revizie_desc|default:"Zistite termíny povinných periodických skúšok a inšpekcií zariadenia." }}</p>
                     <div class="space-y-4">
-                        <div><label class="text-xs font-bold text-gray-500 uppercase">{{ industry_terms.revizie_date_label|default:"Dátum uvedenia do prevádzky" }}</label><input type="date" id="vtz-date" class="w-full mt-1 p-2 rounded-lg border border-gray-300"></div>
-                        <button onclick="calcVTZ()" class="w-full bg-brand text-white font-bold py-2.5 rounded-lg hover-bg-brand transition">Overiť termíny</button>
+                        <div><label class="text-xs font-bold text-gray-500 uppercase">{{ industry_terms.revizie_date_label|default:"Dátum uvedenia do prevádzky" }}</label><input type="date" id="vtz-date" class="w-full mt-1 min-h-[46px] appearance-none px-3.5 py-2.5 rounded-xl bg-white border border-gray-200 hover:border-gray-300 focus:border-brand text-gray-900 shadow-sm focus:outline-none focus:ring-4 focus:ring-brand/15 transition-all duration-200"></div>
+                        <button onclick="calcVTZ()" class="w-full bg-brand text-white font-bold py-2.5 rounded-xl hover-bg-brand shadow-sm transition">Overiť termíny</button>
                         <div id="vtz-result" class="hidden mt-4 grid {% if hub_config.revizia_perioda_1_roky and hub_config.revizia_perioda_2_roky %}grid-cols-2{% else %}grid-cols-1{% endif %} gap-2">
                             {% if hub_config.revizia_perioda_1_roky %}
                             <div class="p-3 bg-white border border-gray-200 rounded-xl text-center">
@@ -183,18 +192,21 @@
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
                             <div class="min-w-0">
                                 <label for="fplyn-type" class="block truncate text-xs font-bold text-gray-500 uppercase" title="{{ industry_terms.fplyn_type_label|default:'Typ chladiva' }}">{{ industry_terms.fplyn_type_label|default:"Typ chladiva" }}</label>
-                                <select id="fplyn-type" class="w-full mt-1 pl-2.5 pr-8 py-2 rounded-lg border border-gray-300 bg-white truncate">
-                                    {% for chladivo in fplyn_chladiva %}
-                                    <option value="{{ chladivo.gwp }}">{{ chladivo.nazov }}</option>
-                                    {% endfor %}
-                                </select>
+                                <div class="relative group mt-1">
+                                    <select id="fplyn-type" class="w-full pl-3.5 pr-10 py-2.5 rounded-xl border border-gray-200 hover:border-gray-300 focus:border-brand bg-white text-gray-900 shadow-sm truncate focus:outline-none focus:ring-4 focus:ring-brand/15 appearance-none cursor-pointer transition-all duration-200">
+                                        {% for chladivo in fplyn_chladiva %}
+                                        <option value="{{ chladivo.gwp }}">{{ chladivo.nazov }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <svg class="w-4 h-4 text-gray-400 group-focus-within:text-brand pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                </div>
                             </div>
                             <div class="min-w-0">
                                 <label for="fplyn-kg" class="block truncate text-xs font-bold text-gray-500 uppercase" title="{{ industry_terms.fplyn_amount_label|default:'Náplň (kg)' }}">{{ industry_terms.fplyn_amount_label|default:"Náplň (kg)" }}</label>
-                                <input type="number" id="fplyn-kg" step="0.1" class="w-full mt-1 p-2 rounded-lg border border-gray-300" value="{{ hub_config.fplyn_default_kg|default:'' }}">
+                                <input type="number" id="fplyn-kg" step="0.1" class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-white border border-gray-200 hover:border-gray-300 focus:border-brand text-gray-900 shadow-sm focus:outline-none focus:ring-4 focus:ring-brand/15 transition-all duration-200" value="{{ hub_config.fplyn_default_kg|default:'' }}">
                             </div>
                         </div>
-                        <button onclick="calcFPlyny()" class="w-full bg-brand text-white font-bold py-2.5 rounded-lg hover-bg-brand transition">Vyhodnotiť povinnosť</button>
+                        <button onclick="calcFPlyny()" class="w-full bg-brand text-white font-bold py-2.5 rounded-xl hover-bg-brand shadow-sm transition">Vyhodnotiť povinnosť</button>
                         <div id="fplyn-result" class="hidden mt-4 p-4 bg-white border border-gray-200 rounded-xl text-center">
                             <p class="text-xs text-gray-500 font-bold uppercase">Ekvivalent CO₂</p>
                             <p class="text-2xl font-extrabold text-gray-900" id="fplyn-res-co2">0 t</p>
@@ -217,12 +229,15 @@
                     <div class="space-y-4">
                         <div>
                             <label class="text-xs font-bold text-gray-500 uppercase">{{ industry_terms.cistota_select_label|default:"Odvetvie / Prevádzka" }}</label>
-                            <select id="iso-app" class="w-full mt-1 pl-2.5 pr-8 py-2 rounded-lg border border-gray-300 bg-white truncate" onchange="calcISO()">
-                                <option value="">-- Vyberte aplikáciu --</option>
-                                {% for app in media_quality_apps %}
-                                <option value="{{ app.id }}">{{ app.label }}</option>
-                                {% endfor %}
-                            </select>
+                            <div class="relative group mt-1">
+                                <select id="iso-app" class="w-full pl-3.5 pr-10 py-2.5 rounded-xl border border-gray-200 hover:border-gray-300 focus:border-brand bg-white text-gray-900 shadow-sm truncate focus:outline-none focus:ring-4 focus:ring-brand/15 appearance-none cursor-pointer transition-all duration-200" onchange="calcISO()">
+                                    <option value="" disabled selected hidden>Vyberte aplikáciu</option>
+                                    {% for app in media_quality_apps %}
+                                    <option value="{{ app.id }}">{{ app.label }}</option>
+                                    {% endfor %}
+                                </select>
+                                <svg class="w-4 h-4 text-gray-400 group-focus-within:text-brand pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </div>
                         </div>
                         <div id="iso-result" class="hidden mt-4 space-y-2">
                             <div class="p-3 bg-white border border-gray-200 rounded-xl">
@@ -244,8 +259,8 @@
                     <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2"><span class="text-2xl">📈</span> {{ industry_terms.vibro_title|default:"Vibrodiagnostika pohonu" }}</h2>
                     <p class="text-xs text-gray-500 mb-4">{{ industry_terms.vibro_desc|default:"Rýchle vyhodnotenie mechanického stavu ložísk a pohonu." }}</p>
                     <div class="space-y-4">
-                        <div><label class="text-xs font-bold text-gray-500 uppercase">{{ industry_terms.vibro_input_label|default:"Nameraná hodnota RMS (mm/s)" }}</label><input type="number" id="vibro-rms" step="0.1" class="w-full mt-1 p-2 rounded-lg border border-gray-300" placeholder="{{ hub_config.vibro_limits.limit_b|default:'' }}"></div>
-                        <button onclick="calcVibro()" class="w-full bg-brand text-white font-bold py-2.5 rounded-lg hover-bg-brand transition">Vyhodnotiť stav</button>
+                        <div><label class="text-xs font-bold text-gray-500 uppercase">{{ industry_terms.vibro_input_label|default:"Nameraná hodnota RMS (mm/s)" }}</label><input type="number" id="vibro-rms" step="0.1" class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-white border border-gray-200 hover:border-gray-300 focus:border-brand text-gray-900 shadow-sm focus:outline-none focus:ring-4 focus:ring-brand/15 transition-all duration-200" placeholder="{{ hub_config.vibro_limits.limit_b|default:'' }}"></div>
+                        <button onclick="calcVibro()" class="w-full bg-brand text-white font-bold py-2.5 rounded-xl hover-bg-brand shadow-sm transition">Vyhodnotiť stav</button>
                         <div id="vibro-result" class="hidden mt-4 p-4 border rounded-xl text-center">
                             <p class="text-xs font-bold uppercase mb-1" id="vibro-res-zone">Zóna</p>
                             <p class="text-lg font-extrabold" id="vibro-res-text">--</p>
@@ -260,9 +275,9 @@
                     <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2"><span class="text-2xl">⚖️</span> {{ industry_terms.capex_title|default:"CAPEX vs OPEX" }}</h2>
                     <p class="text-xs text-gray-500 mb-4">{{ industry_terms.capex_desc|default:"Porovnanie nákupu zariadenia vs. dlhodobý prenájom" }}{% if hub_config.capex_years %} ({{ hub_config.capex_years }} r.){% endif %}.</p>
                     <div class="space-y-4">
-                        <div><label class="text-xs font-bold text-gray-500 uppercase">{{ industry_terms.capex_price_label|default:"Cena nového zariadenia" }} ({{ mena }})</label><input type="number" id="capex-price" class="w-full mt-1 p-2 rounded-lg border border-gray-300" value="{{ hub_config.capex_default_price|default:'' }}"></div>
-                        <div><label class="text-xs font-bold text-gray-500 uppercase">{{ industry_terms.capex_rent_label|default:"Mesačný prenájom" }} ({{ mena }})</label><input type="number" id="capex-rent" class="w-full mt-1 p-2 rounded-lg border border-gray-300" value="{{ hub_config.capex_default_rent|default:'' }}"></div>
-                        <button onclick="calcCapex()" class="w-full bg-brand text-white font-bold py-2.5 rounded-lg hover-bg-brand transition">Porovnať{% if hub_config.capex_years %} na {{ hub_config.capex_years }} r.{% endif %}</button>
+                        <div><label class="text-xs font-bold text-gray-500 uppercase">{{ industry_terms.capex_price_label|default:"Cena nového zariadenia" }} ({{ mena }})</label><input type="number" id="capex-price" class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-white border border-gray-200 hover:border-gray-300 focus:border-brand text-gray-900 shadow-sm focus:outline-none focus:ring-4 focus:ring-brand/15 transition-all duration-200" value="{{ hub_config.capex_default_price|default:'' }}"></div>
+                        <div><label class="text-xs font-bold text-gray-500 uppercase">{{ industry_terms.capex_rent_label|default:"Mesačný prenájom" }} ({{ mena }})</label><input type="number" id="capex-rent" class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-white border border-gray-200 hover:border-gray-300 focus:border-brand text-gray-900 shadow-sm focus:outline-none focus:ring-4 focus:ring-brand/15 transition-all duration-200" value="{{ hub_config.capex_default_rent|default:'' }}"></div>
+                        <button onclick="calcCapex()" class="w-full bg-brand text-white font-bold py-2.5 rounded-xl hover-bg-brand shadow-sm transition">Porovnať{% if hub_config.capex_years %} na {{ hub_config.capex_years }} r.{% endif %}</button>
                         <div id="capex-result" class="hidden mt-4 grid grid-cols-2 gap-2">
                             <div class="p-3 bg-white border border-gray-200 rounded-xl text-center">
                                 <p class="text-[10px] text-gray-500 font-bold uppercase">{{ industry_terms.capex_buy_label|default:"Nákup + Servis" }}</p>

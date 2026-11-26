@@ -5,6 +5,7 @@
 {% block extra_head %}
     {{ block.super }}
     <link rel="canonical" href="{{ request.scheme }}://{{ request.get_host }}{% url 'webbuilder:home' %}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 {% endblock %}
 
 {% block extra_css %}
@@ -18,6 +19,33 @@
     .digital-badge { padding: 10px; border-radius: 12px; text-align: center; font-size: 12px; font-weight: bold; border: 1px solid rgba(0,0,0,0.05); min-width: 0; overflow-wrap: anywhere; }
     .digital-badge.on { background: #dcfce7; color: #166534; }
     .digital-badge.off { background: #f1f5f9; color: #475569; }
+    select:has(option[value=""][hidden]:checked),
+    select:has(option[value=""][disabled]:checked) { color: #9ca3af; }
+    select option { color: #111827; background-color: #ffffff; }
+    /* Prémiový štýl Flatpickr kalendára v brand farbe */
+    .flatpickr-calendar {
+        border: 1px solid #e2e8f0;
+        border-radius: 1rem;
+        box-shadow: 0 20px 40px -12px rgba(15, 23, 42, 0.18);
+        padding: 8px;
+        font-family: inherit;
+    }
+    .flatpickr-months { padding: 4px 4px 8px; align-items: center; }
+    .flatpickr-current-month { font-size: 0.95rem; font-weight: 700; color: #0f172a; }
+    span.flatpickr-weekday { color: #64748b; font-weight: 700; font-size: 0.72rem; text-transform: uppercase; }
+    .flatpickr-day { border-radius: 0.65rem; font-weight: 600; color: #1e293b; transition: all 0.15s ease; }
+    .flatpickr-day:hover { background: #f1f5f9; border-color: #f1f5f9; }
+    .flatpickr-day.today { border-color: {{ nastavenia.hlavna_farba|default:"#0f172a" }}; color: {{ nastavenia.hlavna_farba|default:"#0f172a" }}; }
+    .flatpickr-day.selected,
+    .flatpickr-day.selected:hover,
+    .flatpickr-day.selected:focus {
+        background: {{ nastavenia.hlavna_farba|default:"#0f172a" }};
+        border-color: {{ nastavenia.hlavna_farba|default:"#0f172a" }};
+        color: #ffffff;
+        box-shadow: 0 4px 10px -2px rgba(15, 23, 42, 0.25);
+    }
+    .flatpickr-day.flatpickr-disabled,
+    .flatpickr-day.flatpickr-disabled:hover { color: #cbd5e1; opacity: 0.55; cursor: not-allowed; background: transparent; border-color: transparent; }
 {% endblock %}
 
 {% block content %}
@@ -935,10 +963,13 @@
                         {% endif %}
                     </div>
                     {% if has_booking %}
-                    <p class="text-xs text-gray-500 mb-6 bg-gray-50 p-2.5 rounded-xl border border-gray-100 flex items-center justify-between">
-                        <span>Hľadáte plánovaný termín servisu alebo konzultácie?</span>
-                        <a href="#rezervacia" class="text-brand font-bold hover:underline">Rezervovať termín online &darr;</a>
-                    </p>
+                    <div class="text-xs text-gray-600 mb-6 bg-gray-50/90 px-3.5 py-2.5 rounded-2xl border border-gray-200/80 flex items-center justify-between flex-wrap gap-2.5">
+                        <span class="font-medium leading-snug">Hľadáte plánovaný termín servisu alebo konzultácie?</span>
+                        <a href="#rezervacia" class="group inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white hover:bg-brand text-brand hover:text-white border border-brand/25 hover:border-brand font-bold text-xs shadow-sm hover:shadow transition-all duration-200 whitespace-nowrap shrink-0">
+                            <span>Rezervovať termín online</span>
+                            <svg class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-y-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg>
+                        </a>
+                    </div>
                     {% endif %}
                     <form id="dopytForm" class="space-y-5" enctype="multipart/form-data">
                         {% csrf_token %}
@@ -968,66 +999,66 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-5 items-end">
                             <div>
                                 <label class="block text-sm font-bold text-gray-700 mb-2">Firma / Meno *</label>
-                                <input type="text" name="firma" required value="{% if request.user.is_authenticated and request.user.zakaznik_profil %}{{ request.user.zakaznik_profil.Nazov_spolocnosti }}{% endif %}" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 ring-brand transition">
+                                <input type="text" name="firma" required value="{% if request.user.is_authenticated and request.user.zakaznik_profil %}{{ request.user.zakaznik_profil.Nazov_spolocnosti }}{% endif %}" class="w-full bg-gray-50/80 hover:bg-gray-50 focus:bg-white border border-gray-200 hover:border-gray-300 focus:border-brand rounded-xl px-4 py-3 text-gray-900 shadow-sm focus:outline-none focus:ring-4 focus:ring-brand/15 transition-all duration-200">
                             </div>
                             <div>
                                 <label class="block text-sm font-bold text-gray-700 mb-2">Číslo objednávky / PO <span class="text-xs text-gray-400 font-normal">(Voliteľné pre B2B)</span></label>
-                                <input type="text" name="cislo_objednavky_klienta" placeholder="Napr. PO-{% now 'Y' %}-089" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 ring-brand transition">
+                                <input type="text" name="cislo_objednavky_klienta" placeholder="Napr. PO-{% now 'Y' %}-089" class="w-full bg-gray-50/80 hover:bg-gray-50 focus:bg-white border border-gray-200 hover:border-gray-300 focus:border-brand rounded-xl px-4 py-3 text-gray-900 shadow-sm focus:outline-none focus:ring-4 focus:ring-brand/15 transition-all duration-200">
                             </div>
                         </div>
                         {% if request.user.is_authenticated and request.user.zakaznik_profil and klient_zariadenia %}
                         <div>
                             <label class="block text-sm font-bold text-gray-700 mb-2">Vaše evidované zariadenie <span class="text-xs text-gray-400 font-normal">(Voliteľné)</span></label>
-                            <div class="relative">
-                                <select name="zariadenie_id" class="w-full bg-gray-50 border border-gray-200 rounded-xl pl-4 pr-10 py-3 truncate focus:outline-none focus:ring-2 ring-brand transition appearance-none cursor-pointer">
-                                    <option value="">-- Vyberte zariadenie z vašej evidencie --</option>
+                            <div class="relative group">
+                                <select name="zariadenie_id" class="w-full bg-gray-50/80 hover:bg-gray-50 focus:bg-white border border-gray-200 hover:border-gray-300 focus:border-brand rounded-xl pl-4 pr-10 py-3 text-gray-900 shadow-sm truncate focus:outline-none focus:ring-4 focus:ring-brand/15 transition-all duration-200 appearance-none cursor-pointer">
+                                    <option value="" hidden>Vyberte zariadenie z vašej evidencie</option>
                                     {% for zar in klient_zariadenia %}
                                     <option value="{{ zar.id }}">{{ zar.vyrobca.nazov_vyrobcu|default:'' }} {{ zar.model_zariadenia|default:zar.nazov }} [SN: {{ zar.vyrobne_cislo }}]</option>
                                     {% endfor %}
                                 </select>
-                                <svg class="w-4 h-4 text-gray-400 pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                <svg class="w-4 h-4 text-gray-400 group-focus-within:text-brand pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                             </div>
                         </div>
                         {% endif %}
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-5 items-end">
                             <div>
                                 <label class="block text-sm font-bold text-gray-700 mb-2">E-mail *</label>
-                                <input type="email" name="email" value="{% if request.user.is_authenticated and request.user.zakaznik_profil %}{{ request.user.zakaznik_profil.email|default:request.user.email }}{% endif %}" required class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 ring-brand transition">
+                                <input type="email" name="email" value="{% if request.user.is_authenticated and request.user.zakaznik_profil %}{{ request.user.zakaznik_profil.email|default:request.user.email }}{% endif %}" required class="w-full bg-gray-50/80 hover:bg-gray-50 focus:bg-white border border-gray-200 hover:border-gray-300 focus:border-brand rounded-xl px-4 py-3 text-gray-900 shadow-sm focus:outline-none focus:ring-4 focus:ring-brand/15 transition-all duration-200">
                             </div>
                             <div>
                                 <label class="block text-sm font-bold text-gray-700 mb-2">Telefón</label>
-                                <input type="text" name="telefon" value="{% if request.user.is_authenticated and request.user.zakaznik_profil %}{{ request.user.zakaznik_profil.telefon|default:'' }}{% endif %}" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 ring-brand transition">
+                                <input type="text" name="telefon" value="{% if request.user.is_authenticated and request.user.zakaznik_profil %}{{ request.user.zakaznik_profil.telefon|default:'' }}{% endif %}" class="w-full bg-gray-50/80 hover:bg-gray-50 focus:bg-white border border-gray-200 hover:border-gray-300 focus:border-brand rounded-xl px-4 py-3 text-gray-900 shadow-sm focus:outline-none focus:ring-4 focus:ring-brand/15 transition-all duration-200">
                             </div>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-5 items-end">
                             <div>
                                 <label class="block text-sm font-bold text-gray-700 mb-2">Značka zariadenia <span class="text-xs text-gray-400 font-normal">(Voliteľné)</span></label>
-                                <div class="relative">
-                                    <select name="znacka_id" class="w-full bg-gray-50 border border-gray-200 rounded-xl pl-4 pr-10 py-3 truncate focus:outline-none focus:ring-2 ring-brand transition appearance-none cursor-pointer">
+                                <div class="relative group">
+                                    <select name="znacka_id" class="w-full bg-gray-50/80 hover:bg-gray-50 focus:bg-white border border-gray-200 hover:border-gray-300 focus:border-brand rounded-xl pl-4 pr-10 py-3 text-gray-900 shadow-sm truncate focus:outline-none focus:ring-4 focus:ring-brand/15 transition-all duration-200 appearance-none cursor-pointer">
                                         <option value="">Neviem / Iná</option>
                                         {% for znacka in znacky %}
                                             <option value="{{ znacka.id }}">{{ znacka.nazov_vyrobcu }}</option>
                                         {% endfor %}
                                     </select>
-                                    <svg class="w-4 h-4 text-gray-400 pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                    <svg class="w-4 h-4 text-gray-400 group-focus-within:text-brand pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                                 </div>
                             </div>
                             <div>
                                 <label class="block text-sm font-bold text-gray-700 mb-2">Typ požiadavky <span class="text-xs text-gray-400 font-normal">(Voliteľné)</span></label>
-                                <div class="relative">
-                                    <select name="sluzba_id" class="w-full bg-gray-50 border border-gray-200 rounded-xl pl-4 pr-10 py-3 truncate focus:outline-none focus:ring-2 ring-brand transition appearance-none cursor-pointer">
-                                        <option value="">Vyberte typ</option>
+                                <div class="relative group">
+                                    <select name="sluzba_id" class="w-full bg-gray-50/80 hover:bg-gray-50 focus:bg-white border border-gray-200 hover:border-gray-300 focus:border-brand rounded-xl pl-4 pr-10 py-3 text-gray-900 shadow-sm truncate focus:outline-none focus:ring-4 focus:ring-brand/15 transition-all duration-200 appearance-none cursor-pointer">
+                                        <option value="" hidden>Vyberte typ požiadavky</option>
                                         {% for sluzba in sluzby %}
                                             <option value="{{ sluzba.id }}">{{ sluzba.nazov }}</option>
                                         {% endfor %}
                                     </select>
-                                    <svg class="w-4 h-4 text-gray-400 pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                    <svg class="w-4 h-4 text-gray-400 group-focus-within:text-brand pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                                 </div>
                             </div>
                         </div>
                         <div>
                             <label class="block text-sm font-bold text-gray-700 mb-2">Vaša požiadavka *</label>
-                            <textarea name="poziadavka" rows="4" required class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 ring-brand transition" placeholder="{{ industry_terms.poziadavka_placeholder|default:'Ako vám môžeme pomôcť?' }}"></textarea>
+                            <textarea name="poziadavka" rows="4" required class="w-full bg-gray-50/80 hover:bg-gray-50 focus:bg-white border border-gray-200 hover:border-gray-300 focus:border-brand rounded-xl px-4 py-3 text-gray-900 shadow-sm focus:outline-none focus:ring-4 focus:ring-brand/15 transition-all duration-200" placeholder="{{ industry_terms.poziadavka_placeholder|default:'Ako vám môžeme pomôcť?' }}"></textarea>
                         </div>
                         <div class="p-3 bg-red-50 border border-red-200 rounded-xl">
                             <label class="flex items-start gap-2.5 cursor-pointer">
@@ -1163,10 +1194,13 @@
                 </div>
                 
                 <div class="bg-gray-50 p-8 rounded-3xl border border-gray-200 shadow-xl">
-                    <p class="text-xs text-amber-950 mb-6 bg-amber-50 p-3 rounded-2xl border border-amber-200 flex items-center justify-between flex-wrap gap-2">
-                        <span class="flex items-center gap-1.5 font-medium"><span>🚨</span> <strong>Akútna požiadavka alebo urgentný výpadok?</strong> Online termíny sú vyhradené pre plánované stretnutia a zásahy od zajtra.</span>
-                        <a href="#kontakt" class="text-red-700 font-bold hover:underline">Urgentný kontakt &rarr;</a>
-                    </p>
+                    <div class="text-xs text-amber-950 mb-6 bg-amber-50/90 px-4 py-3 rounded-2xl border border-amber-200/90 flex items-center justify-between flex-wrap gap-3">
+                        <span class="flex items-center gap-2 font-medium leading-relaxed"><span aria-hidden="true">🚨</span> <span><strong>Akútna požiadavka alebo urgentný výpadok?</strong> Online termíny sú vyhradené pre plánované stretnutia a zásahy od zajtra.</span></span>
+                        <a href="#kontakt" class="group inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white hover:bg-red-600 text-red-700 hover:text-white border border-red-200 hover:border-red-600 font-bold text-xs shadow-sm hover:shadow transition-all duration-200 whitespace-nowrap shrink-0">
+                            <span>Urgentný kontakt</span>
+                            <svg class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                        </a>
+                    </div>
                     <form id="bookingForm" class="space-y-6">
                         {% csrf_token %}
                         <input type="text" name="website_url" class="hidden" tabindex="-1" autocomplete="off">
@@ -1176,30 +1210,33 @@
                             <div class="space-y-6">
                                 <div>
                                     <label class="block text-sm font-bold text-gray-700 mb-2">1. Akú službu potrebujete? *</label>
-                                    <select name="sluzba_id" required class="w-full bg-white border border-gray-200 rounded-xl pl-4 pr-9 py-3 truncate focus:ring-2 ring-brand outline-none">
-                                        <option value="">Vyberte službu</option>
-                                        {% for sluzba in sluzby %}
-                                            <option value="{{ sluzba.id }}">{{ sluzba.nazov }}</option>
-                                        {% endfor %}
-                                    </select>
+                                    <div class="relative group">
+                                        <select name="sluzba_id" required class="w-full bg-white border border-gray-200 hover:border-gray-300 focus:border-brand rounded-xl pl-4 pr-10 py-3 text-gray-900 shadow-sm truncate focus:outline-none focus:ring-4 focus:ring-brand/15 transition-all duration-200 appearance-none cursor-pointer">
+                                            <option value="" disabled selected hidden>Vyberte službu</option>
+                                            {% for sluzba in sluzby %}
+                                                <option value="{{ sluzba.id }}">{{ sluzba.nazov }}</option>
+                                            {% endfor %}
+                                        </select>
+                                        <svg class="w-4 h-4 text-gray-400 group-focus-within:text-brand pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                    </div>
                                 </div>
                                 <!-- Krok 2: Spôsob realizácie a lokalita -->
                                 <div class="space-y-3">
                                     <label class="block text-sm font-bold text-gray-700">2. Spôsob realizácie a lokalita *</label>
-                                    <div class="grid grid-cols-2 gap-2 text-xs font-bold">
-                                        <label class="flex items-center gap-2 p-3 bg-white border border-gray-200 rounded-xl cursor-pointer hover:border-brand transition">
-                                            <input type="radio" name="sposob_realizacie" value="VYJAZD" checked class="text-brand focus:ring-brand">
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs font-bold">
+                                        <label class="flex items-center gap-2 p-3 bg-white border border-gray-200 hover:border-gray-300 has-[:checked]:border-brand has-[:checked]:bg-brand/5 has-[:checked]:text-brand has-[:checked]:shadow-sm rounded-xl cursor-pointer transition-all duration-200">
+                                            <input type="radio" name="sposob_realizacie" value="VYJAZD" checked class="accent-brand focus:ring-brand">
                                             <span>📍 U vás na mieste</span>
                                         </label>
-                                        <label class="flex items-center gap-2 p-3 bg-white border border-gray-200 rounded-xl cursor-pointer hover:border-brand transition">
-                                            <input type="radio" name="sposob_realizacie" value="DIELNA" class="text-brand focus:ring-brand">
+                                        <label class="flex items-center gap-2 p-3 bg-white border border-gray-200 hover:border-gray-300 has-[:checked]:border-brand has-[:checked]:bg-brand/5 has-[:checked]:text-brand has-[:checked]:shadow-sm rounded-xl cursor-pointer transition-all duration-200">
+                                            <input type="radio" name="sposob_realizacie" value="DIELNA" class="accent-brand focus:ring-brand">
                                             <span>🏢 Stredisko / Online (0 {{ mena }})</span>
                                         </label>
                                     </div>
 
                                     <!-- Možnosť: Výjazd (Mesto + Live výpočet) -->
                                     <div id="bookingVyjazdWrap">
-                                        <input type="text" id="bookingLocationInput" name="mesto" required value="{% if request.user.is_authenticated and request.user.zakaznik_profil %}{{ request.user.zakaznik_profil.psc|default:'' }} {{ request.user.zakaznik_profil.mesto|default:'' }}{% endif %}" placeholder="Vaše mesto alebo PSČ (napr. 811 01 Bratislava)" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 ring-brand outline-none text-base md:text-sm">
+                                        <input type="text" id="bookingLocationInput" name="mesto" required value="{% if request.user.is_authenticated and request.user.zakaznik_profil %}{{ request.user.zakaznik_profil.psc|default:'' }} {{ request.user.zakaznik_profil.mesto|default:'' }}{% endif %}" placeholder="Vaše mesto alebo PSČ (napr. 811 01 Bratislava)" class="w-full bg-white border border-gray-200 hover:border-gray-300 focus:border-brand rounded-xl px-4 py-3 text-gray-900 shadow-sm focus:outline-none focus:ring-4 focus:ring-brand/15 transition-all duration-200 text-base md:text-sm">
                                         <div id="bookingLiveCalcBadge" class="hidden mt-2 p-2.5 bg-brand/5 border border-brand/20 rounded-xl text-xs text-gray-700 flex flex-wrap items-center justify-between gap-2">
                                             <span id="bookingLiveDistance" class="font-bold text-gray-900"></span>
                                             <span id="bookingLiveTravel" class="font-extrabold text-brand"></span>
@@ -1209,24 +1246,30 @@
 
                                     <!-- Možnosť: Dielňa / Online (Výber strediska) -->
                                     <div id="bookingDielnaWrap" class="hidden space-y-2">
-                                        <select name="stredisko_info" class="w-full bg-white border border-gray-200 rounded-xl pl-4 pr-9 py-3 truncate focus:ring-2 ring-brand outline-none text-base md:text-xs font-semibold">
-                                            {% if identita.adresa_prevadzky %}
-                                                <option value="Centrála / Online ({{ identita.adresa_prevadzky }})">🏢 Centrála / Online ({{ identita.adresa_prevadzky|truncatechars:32 }}) – 0 {{ mena }}</option>
-                                            {% elif not servisne_strediska %}
-                                                <option value="Pracovisko spoločnosti / Online">🏢 Pracovisko spoločnosti / Online – 0 {{ mena }} doprava</option>
-                                            {% endif %}
-                                            {% for stredisko in servisne_strediska %}
-                                                <option value="{{ stredisko.nazov }} ({{ stredisko.adresa|default:'' }})">🏢 {{ stredisko.nazov|truncatechars:26 }}{% if stredisko.adresa %} ({{ stredisko.adresa|truncatechars:22 }}){% endif %} – 0 {{ mena }}</option>
-                                            {% endfor %}
-                                        </select>
+                                        <div class="relative group">
+                                            <select name="stredisko_info" class="w-full bg-white border border-gray-200 hover:border-gray-300 focus:border-brand rounded-xl pl-4 pr-10 py-3 text-gray-900 shadow-sm truncate focus:outline-none focus:ring-4 focus:ring-brand/15 transition-all duration-200 appearance-none cursor-pointer text-base md:text-xs font-semibold">
+                                                {% if identita.adresa_prevadzky %}
+                                                    <option value="Centrála / Online ({{ identita.adresa_prevadzky }})">🏢 Centrála / Online ({{ identita.adresa_prevadzky|truncatechars:32 }}) – 0 {{ mena }}</option>
+                                                {% elif not servisne_strediska %}
+                                                    <option value="Pracovisko spoločnosti / Online">🏢 Pracovisko spoločnosti / Online – 0 {{ mena }} doprava</option>
+                                                {% endif %}
+                                                {% for stredisko in servisne_strediska %}
+                                                    <option value="{{ stredisko.nazov }} ({{ stredisko.adresa|default:'' }})">🏢 {{ stredisko.nazov|truncatechars:26 }}{% if stredisko.adresa %} ({{ stredisko.adresa|truncatechars:22 }}){% endif %} – 0 {{ mena }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            <svg class="w-4 h-4 text-gray-400 group-focus-within:text-brand pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                        </div>
                                         <p class="text-[11px] text-emerald-800 bg-emerald-50 p-2 rounded-lg border border-emerald-200">
                                             💡 Pri realizácii na našom stredisku alebo online na diaľku neplatíte žiaden poplatok za dopravu (0 {{ mena }}).
                                         </p>
                                     </div>
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-bold text-gray-700 mb-2">3. Vyberte dátum *</label>
-                                    <input type="date" id="bookingDate" name="datum" data-pracovat-vikendy="{% if globalne_nastavenia.pracovat_vikendy %}1{% else %}0{% endif %}" required class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 ring-brand outline-none">
+                                    <label for="bookingDate" class="block text-sm font-bold text-gray-700 mb-2">3. Vyberte dátum *</label>
+                                    <div class="relative group">
+                                        <input type="date" id="bookingDate" name="datum" data-pracovat-vikendy="{% if globalne_nastavenia.pracovat_vikendy %}1{% else %}0{% endif %}" placeholder="Vyberte dátum" required class="w-full min-h-[48px] appearance-none bg-white border border-gray-200 hover:border-gray-300 focus:border-brand rounded-xl px-4 py-3 text-gray-900 shadow-sm focus:outline-none focus:ring-4 focus:ring-brand/15 transition-all duration-200">
+                                        <svg id="bookingDateIcon" class="hidden w-4 h-4 text-gray-400 group-focus-within:text-brand pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                    </div>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-bold text-gray-700 mb-2">4. Preferovaný čas *</label>
@@ -1241,21 +1284,21 @@
                             <div class="space-y-6">
                                 <div>
                                     <label class="block text-sm font-bold text-gray-700 mb-2">Firma / Meno *</label>
-                                    <input type="text" name="firma" required value="{% if request.user.is_authenticated and request.user.zakaznik_profil %}{{ request.user.zakaznik_profil.Nazov_spolocnosti }}{% endif %}" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 ring-brand outline-none">
+                                    <input type="text" name="firma" required value="{% if request.user.is_authenticated and request.user.zakaznik_profil %}{{ request.user.zakaznik_profil.Nazov_spolocnosti }}{% endif %}" class="w-full bg-white border border-gray-200 hover:border-gray-300 focus:border-brand rounded-xl px-4 py-3 text-gray-900 shadow-sm focus:outline-none focus:ring-4 focus:ring-brand/15 transition-all duration-200">
                                 </div>
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div>
                                         <label class="block text-sm font-bold text-gray-700 mb-2">E-mail *</label>
-                                        <input type="email" name="email" required value="{% if request.user.is_authenticated and request.user.zakaznik_profil %}{{ request.user.zakaznik_profil.email|default:request.user.email }}{% endif %}" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 ring-brand outline-none">
+                                        <input type="email" name="email" required value="{% if request.user.is_authenticated and request.user.zakaznik_profil %}{{ request.user.zakaznik_profil.email|default:request.user.email }}{% endif %}" class="w-full bg-white border border-gray-200 hover:border-gray-300 focus:border-brand rounded-xl px-4 py-3 text-gray-900 shadow-sm focus:outline-none focus:ring-4 focus:ring-brand/15 transition-all duration-200">
                                     </div>
                                     <div>
                                         <label class="block text-sm font-bold text-gray-700 mb-2">Telefón *</label>
-                                        <input type="text" name="telefon" required value="{% if request.user.is_authenticated and request.user.zakaznik_profil %}{{ request.user.zakaznik_profil.telefon|default:'' }}{% endif %}" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 ring-brand outline-none">
+                                        <input type="text" name="telefon" required value="{% if request.user.is_authenticated and request.user.zakaznik_profil %}{{ request.user.zakaznik_profil.telefon|default:'' }}{% endif %}" class="w-full bg-white border border-gray-200 hover:border-gray-300 focus:border-brand rounded-xl px-4 py-3 text-gray-900 shadow-sm focus:outline-none focus:ring-4 focus:ring-brand/15 transition-all duration-200">
                                     </div>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-bold text-gray-700 mb-2">Poznámka k rezervácii</label>
-                                    <textarea name="poznamka" rows="3" placeholder="Bližší popis vašej požiadavky, rozsahu prác alebo preferovanej formy stretnutia..." class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 ring-brand outline-none"></textarea>
+                                    <textarea name="poznamka" rows="3" placeholder="Bližší popis vašej požiadavky, rozsahu prác alebo preferovanej formy stretnutia..." class="w-full bg-white border border-gray-200 hover:border-gray-300 focus:border-brand rounded-xl px-4 py-3 text-gray-900 shadow-sm focus:outline-none focus:ring-4 focus:ring-brand/15 transition-all duration-200"></textarea>
                                 </div>
                                 <div class="bg-blue-50 p-4 rounded-xl border border-blue-100 text-sm text-blue-800">
                                     <span class="font-bold">ℹ️ Dôležité:</span> Váš termín je predbežný. Presný čas a detaily realizácie vám potvrdíme e-mailom alebo telefonicky podľa aktuálneho harmonogramu.
@@ -1543,6 +1586,7 @@
     {% endblock %}
 
 {% block extra_js %}
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <!-- 🟢 AJAX SKRIPT PRE FORMULÁR -->
     <script>
         function selectBrandInForm(brandId) {
@@ -1741,7 +1785,13 @@
             });
         }
         if (bookingServiceSelect) {
-            bookingServiceSelect.addEventListener('change', runLiveBookingCalc);
+            bookingServiceSelect.addEventListener('change', function() {
+                runLiveBookingCalc();
+                const dateEl = document.getElementById('bookingDate');
+                if (dateEl && dateEl.value) {
+                    dateEl.dispatchEvent(new Event('change'));
+                }
+            });
         }
 
         // Prepínanie spôsobu realizácie (Výjazd vs. Dielňa) s obnovou slotov
@@ -1967,12 +2017,26 @@
         if (bookingForm) {
             bookingForm.addEventListener('submit', function(e) {
                 e.preventDefault();
+                const dateEl = document.getElementById('bookingDate');
                 const timeInput = document.getElementById('bookingTime');
                 const msgDiv = document.getElementById('bookingMessage');
                 const btn = document.getElementById('bookingSubmitBtn') || bookingForm.querySelector('button[type="submit"]');
                 const btnSpinner = document.getElementById('bookingBtnSpinner');
                 const btnText = document.getElementById('bookingBtnText');
                 const slotsBox = document.getElementById('bookingSlots');
+
+                if (dateEl && !dateEl.value) {
+                    const visibleDateInput = (dateEl._flatpickr && dateEl._flatpickr.altInput) ? dateEl._flatpickr.altInput : dateEl;
+                    visibleDateInput.classList.add('border-red-500', 'ring-4', 'ring-red-500/15');
+                    visibleDateInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    setTimeout(() => visibleDateInput.classList.remove('border-red-500', 'ring-4', 'ring-red-500/15'), 2500);
+                    if (msgDiv) {
+                        msgDiv.classList.remove('hidden', 'bg-green-50', 'border-green-200', 'text-green-700');
+                        msgDiv.classList.add('bg-amber-50', 'border-amber-200', 'text-amber-800');
+                        msgDiv.innerHTML = '<b>Upozornenie:</b> Prosím, vyberte dátum rezervácie.';
+                    }
+                    return;
+                }
 
                 if (!timeInput.value) {
                     if (slotsBox) {
@@ -2044,6 +2108,8 @@
 
                             document.getElementById('resetBookingBtn').addEventListener('click', function() {
                                 bookingForm.reset();
+                                const bDateEl = document.getElementById('bookingDate');
+                                if (bDateEl && bDateEl._flatpickr) bDateEl._flatpickr.clear();
                                 if (slotsBox) slotsBox.innerHTML = '<p class="text-sm text-gray-500 italic">Najprv zvoľte dátum.</p>';
                                 timeInput.value = '';
                                 if (liveCalcBadge) liveCalcBadge.classList.add('hidden');
@@ -2100,6 +2166,7 @@
         if (bookingDate) {
             // 🛡️ Nastavíme minimálny dátum na najbližší pracovný deň podľa prevádzky firmy
             const zajtra = new Date();
+            zajtra.setHours(0, 0, 0, 0);
             zajtra.setDate(zajtra.getDate() + 1);
             const pracovatVikendy = bookingDate.getAttribute('data-pracovat-vikendy') === '1';
             if (!pracovatVikendy) {
@@ -2113,6 +2180,67 @@
             const mm = String(zajtra.getMonth() + 1).padStart(2, '0');
             const dd = String(zajtra.getDate()).padStart(2, '0');
             bookingDate.setAttribute('min', `${yyyy}-${mm}-${dd}`);
+
+            if (typeof flatpickr === 'function') {
+                const buildDynamicLocale = () => {
+                    try {
+                        const dtfLongM = new Intl.DateTimeFormat(undefined, { month: 'long' });
+                        const dtfShortM = new Intl.DateTimeFormat(undefined, { month: 'short' });
+                        const dtfLongW = new Intl.DateTimeFormat(undefined, { weekday: 'long' });
+                        const dtfShortW = new Intl.DateTimeFormat(undefined, { weekday: 'short' });
+                        const weekdaysShort = [];
+                        const weekdaysLong = [];
+                        for (let i = 0; i < 7; i++) {
+                            const d = new Date(2024, 0, 7 + i);
+                            weekdaysShort.push(dtfShortW.format(d));
+                            weekdaysLong.push(dtfLongW.format(d));
+                        }
+                        const monthsShort = [];
+                        const monthsLong = [];
+                        for (let m = 0; m < 12; m++) {
+                            const d = new Date(2024, m, 15);
+                            monthsShort.push(dtfShortM.format(d));
+                            monthsLong.push(dtfLongM.format(d));
+                        }
+                        return {
+                            firstDayOfWeek: 1,
+                            weekdays: { shorthand: weekdaysShort, longhand: weekdaysLong },
+                            months: { shorthand: monthsShort, longhand: monthsLong },
+                        };
+                    } catch (e) {
+                        return { firstDayOfWeek: 1 };
+                    }
+                };
+
+                bookingDate.removeAttribute('required');
+                const bookingDateIcon = document.getElementById('bookingDateIcon');
+                if (bookingDateIcon) bookingDateIcon.classList.remove('hidden');
+
+                flatpickr(bookingDate, {
+                    minDate: zajtra,
+                    disableMobile: true,
+                    dateFormat: 'Y-m-d',
+                    altInput: true,
+                    altFormat: 'LOCAL',
+                    altInputClass: 'w-full min-h-[48px] bg-white border border-gray-200 hover:border-gray-300 focus:border-brand rounded-xl pl-4 pr-11 py-3 text-base md:text-sm text-gray-900 shadow-sm focus:outline-none focus:ring-4 focus:ring-brand/15 transition-all duration-200 cursor-pointer placeholder:text-gray-400',
+                    locale: buildDynamicLocale(),
+                    disable: pracovatVikendy ? [] : [
+                        function(date) {
+                            return (date.getDay() === 0 || date.getDay() === 6);
+                        }
+                    ],
+                    formatDate: (dateObj, formatStr) => {
+                        if (formatStr === 'Y-m-d') {
+                            const y = dateObj.getFullYear();
+                            const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+                            const d = String(dateObj.getDate()).padStart(2, '0');
+                            return `${y}-${m}-${d}`;
+                        }
+                        return new Intl.DateTimeFormat(undefined, { day: '2-digit', month: '2-digit', year: 'numeric' }).format(dateObj);
+                    }
+                });
+            }
+
             bookingDate.addEventListener('change', function() {
                 const dateVal = this.value;
                 if (!dateVal) return;
@@ -2155,12 +2283,14 @@
                 slotsAbortController = typeof AbortController !== 'undefined' ? new AbortController() : null;
                 
                 const isVyjazdSelected = document.querySelector('input[name="sposob_realizacie"][value="VYJAZD"]')?.checked ?? true;
+                const sposobVal = isVyjazdSelected ? 'VYJAZD' : 'DIELNA';
+                const srvVal = bookingServiceSelect ? (bookingServiceSelect.value || '') : '';
                 const locationInput = document.querySelector('input[name="mesto"]');
                 const strediskoSelect = document.querySelector('select[name="stredisko_info"]');
                 let effectiveLoc = isVyjazdSelected ? (locationInput ? locationInput.value.trim() : '') : (strediskoSelect ? strediskoSelect.value.trim() : '');
                 const locationVal = encodeURIComponent(effectiveLoc);
 
-                fetch(`{% url "webbuilder:get_available_slots" %}?date=${dateVal}&location=${locationVal}`, {
+                fetch(`{% url "webbuilder:get_available_slots" %}?date=${dateVal}&location=${locationVal}&sluzba_id=${encodeURIComponent(srvVal)}&sposob_realizacie=${encodeURIComponent(sposobVal)}`, {
                     signal: slotsAbortController ? slotsAbortController.signal : undefined
                 })
                 .then(res => res.json())

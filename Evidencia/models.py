@@ -2599,6 +2599,11 @@ class TypServisuPrace(ISASAuditMixin, models.Model):
         verbose_name="⏱️ Normohodiny (Odhadovaný čas)",
         help_text="⏱️ Odhadovaný čas trvania úkonu v hodinách pre plánovanie kapacít a kalkuláciu nákladov."
     )
+    booking_trvanie_min = models.PositiveIntegerField(
+        null=True, blank=True,
+        verbose_name="📅 Online rezervácia: dĺžka okna (min)",
+        help_text="📅 Voliteľná dĺžka jedného časového slotu v minútach pre Stredisko / Online rezervácie (napr. 30, 60, 120). Ak zostane prázdne, použijú sa poldenné bloky."
+    )
 
     hodinova_sadzba_predaj = models.DecimalField(
         max_digits=8, decimal_places=2, default=Decimal('0.00'), blank=True,
@@ -2686,10 +2691,11 @@ class TypServisuPrace(ISASAuditMixin, models.Model):
 
             def _invaliduj_web_cache():
                 try:
+                    cache.add('web_cache_version', 1, None)
                     try:
                         cache.incr('web_cache_version')
                     except ValueError:
-                        cache.set('web_cache_version', 1, None)
+                        cache.set('web_cache_version', 2, None)
                 except Exception:
                     pass
 
@@ -2701,10 +2707,11 @@ class TypServisuPrace(ISASAuditMixin, models.Model):
 
             def _invaliduj_web_cache():
                 try:
+                    cache.add('web_cache_version', 1, None)
                     try:
                         cache.incr('web_cache_version')
                     except ValueError:
-                        cache.set('web_cache_version', 1, None)
+                        cache.set('web_cache_version', 2, None)
                 except Exception:
                     pass
 
@@ -2724,6 +2731,9 @@ class TypServisuPrace(ISASAuditMixin, models.Model):
         if self.hodinova_sadzba_naklad is None: self.hodinova_sadzba_naklad = Decimal('0.00')
         if self.fixny_naklad is None: self.fixny_naklad = Decimal('0.00')
         
+        if self.booking_trvanie_min is not None and (self.booking_trvanie_min < 15 or self.booking_trvanie_min > 1440):
+            raise ValidationError({'booking_trvanie_min': "⏳ Dĺžka okna online rezervácie musí byť medzi 15 a 1440 minútami (alebo nechajte prázdne)."})
+
         # 1. Zamedzenie záporných čísel
         if self.hodinova_sadzba_predaj < Decimal('0.00') or self.fixna_cena_predaj < Decimal('0.00'):
             raise ValidationError("⛔ Predajná cena nesmie byť záporná.")
@@ -5154,6 +5164,29 @@ class PrijataObjednavka(ISASAuditMixin, models.Model):
                     logging.getLogger(__name__).warning(f"⚠️ Celery/Redis nie je dostupný pre webhook objednávky {doc_pk}: {exc}")
 
             transaction.on_commit(lambda pk=self.pk: _safe_obj_webhook(pk))
+
+        # 🔓 UVOĽNENIE TERMÍNU A KALENDÁRA PRI ZAMIETNUTÍ OBJEDNÁVKY (cez on_commit kvôli Admin save_m2m)
+        if stary_stav != 'ZAMIETNUTA' and self.stav == 'ZAMIETNUTA' and self.pk:
+            def _uvolni_ulohy_zamietnutej_obj(obj_pk):
+                try:
+                    obj = PrijataObjednavka.objects.filter(pk=obj_pk, stav='ZAMIETNUTA').first()
+                    if not obj:
+                        return
+                    for u in list(obj.vytvorene_ulohy.filter(dokoncene=False)):
+                        ma_inu_aktivnu = u.zdrojove_objednavky_ulohy.exclude(pk=obj.pk).exclude(stav='ZAMIETNUTA').exists()
+                        ma_ponuku = u.zdrojove_ponuky_ulohy.exists()
+                        ma_zaznamy = u.servisne_zaznamy.exists()
+                        if not ma_inu_aktivnu and not ma_ponuku and not ma_zaznamy:
+                            try:
+                                with transaction.atomic():
+                                    obj.vytvorene_ulohy.remove(u)
+                                    u.delete()
+                            except Exception:
+                                pass
+                except Exception:
+                    pass
+
+            transaction.on_commit(lambda pk=self.pk: _uvolni_ulohy_zamietnutej_obj(pk))
 
         # 🛡️ IDEMPOTENCIA: Synchronizácia in-memory stavu pre prípad opakovaného save() v rovnakom procese
         if not hasattr(self, '_povodny_stav') or not isinstance(self._povodny_stav, dict):

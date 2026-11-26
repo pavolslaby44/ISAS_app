@@ -1914,10 +1914,11 @@ class GlobalneNastavenia(ISASAuditMixin, models.Model):
             except Exception:
                 pass
             try:
+                cache.add('web_cache_version', 1, None)
                 cache.incr('web_cache_version')
             except ValueError:
                 try:
-                    cache.set('web_cache_version', 1, None)
+                    cache.set('web_cache_version', 2, None)
                 except Exception:
                     pass
             except Exception:

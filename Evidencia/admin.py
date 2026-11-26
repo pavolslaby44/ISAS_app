@@ -6547,6 +6547,7 @@ class TypServisuPraceAdmin(ISASPremiumAdmin):
         ('🌐 Web Builder (Verejná prezentácia)', {
             'fields': (
                 ('zobrazit_na_webe', 'zverejnit_postup_na_webe'),
+                'booking_trvanie_min',
                 'popis_na_webe',
                 'slug'
             ),
@@ -6638,6 +6639,9 @@ class TypServisuPraceAdmin(ISASPremiumAdmin):
         if getattr(obj, 'slug', None):
             content.append(render_isas_badge(f"/{obj.slug}", type_color="neutral", monospace=True, wrapper=False))
             
+        if is_web_active and getattr(obj, 'booking_trvanie_min', None):
+            content.append(render_isas_badge(f"BOOKING: {obj.booking_trvanie_min} MIN.", icon="📅", type_color="info", wrapper=False))
+
         # 🛡️ DEFENZÍVNA KONTROLA: Zverejnenie SOP na webe vrátane overenia obsahu
         if is_web_active and getattr(obj, 'zverejnit_postup_na_webe', False):
             has_postup_text = bool(getattr(obj, 'pracovny_postup', None) and str(obj.pracovny_postup).strip())

@@ -496,29 +496,32 @@
                         {% endif %}
                     </div>
                     {% endif %}
-                    <input type="text" name="firma" aria-label="Názov firmy alebo kontaktné meno" placeholder="Firma / Meno" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-base md:text-sm focus:ring-2 ring-brand outline-none">
-                    <input type="email" name="email" aria-label="Váš kontaktný e-mail" required placeholder="E-mail *" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-base md:text-sm focus:ring-2 ring-brand outline-none">
-                    <input type="text" name="telefon" aria-label="Vaše telefónne číslo" placeholder="Telefón" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-base md:text-sm focus:ring-2 ring-brand outline-none">
+                    <input type="text" name="firma" aria-label="Názov firmy alebo kontaktné meno" placeholder="Firma / Meno" class="w-full bg-white border border-gray-200 hover:border-gray-300 focus:border-brand rounded-xl px-4 py-2.5 text-base md:text-sm text-gray-900 shadow-sm focus:ring-4 focus:ring-brand/15 outline-none transition-all duration-200">
+                    <input type="email" name="email" aria-label="Váš kontaktný e-mail" required placeholder="E-mail *" class="w-full bg-white border border-gray-200 hover:border-gray-300 focus:border-brand rounded-xl px-4 py-2.5 text-base md:text-sm text-gray-900 shadow-sm focus:ring-4 focus:ring-brand/15 outline-none transition-all duration-200">
+                    <input type="text" name="telefon" aria-label="Vaše telefónne číslo" placeholder="Telefón" class="w-full bg-white border border-gray-200 hover:border-gray-300 focus:border-brand rounded-xl px-4 py-2.5 text-base md:text-sm text-gray-900 shadow-sm focus:ring-4 focus:ring-brand/15 outline-none transition-all duration-200">
                     <div class="flex items-start gap-2 mt-2 mb-2">
-                        <input type="checkbox" name="gdpr_suhlas" id="cart_gdpr" required class="mt-1 w-4 h-4 text-brand border-gray-300 rounded">
+                        <input type="checkbox" name="gdpr_suhlas" id="cart_gdpr" required class="mt-1 w-4 h-4 accent-brand border-gray-300 rounded">
                         <label for="cart_gdpr" class="text-xs text-gray-500">Súhlasím so spracovaním údajov (GDPR). *</label>
                     </div>
                 {% endif %}
                 
-                <select id="cartLogistika" aria-label="Preferovaný spôsob realizácie" class="w-full bg-white border border-gray-200 rounded-xl pl-4 pr-9 py-2.5 text-base md:text-xs font-semibold text-gray-700 truncate focus:ring-2 ring-brand outline-none">
-                    <option value="NEZADANE">Preferovaný spôsob realizácie: Podľa dohody</option>
-                    <optgroup label="🏭 Dielenský servis (0 {{ mena }} doprava)">
-                        {% if identita.adresa_prevadzky %}
-                        <option value="DIELNA_CENTRALA" data-typ-logistiky="DIELNA" data-adresa="{{ identita.adresa_prevadzky|default:'' }}" data-veduci="{{ identita.veduci_skladu|default:identita.zodpovedny_zamestnanec_sklad|default:'' }}" data-kontakt="{{ identita.telefon_sklad|default:identita.telefon|default:'' }}">🏭 Centrála: {{ identita.adresa_prevadzky|truncatechars:32 }} (0 {{ mena }})</option>
-                        {% elif not servisne_strediska %}
-                        <option value="DIELNA" data-typ-logistiky="DIELNA" data-adresa="" data-veduci="" data-kontakt="">🏭 Dielenský servis (0 {{ mena }} doprava)</option>
-                        {% endif %}
-                        {% for stredisko in servisne_strediska %}
-                        <option value="DIELNA_{{ stredisko.pk }}" data-typ-logistiky="DIELNA" data-adresa="{{ stredisko.adresa|default:'' }}" data-veduci="{{ stredisko.veduci_skladu|default:stredisko.zodpovedny_zamestnanec|default:'' }}" data-kontakt="{{ stredisko.telefon|default:stredisko.email|default:'' }}">🏭 Dielňa: {{ stredisko.nazov|truncatechars:26 }}{% if stredisko.kod_pobocky %} [{{ stredisko.kod_pobocky }}]{% endif %} (0 {{ mena }})</option>
-                        {% endfor %}
-                    </optgroup>
-                    <option value="VYJAZD" data-typ-logistiky="VYJAZD">🚙 Výjazd technika na vašu prevádzku</option>
-                </select>
+                <div class="relative group">
+                    <select id="cartLogistika" aria-label="Preferovaný spôsob realizácie" class="w-full bg-white border border-gray-200 hover:border-gray-300 focus:border-brand rounded-xl pl-4 pr-10 py-2.5 text-base md:text-xs font-semibold text-gray-700 shadow-sm truncate focus:ring-4 focus:ring-brand/15 outline-none appearance-none cursor-pointer transition-all duration-200">
+                        <option value="NEZADANE">Preferovaný spôsob realizácie: Podľa dohody</option>
+                        <optgroup label="🏭 Dielenský servis (0 {{ mena }} doprava)">
+                            {% if identita.adresa_prevadzky %}
+                            <option value="DIELNA_CENTRALA" data-typ-logistiky="DIELNA" data-adresa="{{ identita.adresa_prevadzky|default:'' }}" data-veduci="{{ identita.veduci_skladu|default:identita.zodpovedny_zamestnanec_sklad|default:'' }}" data-kontakt="{{ identita.telefon_sklad|default:identita.telefon|default:'' }}">🏭 Centrála: {{ identita.adresa_prevadzky|truncatechars:32 }} (0 {{ mena }})</option>
+                            {% elif not servisne_strediska %}
+                            <option value="DIELNA" data-typ-logistiky="DIELNA" data-adresa="" data-veduci="" data-kontakt="">🏭 Dielenský servis (0 {{ mena }} doprava)</option>
+                            {% endif %}
+                            {% for stredisko in servisne_strediska %}
+                            <option value="DIELNA_{{ stredisko.pk }}" data-typ-logistiky="DIELNA" data-adresa="{{ stredisko.adresa|default:'' }}" data-veduci="{{ stredisko.veduci_skladu|default:stredisko.zodpovedny_zamestnanec|default:'' }}" data-kontakt="{{ stredisko.telefon|default:stredisko.email|default:'' }}">🏭 Dielňa: {{ stredisko.nazov|truncatechars:26 }}{% if stredisko.kod_pobocky %} [{{ stredisko.kod_pobocky }}]{% endif %} (0 {{ mena }})</option>
+                            {% endfor %}
+                        </optgroup>
+                        <option value="VYJAZD" data-typ-logistiky="VYJAZD">🚙 Výjazd technika na vašu prevádzku</option>
+                    </select>
+                    <svg class="w-4 h-4 text-gray-400 group-focus-within:text-brand pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </div>
 
                 <div id="cartDielnaInfo" class="hidden p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-950 space-y-0.5">
                     <p class="font-bold flex items-center gap-1.5 text-emerald-900"><span>🏭</span> Dielenský servis (Bez poplatku za dopravu):</p>
@@ -562,7 +565,7 @@
                     </label>
                 </div>
                 {% endif %}
-                <textarea id="cartNote" aria-label="Doplňujúca poznámka k dopytu" rows="2" placeholder="Poznámka k dopytu (voliteľné)..." class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-base md:text-sm focus:ring-2 ring-brand outline-none"></textarea>
+                <textarea id="cartNote" aria-label="Doplňujúca poznámka k dopytu" rows="2" placeholder="Poznámka k dopytu (voliteľné)..." class="w-full bg-white border border-gray-200 hover:border-gray-300 focus:border-brand rounded-xl px-4 py-2.5 text-base md:text-sm text-gray-900 shadow-sm focus:ring-4 focus:ring-brand/15 outline-none transition-all duration-200"></textarea>
                 
                 {% if nastavenia.zobrazit_live_sla and sla_telemetria %}
                 <div class="p-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 border text-center {% if sla_telemetria.status == 'KRITICKA' %}bg-amber-50 text-amber-900 border-amber-300{% elif sla_telemetria.status == 'ZVYSENA' %}bg-blue-50 text-blue-900 border-blue-200{% elif sla_telemetria.status == 'MIMO_PREVADZKY' %}bg-slate-100 text-slate-800 border-slate-300{% else %}bg-emerald-50 text-emerald-900 border-emerald-200{% endif %}">
