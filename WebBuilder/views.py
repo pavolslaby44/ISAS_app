@@ -23,7 +23,7 @@ from django.core.paginator import Paginator
 from django.core.validators import validate_email
 from django.db import DataError, models, transaction
 from django.db.models import Avg, Count, Exists, OuterRef, Prefetch, Q
-from django.http import Http404, JsonResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.utils import timezone
@@ -132,6 +132,24 @@ def _rate_limit_hit(cache_key, limit, timeout):
 
 def _local_today():
     return timezone.localdate() if getattr(settings, 'USE_TZ', False) else timezone.now().date()
+
+
+def robots_txt_view(request):
+    """🤖 Dynamický robots.txt pre verejný web bez fixnej domény."""
+    sitemap_url = request.build_absolute_uri(reverse('webbuilder:django.contrib.sitemaps.views.sitemap'))
+    lines = [
+        "User-agent: *",
+        "Allow: /",
+        "Disallow: /admin/",
+        "Disallow: /evidencia/",
+        "Disallow: /b2b/",
+        "Disallow: /api/",
+        "Disallow: /dopyt/",
+        "Disallow: /zariadenie/",
+        f"Sitemap: {sitemap_url}",
+    ]
+    return HttpResponse("\n".join(lines) + "\n", content_type="text/plain; charset=utf-8")
+
 
 def public_web_view(request):
     is_preview = _resolve_preview_mode(request)
@@ -2207,6 +2225,11 @@ class ReferenciaDetailView(WebBaseMixin, DetailView):
         suvisiace_qs = (
             ServisnyZaznam.objects.filter(
                 zobrazit_na_webe=True, dokoncene=True
+            )
+            .filter(
+                (Q(foto_po__isnull=False) & ~Q(foto_po='')) |
+                (Q(foto_pred__isnull=False) & ~Q(foto_pred='')) |
+                (Q(video__isnull=False) & ~Q(video=''))
             )
             .exclude(pk=self.object.pk)
             .exclude(slug__isnull=True).exclude(slug__exact='')

@@ -20,6 +20,7 @@ app_name = 'webbuilder'
 
 _web_patterns = [
     path('favicon.ico', lambda request: HttpResponse(status=204)),
+    path('robots.txt', views.robots_txt_view, name='robots_txt'),
     path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='django.contrib.sitemaps.views.sitemap'),
     
     path('', views.public_web_view, name='home'),

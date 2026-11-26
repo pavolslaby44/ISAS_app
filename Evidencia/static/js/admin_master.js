@@ -130,9 +130,10 @@ document.addEventListener("DOMContentLoaded", function() {
         const origHtml = btn?.innerHTML || "";
         if (btn) { btn.classList.add("is-processing"); btn.innerHTML = opts.loadingText || "⏳ SPRACOVÁVAM..."; btn.style.pointerEvents = "none"; }
         
-        const fetchOpts = { 
-            method: opts.method || "POST", 
-            headers: { "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]')?.value || '', ...(opts.headers || {}) } 
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || (document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/)?.[1] || '');
+        const fetchOpts = {
+            method: opts.method || "POST",
+            headers: { "X-CSRFToken": csrfToken, ...(opts.headers || {}) }
         };
 
         if (payload instanceof FormData) fetchOpts.body = payload;

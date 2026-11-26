@@ -1047,9 +1047,10 @@ document.addEventListener("DOMContentLoaded", function() {
                     onError: handleError
                 });
             } else {
+                const csrfVal = document.querySelector('[name=csrfmiddlewaretoken]')?.value || (document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/)?.[1] || '');
                 fetch("/isas-mail-api/", {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: { "Content-Type": "application/json", "X-CSRFToken": csrfVal },
                     body: JSON.stringify(postData)
                 })
                 .then(r => r.json())

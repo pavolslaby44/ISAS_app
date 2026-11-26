@@ -236,7 +236,7 @@ MIDDLEWARE = [
     'ISASaplikacia.middleware.PublicWebRoutingMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
+    'ISASaplikacia.middleware.DynamicCsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'ISASaplikacia.middleware.ISASAuditMiddleware', # 🛡️ SPRÁVNE UMIESTNENIE: Okamžite po Auth sprístupní usera pre Tenant a Audit modul
     'ISASaplikacia.middleware.ISASTenantMiddleware',

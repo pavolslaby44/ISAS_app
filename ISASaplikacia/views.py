@@ -80,7 +80,6 @@ def home(request):
     """Presmerovanie domovskej stránky na administráciu."""
     return redirect('/admin/')
 
-@csrf_exempt
 @staff_member_required
 def isas_mail_api(request):
     if request.method == "POST":
@@ -1457,7 +1456,6 @@ def api_history_radar(request):
 
     return JsonResponse({'status': 'ok', 'data': history_data})
 
-@csrf_exempt
 @staff_member_required
 def api_optimize_route(request):
     """🧠 ISAS AI ROUTING: Návrh optimálnej trasy (Bez zápisu do DB)"""

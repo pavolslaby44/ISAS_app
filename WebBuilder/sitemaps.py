@@ -1,40 +1,50 @@
-from django.contrib.sitemaps import Sitemap
-from django.urls import reverse
+from django.urls import reverse, NoReverseMatch
+from django.core.cache import cache
 from django.core.exceptions import FieldDoesNotExist
 from django.apps import apps
 from django.utils import timezone
 from django.db import models
 
-from WebBuilder.utils_helper import get_eshop_models
+from WebBuilder.utils_helper import (
+    get_active_web_blocks,
+    get_eshop_models,
+    get_nav_katalog_menu,
+    get_web_nav_flags,
+)
 
 from Evidencia.models import TypServisuPrace, ServisnyZaznam, ServisovaneZariadenie
 
 class StaticViewSitemap(Sitemap):
     def items(self):
-        polozky = [
-            'webbuilder:home', 'webbuilder:sluzby_list', 'webbuilder:referencie_list',
-            'webbuilder:eshop_list', 'webbuilder:blog_list', 'webbuilder:kariera_list'
-        ]
-        # 🚜 FEATURE TOGGLING: Zoznam požičovne indexujeme iba ak sú v DB aktívne stroje
-        if ServisovaneZariadenie.objects.filter(je_urcene_na_prenajom=True, zobrazit_na_webe_prenajom=True).exists():
-            polozky.append('webbuilder:rental_list')
-        # 🛡️ FEATURE TOGGLING: Nástroje indexujeme iba ak odvetvie podporuje aspoň 1 nástroj
-        try:
-            from Evidencia.industry_loader import (
-                is_esg_audit_supported, HAS_HEAT_RECOVERY, HAS_VTZ_INSPECTION,
-                HAS_FPLYNY_AUDIT, HAS_VIBRO_DIAGNOSTICS, HAS_CAPEX_CALCULATOR
-            )
-            if is_esg_audit_supported() or HAS_HEAT_RECOVERY or HAS_VTZ_INSPECTION or HAS_FPLYNY_AUDIT or HAS_VIBRO_DIAGNOSTICS or HAS_CAPEX_CALCULATOR:
-                reverse('webbuilder:nastroje')
-                polozky.append('webbuilder:nastroje')
-        except Exception:
-            pass
+        polozky = ['webbuilder:home']
 
         try:
-            reverse('webbuilder:reklamacie')
-            polozky.append('webbuilder:reklamacie')
+            web_ver = cache.get('web_cache_version', 1)
         except Exception:
-            pass
+            web_ver = 1
+
+        aktivne_bloky = get_active_web_blocks(cache_ver=web_ver, is_preview=False)
+        nav_katalog = get_nav_katalog_menu(cache_ver=web_ver, is_preview=False, aktivne_bloky=aktivne_bloky)
+        nav_flags = get_web_nav_flags(cache_ver=web_ver, is_preview=False, aktivne_bloky=aktivne_bloky)
+
+        for item in nav_katalog:
+            url_name = item.get('url_name') if isinstance(item, dict) else None
+            if url_name and url_name not in polozky:
+                polozky.append(url_name)
+
+        flag_url_map = (
+            ('show_referencie', 'webbuilder:referencie_list'),
+            ('show_blog', 'webbuilder:blog_list'),
+            ('show_kariera', 'webbuilder:kariera_list'),
+            ('show_reklamacie', 'webbuilder:reklamacie'),
+        )
+        for flag_key, url_name in flag_url_map:
+            if nav_flags.get(flag_key) and url_name not in polozky:
+                try:
+                    reverse(url_name)
+                    polozky.append(url_name)
+                except NoReverseMatch:
+                    pass
 
         return polozky
 

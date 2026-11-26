@@ -1,11 +1,13 @@
 import contextvars
 import re
+import threading
 
 from django.apps import apps
 from django.http import Http404
 from django.conf import settings
 from django.core.cache import cache
 from django.http.request import split_domain_port
+from django.middleware.csrf import CsrfViewMiddleware
 from django.urls import set_urlconf
 from django.utils.functional import empty
 
@@ -294,3 +296,28 @@ class PublicWebRoutingMiddleware:
             # 🛡️ BEZPEČNOSŤ: Reset URLconfu zabraňuje úniku stavu do ďalších požiadaviek vo worker vlákne
             if is_public_web:
                 set_urlconf(None)
+
+
+class DynamicCsrfViewMiddleware(CsrfViewMiddleware):
+    """🛡️ Obnoví nacachované CSRF originy pri zmene dynamickej domény z ERP adminu bez reštartu workerov."""
+    def __init__(self, get_response):
+        super().__init__(get_response)
+        self._csrf_domain_lock = threading.Lock()
+        self._last_dyn_domain = None
+
+    def process_view(self, request, callback, callback_args, callback_kwargs):
+        if request.method not in ('GET', 'HEAD', 'OPTIONS', 'TRACE'):
+            try:
+                dyn_dom = cache.get('isas_public_web_domain') or ''
+            except Exception:
+                dyn_dom = None
+
+            if isinstance(dyn_dom, str) and self._last_dyn_domain != dyn_dom:
+                with self._csrf_domain_lock:
+                    if self._last_dyn_domain != dyn_dom:
+                        self.__dict__.pop('allowed_origins_exact', None)
+                        self.__dict__.pop('allowed_origin_subdomains', None)
+                        self.__dict__.pop('csrf_trusted_origins_hosts', None)
+                        self._last_dyn_domain = dyn_dom
+
+        return super().process_view(request, callback, callback_args, callback_kwargs)

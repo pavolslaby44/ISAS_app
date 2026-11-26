@@ -699,6 +699,8 @@
 {% block content %}
     {{ block.super }}
 
+    {% csrf_token %}
+
     <div id="isas-preloader-wrapper">
         <div class="isas-loader-box">
             <div class="isas-spinner"></div>
