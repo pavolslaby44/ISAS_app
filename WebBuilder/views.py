@@ -212,7 +212,7 @@ def public_web_view(request):
             if s.hodnotenie_priemer is not None:
                 s.hodnotenie_priemer_zaokruhlene = round(float(s.hodnotenie_priemer), 1)
         
-        znacky = list(DatabazaVyrobcov.objects.filter(zobrazit_na_webe=True).values(
+        znacky = list(DatabazaVyrobcov.objects.filter(zobrazit_na_webe=True).only(
             'id', 'nazov_vyrobcu', 'logo_na_webe', 'typ_vyroby'
         ))
 
@@ -747,7 +747,7 @@ def submit_inquiry(request):
                 zakaznik = b2b_klient
             else:
                 # Najprv skúsime nájsť existujúceho (s uzamknutím riadku pre update)
-                zakaznik = Zakaznik.objects.select_for_update().filter(email__iexact=email).first()
+                zakaznik = Zakaznik.objects.select_for_update().filter(email__iexact=email, je_interny_profil=False).first()
                 
                 if not zakaznik:
                     try:
@@ -761,7 +761,7 @@ def submit_inquiry(request):
                                 Ostatne=gdpr_zaznam
                             )
                     except Exception:
-                        zakaznik = Zakaznik.objects.filter(email__iexact=email).first()
+                        zakaznik = Zakaznik.objects.filter(email__iexact=email, je_interny_profil=False).first()
                 else:
                     # Ak zákazník existuje, pripojíme GDPR log k jeho existujúcim poznámkam
                     update_fields = []
@@ -941,14 +941,7 @@ def check_ticket_status(request):
         # Zamedzí botom hádať čísla objednávok (max 5 pokusov za minútu na IP)
         ip_adresa = get_client_ip(request)
         cache_key = f"ticket_check_limit_{ip_adresa}"
-        
-        try:
-            pokusy = cache.incr(cache_key)
-        except ValueError:
-            cache.set(cache_key, 1, 60)
-            pokusy = 1
-            
-        if pokusy > 5:
+        if _rate_limit_hit(cache_key, 5, 60):
             return JsonResponse({'status': 'error', 'message': 'Príliš veľa pokusov. Skúste to prosím o minútu.'}, status=429)
 
         # 🛡️ ZERO DATA LEAK: Vytiahneme len stav, nič iné!
@@ -994,14 +987,7 @@ def calculate_callout_fee(request):
         # 🛡️ ANTI BRUTE-FORCE OCHRANA (Rate Limiting)
         ip_adresa = get_client_ip(request)
         cache_key = f"calc_limit_{ip_adresa}"
-        
-        try:
-            pokusy = cache.incr(cache_key)
-        except ValueError:
-            cache.set(cache_key, 1, 60)
-            pokusy = 1
-            
-        if pokusy > 10:
+        if _rate_limit_hit(cache_key, 10, 60):
             return JsonResponse({'status': 'error', 'message': 'Príliš veľa pokusov. Skúste to prosím neskôr.'}, status=429)
 
         service_id_str = str(service_id).strip()
@@ -1127,14 +1113,7 @@ def public_iot_demo(request):
     """
     ip_adresa = get_client_ip(request)
     cache_key = f"iot_demo_limit_{ip_adresa}"
-    
-    try:
-        pokusy = cache.incr(cache_key)
-    except ValueError:
-        cache.set(cache_key, 1, 60)
-        pokusy = 1
-        
-    if pokusy > 180:
+    if _rate_limit_hit(cache_key, 180, 60):
         return JsonResponse({'status': 'error', 'message': 'Príliš veľa požiadaviek.'}, status=429)
 
     t = time.time()
@@ -3264,7 +3243,7 @@ def generate_esg_audit(request):
 
         try:
             # 1. Vytvorenie Leadu (Zákazník + Objednávka) s ochranou pred race condition
-            zakaznik = Zakaznik.objects.select_for_update().filter(email__iexact=email).first()
+            zakaznik = Zakaznik.objects.select_for_update().filter(email__iexact=email, je_interny_profil=False).first()
             if not zakaznik:
                 try:
                     with transaction.atomic():
@@ -3274,7 +3253,7 @@ def generate_esg_audit(request):
                             Ostatne='Vygenerované z webovej kalkulačky (ESG Audit).'
                         )
                 except Exception:
-                    zakaznik = Zakaznik.objects.filter(email__iexact=email).first()
+                    zakaznik = Zakaznik.objects.filter(email__iexact=email, je_interny_profil=False).first()
 
             if not zakaznik:
                 transaction.set_rollback(True)
@@ -3494,14 +3473,7 @@ def submit_career(request):
         # 🛡️ Anti-Spam Rate Limiting: Max 3 odoslania životopisu za 5 minút z jednej IP
         ip_adresa = get_client_ip(request)
         cache_key = f"career_limit_{ip_adresa}"
-        
-        try:
-            pokusy = cache.incr(cache_key)
-        except ValueError:
-            cache.set(cache_key, 1, 300)
-            pokusy = 1
-            
-        if pokusy > 3:
+        if _rate_limit_hit(cache_key, 3, 300):
             return JsonResponse({'status': 'error', 'message': 'Príliš veľa odoslaných žiadostí. Skúste to prosím neskôr.'}, status=429)
 
         pozicia = None
@@ -3579,7 +3551,7 @@ def submit_special_lead(request):
         b2b_klient, _ = get_b2b_client_and_discount(request)
         zakaznik = b2b_klient
         if not zakaznik:
-            zakaznik = Zakaznik.objects.select_for_update().filter(email__iexact=email).first()
+            zakaznik = Zakaznik.objects.select_for_update().filter(email__iexact=email, je_interny_profil=False).first()
             if not zakaznik:
                 try:
                     with transaction.atomic():
@@ -3589,7 +3561,7 @@ def submit_special_lead(request):
                             telefon=telefon
                         )
                 except Exception:
-                    zakaznik = Zakaznik.objects.filter(email__iexact=email).first()
+                    zakaznik = Zakaznik.objects.filter(email__iexact=email, je_interny_profil=False).first()
 
         if not zakaznik:
             return JsonResponse({'status': 'error', 'message': 'Nepodarilo sa spracovať profil zákazníka.'}, status=500)
@@ -3901,14 +3873,7 @@ def get_available_slots(request):
     # 🛡️ ANTI BRUTE-FORCE OCHRANA (Rate Limiting)
     ip_adresa = get_client_ip(request)
     cache_key = f"booking_slots_limit_{ip_adresa}"
-    
-    try:
-        pokusy = cache.incr(cache_key)
-    except ValueError:
-        cache.set(cache_key, 1, 60)
-        pokusy = 1
-        
-    if pokusy > 50:
+    if _rate_limit_hit(cache_key, 50, 60):
         return JsonResponse({'status': 'error', 'message': 'Príliš veľa požiadaviek.'}, status=429)
     
     # 1. Zistíme, koľko máme reálne aktívnych technikov (ochrana pred započítaním prepustených/anonymizovaných)
@@ -4182,23 +4147,26 @@ def submit_booking(request):
 
             # 💾 ZÁPIS DO DATABÁZY
             with transaction.atomic():
-                # Defenzívne vytvorenie zákazníka v savepointe
-                zakaznik = Zakaznik.objects.select_for_update().filter(email__iexact=email, je_interny_profil=False).first()
-                if not zakaznik:
-                    try:
-                        with transaction.atomic():
-                            zakaznik = Zakaznik.objects.create(
-                                Nazov_spolocnosti=firma or f"Klient ({email})",
-                                email=email,
-                                telefon=telefon,
-                                Ostatne="Vytvorené cez Smart Booking."
-                            )
-                    except Exception:
-                        zakaznik = Zakaznik.objects.filter(email__iexact=email, je_interny_profil=False).first()
+                if b2b_klient_auth and request.user.is_authenticated and getattr(request.user, 'is_active', False):
+                    zakaznik = b2b_klient_auth
                 else:
-                    if not zakaznik.telefon and telefon:
-                        zakaznik.telefon = telefon
-                        zakaznik.save(update_fields=['telefon'])
+                    # Defenzívne vytvorenie zákazníka v savepointe
+                    zakaznik = Zakaznik.objects.select_for_update().filter(email__iexact=email, je_interny_profil=False).first()
+                    if not zakaznik:
+                        try:
+                            with transaction.atomic():
+                                zakaznik = Zakaznik.objects.create(
+                                    Nazov_spolocnosti=firma or f"Klient ({email})",
+                                    email=email,
+                                    telefon=telefon,
+                                    Ostatne="Vytvorené cez Smart Booking."
+                                )
+                        except Exception:
+                            zakaznik = Zakaznik.objects.filter(email__iexact=email, je_interny_profil=False).first()
+                    else:
+                        if not zakaznik.telefon and telefon:
+                            zakaznik.telefon = telefon
+                            zakaznik.save(update_fields=['telefon'])
 
                 if not zakaznik:
                     return JsonResponse({'status': 'error', 'message': 'Nepodarilo sa vytvoriť zákaznícky profil pre rezerváciu.'}, status=500)
@@ -4442,8 +4410,6 @@ def b2b_dashboard_view(request):
     else:
         telemetry_domain = telemetry_base
 
-    web_ver = cache.get('web_cache_version', 1)
-    aktivne_bloky_set = get_active_web_blocks(cache_ver=web_ver, is_preview=is_preview)
     web_ver = cache.get('web_cache_version', 1)
     aktivne_bloky_set = get_active_web_blocks(cache_ver=web_ver, is_preview=is_preview)
     context = {

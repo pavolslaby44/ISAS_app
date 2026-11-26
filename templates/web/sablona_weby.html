@@ -1540,17 +1540,17 @@
       {% endif %}
       "@id": "{{ request.scheme }}://{{ request.get_host }}",
       "url": "{{ request.scheme }}://{{ request.get_host }}",
-      "telephone": "{{ identita.telefon|escapejs }}",
-      "email": "{{ identita.email_vseobecny|escapejs }}",
+      "telephone": "{{ identita.telefon|default:''|escapejs }}",
+      "email": "{{ identita.email_vseobecny|default:''|escapejs }}",
       "address": {
         "@type": "PostalAddress",
-        "streetAddress": "{{ identita.sidlo_ulica|escapejs }} {{ identita.sidlo_cislo|escapejs }}",
-        "addressLocality": "{{ identita.sidlo_mesto|escapejs }}",
-        "postalCode": "{{ identita.sidlo_psc|escapejs }}",
-        "addressCountry": "{{ identita.sidlo_stat_kod|default:identita.sidlo_stat|escapejs }}"
+        "streetAddress": "{{ identita.sidlo_ulica|default:''|escapejs }} {{ identita.sidlo_cislo|default:''|escapejs }}",
+        "addressLocality": "{{ identita.sidlo_mesto|default:''|escapejs }}",
+        "postalCode": "{{ identita.sidlo_psc|default:''|escapejs }}",
+        "addressCountry": "{{ identita.sidlo_stat_kod|default:identita.sidlo_stat|default:''|escapejs }}"
       },
-      "taxID": "{{ identita.dic|escapejs }}",
-      "vatID": "{{ identita.ic_dph|escapejs }}"{% if identita.linkedin or identita.facebook or identita.instagram %},
+      "taxID": "{{ identita.dic|default:''|escapejs }}",
+      "vatID": "{{ identita.ic_dph|default:''|escapejs }}"{% if identita.linkedin or identita.facebook or identita.instagram %},
       "sameAs": [
         {% if identita.linkedin %}"{{ identita.linkedin|escapejs }}"{% if identita.facebook or identita.instagram %},{% endif %}{% endif %}
         {% if identita.facebook %}"{{ identita.facebook|escapejs }}"{% if identita.instagram %},{% endif %}{% endif %}

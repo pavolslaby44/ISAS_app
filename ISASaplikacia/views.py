@@ -2,6 +2,9 @@ import base64
 import datetime
 import json
 import logging
+import mimetypes
+import os
+import posixpath
 import re
 import secrets
 import time
@@ -17,13 +20,15 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
 from django.core.cache import cache
+from django.core.exceptions import ObjectDoesNotExist, SuspiciousFileOperation
 from django.db import transaction
 from django.views.decorators.http import require_http_methods
 from django.db.models import Count, Exists, F, OuterRef, Prefetch, Q, Sum, Window, Avg
 from django.db.models.functions import RowNumber
-from django.http import JsonResponse
+from django.http import FileResponse, Http404, HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import redirect
 from django.utils import timezone
+from django.utils._os import safe_join
 from django.utils.dateparse import parse_date
 from django.utils.html import escape
 from django.views.decorators.csrf import csrf_exempt
@@ -2099,3 +2104,135 @@ def api_easter_egg_2048(request):
         "bounty_uznana": overena_bounty if rezim == "daily" else False,
         **data
     })
+
+
+
+PROTECTED_MEDIA_PREFIXES = (
+    'systemove_zalohy/',
+    'systemove_exporty/',
+    'importy_dat/',
+    'hr_zmluvy/',
+    'hr_certifikaty/',
+    'hr_absencie/',
+    'kariera/zivotopisy/',
+    'emailove_prilohy/',
+    'emaile_prilohy/',
+    'objednavky_dodavatelom/',
+    'faktury/',
+    'faktury_xml/',
+    'faktury_vizualizacie/',
+    'blocky/',
+    'vygenerovane_vstupy/',
+    'hr_podpisy/',
+    'identita/peciatky/',
+)
+
+B2B_PROTECTED_MEDIA_PREFIXES = (
+    'vystavene_faktury_pdf/',
+    'peppol_xml/',
+    'cenove_ponuky_pdf/',
+    'prijate_objednavky/',
+    'servisne_protokoly_pdf/',
+    'sablony_vstupov/',
+)
+
+
+def _b2b_client_owns_media(b2b_klient, norm_path):
+    """Overí v DB, či prihlásený B2B klient vlastní požadovaný súbor."""
+    if norm_path.startswith('vystavene_faktury_pdf/'):
+        VystavenaFaktura = apps.get_model('Evidencia', 'VystavenaFaktura')
+        return bool(VystavenaFaktura and VystavenaFaktura.objects.filter(
+            zakaznik=b2b_klient, pdf_dokument=norm_path
+        ).exclude(stav__in=['DRAFT', 'STORNO']).exists())
+
+    if norm_path.startswith('peppol_xml/'):
+        VystavenaFaktura = apps.get_model('Evidencia', 'VystavenaFaktura')
+        return bool(VystavenaFaktura and VystavenaFaktura.objects.filter(
+            zakaznik=b2b_klient, peppol_xml_dokument=norm_path
+        ).exclude(stav__in=['DRAFT', 'STORNO']).exists())
+
+    if norm_path.startswith('cenove_ponuky_pdf/'):
+        CenovaPonuka = apps.get_model('Evidencia', 'CenovaPonuka')
+        return bool(CenovaPonuka and CenovaPonuka.objects.filter(
+            zakaznik=b2b_klient, pdf_dokument=norm_path
+        ).exists())
+
+    if norm_path.startswith('prijate_objednavky/'):
+        PrijataObjednavka = apps.get_model('Evidencia', 'PrijataObjednavka')
+        return bool(PrijataObjednavka and PrijataObjednavka.objects.filter(
+            zakaznik=b2b_klient, subor_objednavky=norm_path
+        ).exists())
+
+    if norm_path.startswith('sablony_vstupov/'):
+        sablona = getattr(b2b_klient, 'sablona_vstupu', None)
+        return bool(sablona and getattr(sablona, 'name', None) == norm_path)
+
+    if norm_path.startswith('servisne_protokoly_pdf/'):
+        ServisnyZaznam = apps.get_model('Evidencia', 'ServisnyZaznam')
+        return bool(ServisnyZaznam and ServisnyZaznam.objects.filter(
+            uzavrety_pdf_dokument=norm_path, dokoncene=True
+        ).filter(
+            Q(zakaznik=b2b_klient) | Q(zariadenie__zakaznik=b2b_klient) | Q(zariadenie__prenajmy__zakaznik=b2b_klient)
+        ).exists())
+
+    return False
+
+
+@require_http_methods(["GET", "HEAD"])
+def protected_media_view(request, rel_path):
+    """🛡️ Autorizované servovanie interných a B2B médií cez Nginx X-Accel-Redirect."""
+    user = getattr(request, 'user', None)
+    if not user or not getattr(user, 'is_authenticated', False) or not getattr(user, 'is_active', False):
+        return HttpResponseForbidden("Prístup zamietnutý.")
+
+    if not rel_path or '\x00' in rel_path or '\\' in rel_path:
+        raise Http404("Súbor sa nenašiel.")
+
+    norm_path = posixpath.normpath(rel_path).lstrip('/')
+    if not norm_path or norm_path.startswith('..'):
+        raise Http404("Súbor sa nenašiel.")
+
+    is_staff_only = norm_path.startswith(PROTECTED_MEDIA_PREFIXES)
+    is_b2b_doc = norm_path.startswith(B2B_PROTECTED_MEDIA_PREFIXES)
+    if not is_staff_only and not is_b2b_doc:
+        raise Http404("Súbor sa nenašiel.")
+
+    try:
+        b2b_klient = getattr(user, 'zakaznik_profil', None)
+    except (ObjectDoesNotExist, AttributeError):
+        b2b_klient = None
+
+    is_staff_user = bool(getattr(user, 'is_staff', False) and b2b_klient is None)
+
+    if is_staff_only:
+        if not is_staff_user:
+            return HttpResponseForbidden("Prístup zamietnutý.")
+        if norm_path.startswith('systemove_zalohy/') and not getattr(user, 'is_superuser', False):
+            MegaZaloha = apps.get_model('Evidencia', 'MegaZaloha')
+            if MegaZaloha and not MegaZaloha.objects.filter(subor_zalohy=norm_path, vyziadal_uzivatel=user).exists():
+                return HttpResponseForbidden("Prístup zamietnutý.")
+    else:
+        if not is_staff_user and (b2b_klient is None or not _b2b_client_owns_media(b2b_klient, norm_path)):
+            return HttpResponseForbidden("Prístup zamietnutý.")
+
+    try:
+        full_path = safe_join(settings.MEDIA_ROOT, norm_path)
+    except (SuspiciousFileOperation, ValueError):
+        raise Http404("Súbor sa nenašiel.")
+
+    if not os.path.isfile(full_path):
+        raise Http404("Súbor sa nenašiel.")
+
+    content_type, _ = mimetypes.guess_type(full_path)
+    content_type = content_type or 'application/octet-stream'
+
+    if not settings.DEBUG:
+        response = HttpResponse(content_type=content_type)
+        encoded_path = urllib.parse.quote(norm_path, safe='/')
+        response['X-Accel-Redirect'] = f'/protected-media/{encoded_path}'
+        response['Cache-Control'] = 'private, no-store'
+        return response
+
+    response = FileResponse(open(full_path, 'rb'), content_type=content_type)
+    response['Cache-Control'] = 'private, no-store'
+    return response

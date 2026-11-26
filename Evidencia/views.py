@@ -4,8 +4,11 @@ import hashlib
 import shutil
 import json
 import logging
+import mimetypes
 import os
+import posixpath
 import re
+import urllib.parse
 import traceback
 import uuid
 from datetime import date, datetime, timedelta
@@ -35,8 +38,9 @@ from django.http import FileResponse, Http404, HttpResponse, HttpResponseForbidd
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.utils._os import safe_join
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_http_methods, require_POST
 from google.genai import types
 
 from ISASaplikacia.models import FiremnaIdentita, GlobalneNastavenia, StatLokalizacia
@@ -4767,3 +4771,44 @@ def api_iot_resolve_alarm(request, alarm_id):
     alarm.save(update_fields=['vyriesene'])
     
     return JsonResponse({'status': 'success'})
+
+
+
+@require_http_methods(["GET", "HEAD"])
+def stiahni_vstup_sbs_pdf_view(request, kluc):
+    """🛡️ Autorizované stiahnutie PDF priepustky cez tajný UUID kľúč portálu SBS."""
+    try:
+        kluc_uuid = uuid.UUID(str(kluc))
+    except (ValueError, TypeError, AttributeError):
+        raise Http404("Povolenie na vstup neexistuje.")
+
+    povolenie = get_object_or_404(PovolenieNaVstup, bezpecnostny_kluc=kluc_uuid)
+    doc = getattr(povolenie, 'vygenerovany_dokument', None)
+    if not doc or not getattr(doc, 'name', None):
+        raise Http404("PDF dokument nie je k dispozícii.")
+
+    norm_path = posixpath.normpath(doc.name).lstrip('/')
+    if not norm_path or norm_path.startswith('..') or not norm_path.startswith('vygenerovane_vstupy/'):
+        raise Http404("Neplatný dokument.")
+
+    try:
+        full_path = safe_join(settings.MEDIA_ROOT, norm_path)
+    except Exception:
+        raise Http404("Súbor sa nenašiel.")
+
+    if not os.path.isfile(full_path):
+        raise Http404("Súbor sa nenašiel.")
+
+    content_type, _ = mimetypes.guess_type(full_path)
+    content_type = content_type or 'application/pdf'
+
+    if not settings.DEBUG:
+        response = HttpResponse(content_type=content_type)
+        encoded_path = urllib.parse.quote(norm_path, safe='/')
+        response['X-Accel-Redirect'] = f'/protected-media/{encoded_path}'
+        response['Cache-Control'] = 'private, no-store'
+        return response
+
+    response = FileResponse(open(full_path, 'rb'), content_type=content_type)
+    response['Cache-Control'] = 'private, no-store'
+    return response

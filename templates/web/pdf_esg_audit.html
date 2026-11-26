@@ -1,3 +1,5 @@
+{% load hr_tags %}
+
 <!DOCTYPE html>
 <html lang="sk">
 <head>
@@ -155,7 +157,7 @@
             </td>
             <td style="width: 50%; vertical-align: bottom; text-align: right;">
                 {% if identita.peciatka_podpis %}
-                    <img src="{{ identita.peciatka_podpis.url }}" alt="Autorizácia auditu" style="max-height: 65px;"><br>
+                    {% with peciatka_uri=identita.peciatka_podpis|media_data_uri %}{% if peciatka_uri %}<img src="{{ peciatka_uri }}" alt="Autorizácia auditu" style="max-height: 65px;"><br>{% endif %}{% endwith %}
                 {% endif %}
                 <p style="margin: 4px 0 0 0; font-size: 11px; color: #64748b;">
                     Schválil za dodávateľa: <strong style="color: #0f172a;">{% if identita.konatel %}{{ identita.konatel }}{% elif auditor_meno %}{{ auditor_meno }}{% else %}{{ identita.nazov_spolocnosti|default:"" }}{% endif %}</strong>{% if identita.konatel %}<br><span style="font-size: 10px;">Konateľ / Štatutárny zástupca</span>{% elif auditor_rola %}<br><span style="font-size: 10px;">{{ auditor_rola }}</span>{% endif %}

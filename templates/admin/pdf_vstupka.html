@@ -262,9 +262,9 @@
         
         <div style="text-align: right; font-size: 10px; color: var(--slate-500);">
             {% if povolenie.vytvoril_zamestnanec.osobny_podpis and povolenie.vytvoril_zamestnanec.osobny_podpis.name %}
-                <img src="{{ povolenie.vytvoril_zamestnanec.osobny_podpis.url }}" style="max-height: 55px; margin-bottom: 6px; display: inline-block;" alt="Osobný podpis"><br>
+                {% with podpis_uri=povolenie.vytvoril_zamestnanec.osobny_podpis|media_data_uri %}{% if podpis_uri %}<img src="{{ podpis_uri }}" style="max-height: 55px; margin-bottom: 6px; display: inline-block;" alt="Osobný podpis"><br>{% endif %}{% endwith %}
             {% elif identita.peciatka_podpis and identita.peciatka_podpis.name %}
-                <img src="{{ identita.peciatka_podpis.url }}" style="max-height: 55px; margin-bottom: 6px; display: inline-block;" alt="Pečiatka a Podpis"><br>
+                {% with peciatka_uri=identita.peciatka_podpis|media_data_uri %}{% if peciatka_uri %}<img src="{{ peciatka_uri }}" style="max-height: 55px; margin-bottom: 6px; display: inline-block;" alt="Pečiatka a Podpis"><br>{% endif %}{% endwith %}
             {% endif %}
             Vystavil:<br>
             <strong style="color: var(--slate-900); font-size: 12px;">

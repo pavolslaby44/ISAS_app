@@ -1,4 +1,5 @@
 {% extends "documents/portal_design_system.html" %}
+{% load hr_tags %}
 
 {% block title %}Schválenie ponuky | {{ identita.nazov_spolocnosti }}{% endblock %}
 
@@ -380,9 +381,9 @@
         <div class="sign-block">
             <div class="sign-pad">
                 {% if ponuka.vystavil.zamestnanec.osobny_podpis %}
-                    <img src="{{ ponuka.vystavil.zamestnanec.osobny_podpis.url }}" class="sign-img" alt="Osobný podpis">
+                    {% with podpis_uri=ponuka.vystavil.zamestnanec.osobny_podpis|media_data_uri %}{% if podpis_uri %}<img src="{{ podpis_uri }}" class="sign-img" alt="Osobný podpis">{% endif %}{% endwith %}
                 {% elif identita.peciatka_podpis %}
-                    <img src="{{ identita.peciatka_podpis.url }}" class="sign-img" alt="Pečiatka a Podpis">
+                    {% with peciatka_uri=identita.peciatka_podpis|media_data_uri %}{% if peciatka_uri %}<img src="{{ peciatka_uri }}" class="sign-img" alt="Pečiatka a Podpis">{% endif %}{% endwith %}
                 {% endif %}
             </div>
             <div class="sign-line">

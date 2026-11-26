@@ -30,6 +30,7 @@ urlpatterns = [
     path('ponuka/<uuid:kluc>/', views.verejny_portal_ponuky_view, name='verejny_portal_ponuky'),
     path('api/ponuka/<uuid:kluc>/schvalit/', views.api_schvalit_ponuku_klientom, name='api_schvalit_ponuku'),
     path('vstup-sbs/schvalit/<uuid:kluc>/', views.schvalit_vstup_sbs_view, name='schvalit_vstup_sbs'),
+    path('vstup-sbs/pdf/<uuid:kluc>/', views.stiahni_vstup_sbs_pdf_view, name='stiahni_vstup_sbs_pdf'),
     path('faktura-builder/nova/', views.faktura_builder_nova_view, name='faktura_builder_nova'),
     path('faktura-builder/<int:faktura_id>/', views.faktura_builder_edit_view, name='faktura_builder'),   
     path('api/faktury/ulozit-builder/', views.api_ulozit_fakturu_builder, name='api_ulozit_fakturu_builder'),
