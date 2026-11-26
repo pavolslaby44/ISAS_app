@@ -4625,8 +4625,9 @@ def tool_najdi_a_nastav_ilustracny_obrazok(typ_bloku: str, hladany_vyraz: str, c
                 return json.dumps({"error": f"Nepodarilo sa stiahnuť fyzický súbor obrázka (HTTP {img_response.status_code})."})
 
         # 🧹 Okamžitá invalidácia cache
+        cache.add('web_cache_version', 1, None)
         try: cache.incr('web_cache_version')
-        except ValueError: cache.set('web_cache_version', 1, None)
+        except ValueError: cache.set('web_cache_version', 2, None)
 
         return json.dumps({"status": "success", "informacia": f"Obrázok pre blok {typ_bloku} bol úspešne stiahnutý a nastavený."})
             
@@ -4677,8 +4678,9 @@ def tool_publikuj_draft_webu() -> str:
                 # Zmeníme DRAFT na LIVE
                 draft_bloky.update(verzia='LIVE')
                 
+            cache.add('web_cache_version', 1, None)
             try: cache.incr('web_cache_version')
-            except ValueError: cache.set('web_cache_version', 1, None)
+            except ValueError: cache.set('web_cache_version', 2, None)
             return json.dumps({"status": "success", "informacia": "Draft bol úspešne publikovaný! Zákazníci teraz vidia novú verziu webu."})
             
     except Exception as e:
@@ -4718,8 +4720,9 @@ def tool_zahod_draft_webu() -> str:
             if zmazane_bloky == 0 and not draft_nast:
                 return json.dumps({"informacia": "Žiadny rozpracovaný Draft momentálne neexistuje. Nie je čo zmazať."})
                 
+            cache.add('web_cache_version', 1, None)
             try: cache.incr('web_cache_version')
-            except ValueError: cache.set('web_cache_version', 1, None)
+            except ValueError: cache.set('web_cache_version', 2, None)
             return json.dumps({"status": "success", "informacia": f"Návrh webu (Draft) bol úspešne zmazaný ({zmazane_bloky} blokov odstránených). Web sa vrátil do LIVE stavu."})
             
     except Exception as e:
@@ -4764,8 +4767,9 @@ def tool_vylepsi_texty_v_erp(typ_entity: str, id_entity: int, novy_marketingovy_
             
         najdeny_obj.popis_na_webe = str(novy_marketingovy_text).strip()[:4000]
         najdeny_obj.save(update_fields=['popis_na_webe'])
+        cache.add('web_cache_version', 1, None)
         try: cache.incr('web_cache_version')
-        except ValueError: cache.set('web_cache_version', 1, None)
+        except ValueError: cache.set('web_cache_version', 2, None)
         return json.dumps({"status": "success", "informacia": f"E-shopový popis pre produkt '{najdeny_obj}' (ID: {id_entity}) bol úspešne aktualizovaný."})
     else:
         return json.dumps({"error": f"Neznámy typ_entity '{typ_entity}'. Povolené sú: 'SLUZBA', 'REFERENCIA', 'PRODUKT_ESHOP'."})
@@ -4782,8 +4786,9 @@ def tool_vylepsi_texty_v_erp(typ_entity: str, id_entity: int, novy_marketingovy_
         obj.save(update_fields=[field_name])
         
         # 🧹 Okamžitá invalidácia cache pre web
+        cache.add('web_cache_version', 1, None)
         try: cache.incr('web_cache_version')
-        except ValueError: cache.set('web_cache_version', 1, None)
+        except ValueError: cache.set('web_cache_version', 2, None)
         
         return json.dumps({"status": "success", "informacia": f"Marketingový text pre {typ_entity} (ID: {id_entity}) bol úspešne aktualizovaný."})
         
@@ -4835,8 +4840,9 @@ def tool_spravuj_clanky_a_blog(akcia: str, clanok_id: Optional[int] = None, nadp
                     datum_vydania=pub_date,
                     je_aktivny=je_aktivny if je_aktivny is not None else True
                 )
+                cache.add('web_cache_version', 1, None)
                 try: cache.incr('web_cache_version')
-                except ValueError: cache.set('web_cache_version', 1, None)
+                except ValueError: cache.set('web_cache_version', 2, None)
                 
                 stav_str = "naplánovaný na " + pub_date.strftime('%d.%m.%Y') if pub_date > timezone.now().date() else "publikovaný na blogu"
                 return json.dumps({
@@ -4871,8 +4877,9 @@ def tool_spravuj_clanky_a_blog(akcia: str, clanok_id: Optional[int] = None, nadp
                         clanok.datum_vydania = parsed_pub_date
 
                 clanok.save()
+                cache.add('web_cache_version', 1, None)
                 try: cache.incr('web_cache_version')
-                except ValueError: cache.set('web_cache_version', 1, None)
+                except ValueError: cache.set('web_cache_version', 2, None)
                 return json.dumps({
                     "status": "success",
                     "clanok_id": clanok.id,
@@ -4896,8 +4903,9 @@ def tool_spravuj_clanky_a_blog(akcia: str, clanok_id: Optional[int] = None, nadp
                     clanok.save(update_fields=['je_aktivny'])
                     sprava = f"Článok ID {clanok_id} bol deaktivovaný (skrytý z webu)."
 
+                cache.add('web_cache_version', 1, None)
                 try: cache.incr('web_cache_version')
-                except ValueError: cache.set('web_cache_version', 1, None)
+                except ValueError: cache.set('web_cache_version', 2, None)
                 return json.dumps({"status": "success", "informacia": sprava})
 
             else:
@@ -4938,8 +4946,9 @@ def tool_spravuj_faq(akcia: str, faq_id: Optional[int] = None, kategoria: Option
                     poradie=safe_poradie,
                     je_aktivna=je_aktivna if je_aktivna is not None else True
                 )
+                cache.add('web_cache_version', 1, None)
                 try: cache.incr('web_cache_version')
-                except ValueError: cache.set('web_cache_version', 1, None)
+                except ValueError: cache.set('web_cache_version', 2, None)
                 return json.dumps({
                     "status": "success",
                     "faq_id": nova_faq.id,
@@ -4964,8 +4973,9 @@ def tool_spravuj_faq(akcia: str, faq_id: Optional[int] = None, kategoria: Option
                 if je_aktivna is not None: faq.je_aktivna = je_aktivna
 
                 faq.save()
+                cache.add('web_cache_version', 1, None)
                 try: cache.incr('web_cache_version')
-                except ValueError: cache.set('web_cache_version', 1, None)
+                except ValueError: cache.set('web_cache_version', 2, None)
                 return json.dumps({"status": "success", "faq_id": faq.id, "informacia": f"FAQ položka ID {faq_id} bola upravená."})
 
             elif akcia in ['ZMAZAT', 'DEAKTIVOVAT']:
@@ -4984,8 +4994,9 @@ def tool_spravuj_faq(akcia: str, faq_id: Optional[int] = None, kategoria: Option
                     faq.save(update_fields=['je_aktivna'])
                     sprava = f"FAQ položka ID {faq_id} bola deaktivovaná."
 
+                cache.add('web_cache_version', 1, None)
                 try: cache.incr('web_cache_version')
-                except ValueError: cache.set('web_cache_version', 1, None)
+                except ValueError: cache.set('web_cache_version', 2, None)
                 return json.dumps({"status": "success", "informacia": sprava})
 
             else:
@@ -5064,8 +5075,9 @@ def tool_vytvor_pripadovu_studiu_z_vyjazdu(zaznam_id: int, verejny_marketingovy_
                 )
                 vytvoreny_clanok_id = novy_clanok.id
 
+            cache.add('web_cache_version', 1, None)
             try: cache.incr('web_cache_version')
-            except ValueError: cache.set('web_cache_version', 1, None)
+            except ValueError: cache.set('web_cache_version', 2, None)
             return json.dumps({
                 "status": "success",
                 "zaznam_id": zaznam.id,
@@ -5159,8 +5171,9 @@ def tool_spravuj_pracovne_pozicie(akcia: str, pozicia_id: Optional[int] = None, 
                     platnost_do=d_platnost,
                     je_aktivna=je_aktivna if je_aktivna is not None else True
                 )
+                cache.add('web_cache_version', 1, None)
                 try: cache.incr('web_cache_version')
-                except ValueError: cache.set('web_cache_version', 1, None)
+                except ValueError: cache.set('web_cache_version', 2, None)
                 return json.dumps({
                     "status": "success",
                     "pozicia_id": nova_pozicia.id,
@@ -5194,8 +5207,9 @@ def tool_spravuj_pracovne_pozicie(akcia: str, pozicia_id: Optional[int] = None, 
                     pozicia.platnost_do = to_date(platnost_do)
 
                 pozicia.save()
+                cache.add('web_cache_version', 1, None)
                 try: cache.incr('web_cache_version')
-                except ValueError: cache.set('web_cache_version', 1, None)
+                except ValueError: cache.set('web_cache_version', 2, None)
                 return json.dumps({"status": "success", "pozicia_id": pozicia.id, "informacia": f"Pracovná pozícia ID {pozicia_id} bola upravená."})
 
             elif akcia in ['DEAKTIVOVAT', 'ZMAZAT']:
@@ -5215,8 +5229,9 @@ def tool_spravuj_pracovne_pozicie(akcia: str, pozicia_id: Optional[int] = None, 
                     pozicia.save(update_fields=['je_aktivna'])
                     sprava = f"Pracovná pozícia ID {pozicia_id} bola stiahnutá z webu (deaktivovaná)."
 
+                cache.add('web_cache_version', 1, None)
                 try: cache.incr('web_cache_version')
-                except ValueError: cache.set('web_cache_version', 1, None)
+                except ValueError: cache.set('web_cache_version', 2, None)
                 return json.dumps({"status": "success", "informacia": sprava})
 
             else:
