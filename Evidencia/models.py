@@ -2653,6 +2653,11 @@ class TypServisuPrace(ISASAuditMixin, models.Model):
         verbose_name="🌐 Zobraziť v katalógu na webe",
         help_text="🌐 Ak je zaškrtnuté, táto služba sa dynamicky zobrazí na verejnej webstránke."
     )
+    povolit_online_booking = models.BooleanField(
+        default=False,
+        verbose_name="📅 Povoliť v online rezervácii",
+        help_text="📅 Ak je zaškrtnuté (a služba sa zobrazuje na webe), zákazník si ju môže vybrať v online rezervačnom kalendári."
+    )
     popis_na_webe = models.TextField(
         blank=True, null=True,
         verbose_name="📝 Marketingový popis pre web",
@@ -2674,6 +2679,8 @@ class TypServisuPrace(ISASAuditMixin, models.Model):
 
     def save(self, *args, **kwargs):
         self.full_clean()
+        if not getattr(self, 'povolit_online_booking', True) and kwargs.get('update_fields') is not None:
+            kwargs['update_fields'] = set(kwargs['update_fields']) | {'booking_trvanie_min'}
         # 🤖 AUTOMATIKA: Generovanie unikátneho URL slugu pre Služby
         if not self.slug:
             base_slug = slugify(self.nazov or f"sluzba-{self.pk or 'nova'}")[:240]
@@ -2731,6 +2738,9 @@ class TypServisuPrace(ISASAuditMixin, models.Model):
         if self.hodinova_sadzba_naklad is None: self.hodinova_sadzba_naklad = Decimal('0.00')
         if self.fixny_naklad is None: self.fixny_naklad = Decimal('0.00')
         
+        if not getattr(self, 'povolit_online_booking', True):
+            self.booking_trvanie_min = None
+
         if self.booking_trvanie_min is not None and (self.booking_trvanie_min < 15 or self.booking_trvanie_min > 1440):
             raise ValidationError({'booking_trvanie_min': "⏳ Dĺžka okna online rezervácie musí byť medzi 15 a 1440 minútami (alebo nechajte prázdne)."})
 

@@ -6497,6 +6497,8 @@ class TypServisuPraceAdmin(ISASPremiumAdmin):
         'sposob_uctovania',
         'je_fakturovatelna',
         'priorita',
+        'zobrazit_na_webe',
+        'povolit_online_booking',
     )
     search_fields = ('nazov', 'pracovny_postup')
     readonly_fields = ('slug',)
@@ -6547,7 +6549,7 @@ class TypServisuPraceAdmin(ISASPremiumAdmin):
         ('🌐 Web Builder (Verejná prezentácia)', {
             'fields': (
                 ('zobrazit_na_webe', 'zverejnit_postup_na_webe'),
-                'booking_trvanie_min',
+                ('povolit_online_booking', 'booking_trvanie_min'),
                 'popis_na_webe',
                 'slug'
             ),
@@ -6562,6 +6564,15 @@ class TypServisuPraceAdmin(ISASPremiumAdmin):
     isas_preloader_text = "⏳ Vstupujete do zoznamu typov servisov/prác..."
     isas_delete_iterate = True
     
+    isas_autofill_rules = [
+        {
+            'action': 'unlock_fields',
+            'trigger_field': 'povolit_online_booking',
+            'target_fields': ['booking_trvanie_min'],
+            'restore_on_unlock': True,
+        }
+    ]
+
     isas_value_based_locks = {
         'trigger_field': 'sposob_uctovania',
         'rules': {
@@ -6639,8 +6650,14 @@ class TypServisuPraceAdmin(ISASPremiumAdmin):
         if getattr(obj, 'slug', None):
             content.append(render_isas_badge(f"/{obj.slug}", type_color="neutral", monospace=True, wrapper=False))
             
-        if is_web_active and getattr(obj, 'booking_trvanie_min', None):
-            content.append(render_isas_badge(f"BOOKING: {obj.booking_trvanie_min} MIN.", icon="📅", type_color="info", wrapper=False))
+        if is_web_active:
+            if getattr(obj, 'povolit_online_booking', True):
+                if getattr(obj, 'booking_trvanie_min', None):
+                    content.append(render_isas_badge(f"BOOKING: {obj.booking_trvanie_min} MIN.", icon="📅", type_color="info", wrapper=False))
+                else:
+                    content.append(render_isas_badge("BOOKING: BLOKY", icon="📅", type_color="info", wrapper=False))
+            else:
+                content.append(render_isas_badge("BEZ BOOKINGU", icon="🚫", type_color="neutral", wrapper=False))
 
         # 🛡️ DEFENZÍVNA KONTROLA: Zverejnenie SOP na webe vrátane overenia obsahu
         if is_web_active and getattr(obj, 'zverejnit_postup_na_webe', False):

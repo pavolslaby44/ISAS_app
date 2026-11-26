@@ -1183,7 +1183,7 @@
         {% endif %}
 
         <!-- 📅 SMART BOOKING -->
-        {% if blok.typ == 'BOOKING' and sluzby %}
+        {% if blok.typ == 'BOOKING' and booking_sluzby %}
         <section class="py-20 bg-white px-6 border-t border-gray-100" id="rezervacia">
             <div class="max-w-5xl mx-auto">
                 <div class="text-center mb-12">
@@ -1214,7 +1214,7 @@
                                     <div class="relative group">
                                         <select name="sluzba_id" required class="w-full bg-white border border-gray-200 hover:border-gray-300 focus:border-brand rounded-xl pl-4 pr-10 py-3 text-gray-900 shadow-sm truncate focus:outline-none focus:ring-4 focus:ring-brand/15 transition-all duration-200 appearance-none cursor-pointer">
                                             <option value="" disabled selected hidden>Vyberte službu</option>
-                                            {% for sluzba in sluzby %}
+                                            {% for sluzba in booking_sluzby %}
                                                 <option value="{{ sluzba.id }}">{{ sluzba.nazov }}</option>
                                             {% endfor %}
                                         </select>

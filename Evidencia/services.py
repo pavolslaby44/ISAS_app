@@ -1886,6 +1886,8 @@ def tool_systemove_informacie_a_maily(limit: int = 10, offset: int = 0) -> str:
                 "pracovny_postup_sop": u.pracovny_postup or "Žiadny",
                 "zverejnit_postup_na_webe": getattr(u, 'zverejnit_postup_na_webe', False),
                 "zobrazit_na_webe": u.zobrazit_na_webe,
+                "povolit_online_booking": getattr(u, 'povolit_online_booking', True),
+                "booking_trvanie_min": getattr(u, 'booking_trvanie_min', None),
                 "marketingovy_popis_web": u.popis_na_webe or "Žiadny",
                 "slug": u.slug
             })
@@ -4454,7 +4456,7 @@ def tool_spravuj_verejny_web(akcia: str, ulozit_ako_draft: bool = True, domena: 
 def tool_spravuj_viditelnost_entit(typ_entity: str, id_entity: int, zobrazit: bool, nazov_skladoveho_modelu: Optional[str] = None) -> str:
     """
     Použi na zapnutie alebo vypnutie zobrazenia konkrétneho záznamu na verejnom webe.
-    'typ_entity' musí byť jedno z: 'ZAMESTNANEC', 'SLUZBA', 'SLUZBA_POSTUP', 'ZNACKA', 'REFERENCIA', 'PRENAJOM', 'ZAKAZNIK_REFERENCIA', 'POZICIA', 'PRODUKT_ESHOP'.
+    'typ_entity' musí byť jedno z: 'ZAMESTNANEC', 'SLUZBA', 'SLUZBA_POSTUP', 'SLUZBA_BOOKING', 'ZNACKA', 'REFERENCIA', 'PRENAJOM', 'ZAKAZNIK_REFERENCIA', 'POZICIA', 'PRODUKT_ESHOP'.
     'id_entity' je ID daného záznamu v databáze.
     'nazov_skladoveho_modelu' zadaj výhradne pri 'PRODUKT_ESHOP' (napr. názov konkrétneho skladového modelu produktu).
     """    
@@ -4462,6 +4464,7 @@ def tool_spravuj_viditelnost_entit(typ_entity: str, id_entity: int, zobrazit: bo
         'ZAMESTNANEC': ('Evidencia', 'Zamestnanec', 'zobrazit_na_webe'),
         'SLUZBA': ('Evidencia', 'TypServisuPrace', 'zobrazit_na_webe'),
         'SLUZBA_POSTUP': ('Evidencia', 'TypServisuPrace', 'zverejnit_postup_na_webe'),
+        'SLUZBA_BOOKING': ('Evidencia', 'TypServisuPrace', 'povolit_online_booking'),
         'ZNACKA': ('Evidencia', 'DatabazaVyrobcov', 'zobrazit_na_webe'),
         'REFERENCIA': ('Evidencia', 'ServisnyZaznam', 'zobrazit_na_webe'),
         'PRENAJOM': ('Evidencia', 'ServisovaneZariadenie', 'zobrazit_na_webe_prenajom'),

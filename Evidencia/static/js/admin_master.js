@@ -594,8 +594,23 @@ document.addEventListener("DOMContentLoaded", function() {
         (Array.isArray(isasConfig.autofill_rules) ? isasConfig.autofill_rules : [isasConfig.autofill_rules]).forEach(rule => {
             if (rule.action === 'unlock_fields') {
                 window.ISASBindFieldEvent(rule.trigger_field, 'input change', (e) => {
-                    const hasValue = e.target.value && e.target.value.trim() !== '';
-                    rule.target_fields.forEach(targetName => window.setISASFieldState(targetName, !hasValue, !hasValue ? '' : undefined));
+                    const isCheckbox = e.target.type === 'checkbox';
+                    const hasValue = isCheckbox ? Boolean(e.target.checked) : Boolean(e.target.value && e.target.value.trim() !== '');
+                    rule.target_fields.forEach(targetName => {
+                        const targetEl = document.getElementById('id_' + targetName);
+                        if (targetEl && rule.restore_on_unlock) {
+                            if (!hasValue && targetEl.value !== '') {
+                                targetEl.dataset.isasPrevVal = targetEl.value;
+                            }
+                            window.setISASFieldState(targetName, !hasValue, !hasValue ? '' : undefined);
+                            if (hasValue && targetEl.value === '' && targetEl.dataset.isasPrevVal) {
+                                targetEl.value = targetEl.dataset.isasPrevVal;
+                                delete targetEl.dataset.isasPrevVal;
+                            }
+                        } else {
+                            window.setISASFieldState(targetName, !hasValue, !hasValue ? '' : undefined);
+                        }
+                    });
                 });
             } else if (rule.action === 'toggle_value') {
                 window.ISASBindFieldEvent(rule.trigger_field, 'change', (e) => {

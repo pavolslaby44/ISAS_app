@@ -187,6 +187,7 @@ def public_web_view(request):
         ).defer('hodinova_sadzba_naklad', 'fixny_naklad').order_by('nazov')
 
         sluzby = list(sluzby_qs)
+        booking_sluzby = [s for s in sluzby if getattr(s, 'povolit_online_booking', True)]
         for s in sluzby:
             cena = Decimal('0.00')
             if s.je_fakturovatelna:
@@ -521,6 +522,7 @@ def public_web_view(request):
             'sla_telemetria': None,
             'bloky': bloky,
             'sluzby': sluzby,
+            'booking_sluzby': booking_sluzby,
             'znacky': znacky,
             'referencie': referencie,
             'tim': tim,
@@ -552,7 +554,7 @@ def public_web_view(request):
             'has_tco': has_tco_enabled,
             'has_media_quality': has_media_quality_enabled,
             'has_iot_demo': has_iot_demo_enabled,
-            'has_booking': any(getattr(b, 'typ', '') == 'BOOKING' for b in bloky) and bool(sluzby),
+            'has_booking': any(getattr(b, 'typ', '') == 'BOOKING' for b in bloky) and bool(booking_sluzby),
             'esg_card_count': esg_card_count,
             'law_card_count': law_card_count,
             'diag_card_count': diag_card_count,
@@ -3819,7 +3821,11 @@ def _build_booking_slots(work_start, midpoint, work_end, sluzba_id=None, sposob_
     trvanie_min = None
     if sposob_realizacie == 'DIELNA' and sluzba_id and str(sluzba_id).strip().isdigit():
         trvanie_min = (
-            TypServisuPrace.objects.filter(pk=int(str(sluzba_id).strip()), zobrazit_na_webe=True)
+            TypServisuPrace.objects.filter(
+                pk=int(str(sluzba_id).strip()),
+                zobrazit_na_webe=True,
+                povolit_online_booking=True,
+            )
             .values_list('booking_trvanie_min', flat=True)
             .first()
         )
@@ -3847,8 +3853,8 @@ def _build_booking_slots(work_start, midpoint, work_end, sluzba_id=None, sposob_
     str_mid = midpoint.strftime('%H:%M')
     str_end = work_end.strftime('%H:%M')
     return [
-        {'id': 'DOPOLUDNIA', 'label': f'Dopoludnia ({str_start} - {str_mid})', 'start': work_start, 'end': midpoint},
-        {'id': 'POPOLUDNI', 'label': f'Popoludní ({str_mid} - {str_end})', 'start': midpoint, 'end': work_end},
+        {'id': 'DOPOLUDNIA', 'label': f'{str_start} - {str_mid}', 'start': work_start, 'end': midpoint},
+        {'id': 'POPOLUDNI', 'label': f'{str_mid} - {str_end}', 'start': midpoint, 'end': work_end},
     ]
 
 
@@ -4089,6 +4095,15 @@ def submit_booking(request):
                 if timezone.is_aware(work_end):
                     work_end = work_end.replace(tzinfo=None)
 
+            if sluzba_id and str(sluzba_id).strip():
+                if not str(sluzba_id).strip().isdigit() or not TypServisuPrace.objects.filter(
+                    pk=int(str(sluzba_id).strip()),
+                    zobrazit_na_webe=True,
+                    povolit_online_booking=True,
+                ).exists():
+                    cache.delete(cache_key)
+                    return JsonResponse({'status': 'error', 'message': 'Vybraná služba nie je dostupná pre online rezerváciu.'}, status=400)
+
             candidate_slots = _build_booking_slots(
                 work_start, midpoint, work_end,
                 sluzba_id=sluzba_id,
@@ -4214,7 +4229,9 @@ def submit_booking(request):
                     try:
                         with transaction.atomic():
                             sluzba = TypServisuPrace.objects.filter(
-                                pk=int(str(sluzba_id).strip()), zobrazit_na_webe=True
+                                pk=int(str(sluzba_id).strip()),
+                                zobrazit_na_webe=True,
+                                povolit_online_booking=True,
                             ).first()
                             if sluzba:
                                 uloha.typ_servisu.add(sluzba)
