@@ -1,3 +1,4 @@
+from django.contrib.sitemaps import Sitemap
 from django.urls import reverse, NoReverseMatch
 from django.core.cache import cache
 from django.core.exceptions import FieldDoesNotExist
