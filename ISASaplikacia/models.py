@@ -1434,6 +1434,11 @@ class FiremnaIdentita(ISASAuditMixin, models.Model):
         def _vycisti_firemnu_cache():
             try:
                 cache.delete_many(['isas_dynamicky_web_firmy', 'isas_firemna_mena'])
+                cache.add('web_cache_version', 1, None)
+                try:
+                    cache.incr('web_cache_version')
+                except ValueError:
+                    cache.set('web_cache_version', 2, None)
             except Exception:
                 pass
 

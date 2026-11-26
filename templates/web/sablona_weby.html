@@ -1,11 +1,12 @@
 {% extends 'web/base.html' %}
+{% load static %}
 
 {% block og_url %}{{ request.scheme }}://{{ request.get_host }}{% url 'webbuilder:home' %}{% endblock %}
 
 {% block extra_head %}
     {{ block.super }}
     <link rel="canonical" href="{{ request.scheme }}://{{ request.get_host }}{% url 'webbuilder:home' %}">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="{% static 'vendor/flatpickr/flatpickr.min.css' %}">
 {% endblock %}
 
 {% block extra_css %}
@@ -1586,7 +1587,7 @@
     {% endblock %}
 
 {% block extra_js %}
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="{% static 'vendor/flatpickr/flatpickr.min.js' %}"></script>
     <!-- 🟢 AJAX SKRIPT PRE FORMULÁR -->
     <script>
         function selectBrandInForm(brandId) {
@@ -1781,7 +1782,15 @@
         if (bookingLocInput) {
             bookingLocInput.addEventListener('input', () => {
                 clearTimeout(calcDebounceTimer);
-                calcDebounceTimer = setTimeout(runLiveBookingCalc, 600);
+                calcDebounceTimer = setTimeout(() => {
+                    runLiveBookingCalc();
+                    const dateEl = document.getElementById('bookingDate');
+                    const isVyjazd = document.querySelector('input[name="sposob_realizacie"][value="VYJAZD"]')?.checked ?? true;
+                    const locLen = bookingLocInput.value.trim().length;
+                    if (isVyjazd && dateEl && dateEl.value && (locLen === 0 || locLen >= 3)) {
+                        dateEl.dispatchEvent(new Event('change'));
+                    }
+                }, 600);
             });
         }
         if (bookingServiceSelect) {
@@ -2264,7 +2273,7 @@
                             <div class="p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 space-y-1.5">
                                 <p class="font-bold flex items-center gap-1.5"><span>⚠️</span> Cez víkendy štandardné termíny nerezervujeme.</p>
                                 <p class="text-[11px] leading-relaxed">Plánované termíny prebiehajú v pracovné dni. Pri urgentnej požiadavke nás kontaktujte priamo.</p>
-                                <button type="button" onclick="const b=document.getElementById('bookingDate'); if(b){b.value='${nextMonVal}'; b.dispatchEvent(new Event('change'));}" class="mt-1 bg-amber-700 hover:bg-amber-800 text-white font-bold py-1.5 px-3 rounded-lg transition text-xs shadow-sm">
+                                <button type="button" onclick="const b=document.getElementById('bookingDate'); if(b){ if(b._flatpickr){ b._flatpickr.setDate('${nextMonVal}', true); } else { b.value='${nextMonVal}'; b.dispatchEvent(new Event('change')); } }" class="mt-1 bg-amber-700 hover:bg-amber-800 text-white font-bold py-1.5 px-3 rounded-lg transition text-xs shadow-sm">
                                     Nastaviť na pondelok (${nextD}.${nextM}.) &rarr;
                                 </button>
                             </div>

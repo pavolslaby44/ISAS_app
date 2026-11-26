@@ -4432,8 +4432,9 @@ def tool_spravuj_verejny_web(akcia: str, ulozit_ako_draft: bool = True, domena: 
                     sprava_blokov = f"Úspešne deaktivované bloky: {', '.join(vytvorene_bloky)}."
 
             # 3. Okamžitá invalidácia cache
+            cache.add('web_cache_version', 1, None)
             try: cache.incr('web_cache_version')
-            except ValueError: cache.set('web_cache_version', 1, None)
+            except ValueError: cache.set('web_cache_version', 2, None)
             
             if ulozit_ako_draft:
                 info_msg = "Návrh webu (DRAFT) bol úspešne vytvorený. Zákazníci ho zatiaľ nevidia. Povedz šéfovi, nech si ho pozrie na adrese: /?preview=ai_draft"
@@ -4488,8 +4489,9 @@ def tool_spravuj_viditelnost_entit(typ_entity: str, id_entity: int, zobrazit: bo
             
             najdeny_obj.zobrazit_na_webe = zobrazit
             najdeny_obj.save(update_fields=['zobrazit_na_webe'])
+            cache.add('web_cache_version', 1, None)
             try: cache.incr('web_cache_version')
-            except ValueError: cache.set('web_cache_version', 1, None)
+            except ValueError: cache.set('web_cache_version', 2, None)
             stav = "ZOBRAZENÝ V E-SHOPE" if zobrazit else "SKRYTÝ Z E-SHOPU"
             return json.dumps({"status": "success", "informacia": f"Produkt '{najdeny_obj}' (ID: {id_entity}) bol úspešne nastavený ako {stav}."})
             
@@ -4501,8 +4503,9 @@ def tool_spravuj_viditelnost_entit(typ_entity: str, id_entity: int, zobrazit: bo
             obj = Model.objects.get(pk=id_entity)
             obj.zobrazit_na_webe = zobrazit
             obj.save(update_fields=['zobrazit_na_webe'])
+            cache.add('web_cache_version', 1, None)
             try: cache.incr('web_cache_version')
-            except ValueError: cache.set('web_cache_version', 1, None)
+            except ValueError: cache.set('web_cache_version', 2, None)
             stav = "ZOBRAZENÝ V E-SHOPE" if zobrazit else "SKRYTÝ Z E-SHOPU"
             return json.dumps({"status": "success", "informacia": f"Produkt '{obj}' bol úspešne nastavený ako {stav}."})
         except Exception as e_mod:
@@ -4522,8 +4525,9 @@ def tool_spravuj_viditelnost_entit(typ_entity: str, id_entity: int, zobrazit: bo
         obj.save(update_fields=[field_name])
         
         # 🧹 Okamžitá invalidácia cache pre web
+        cache.add('web_cache_version', 1, None)
         try: cache.incr('web_cache_version')
-        except ValueError: cache.set('web_cache_version', 1, None)
+        except ValueError: cache.set('web_cache_version', 2, None)
         
         stav = "ZOBRAZENÉ" if zobrazit else "SKRYTÉ"
         return json.dumps({"status": "success", "informacia": f"Záznam {obj} bol úspešne nastavený ako {stav} na verejnom webe."})
