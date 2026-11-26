@@ -867,7 +867,7 @@ body.change-form .form-row:not(.tabular .form-row) {
     box-sizing: border-box !important;
 }
 
-/* 🛡️ Každé pole (fieldBox) zaberie plnú šírku riadku (max 500px) */
+/* 🛡️ Každé pole (fieldBox) zaberie plnú šírku riadku (max 500px, pri textarea uvoľnené pre roztiahnutie) */
 body.change-form .form-row .fieldBox {
     flex: 0 0 100% !important;
     width: 100% !important;
@@ -877,6 +877,10 @@ body.change-form .form-row .fieldBox {
     padding: 0 !important;
     display: flex !important;
     flex-direction: column !important;
+}
+
+body.change-form .form-row .fieldBox:has(textarea) {
+    max-width: 100% !important;
 }
 
 /* 🎯 VERTIKÁLNY LAYOUT: ŠTÍTOK HORE NAD POĽOM (100% symetria, zero zalamovanie) */
@@ -1061,17 +1065,23 @@ body.change-form .form-row .select2-container .select2-selection {
 
 /* 📐 E. DOKONALÁ UNIFORMNÁ ŠÍRKA 500px PRE VŠETKY POLIA (Vrátane n-tíc: 1 pole na 1 riadok) */
 @media screen and (min-width: 769px) {
-    body.change-form .form-row:not(.tabular .form-row):not(.field-zobraz_zive_data):not(.telemetria-box .form-row) > div,
-    body.change-form .form-row:not(.tabular .form-row):not(.field-zobraz_zive_data):not(.telemetria-box .form-row) .fieldBox {
+    body.change-form .form-row:not(.tabular .form-row):not(.field-zobraz_zive_data):not(.telemetria-box .form-row) > div:not(:has(textarea)),
+    body.change-form .form-row:not(.tabular .form-row):not(.field-zobraz_zive_data):not(.telemetria-box .form-row) .fieldBox:not(:has(textarea)) {
         width: 100% !important;
         max-width: 500px !important;
         flex: 0 0 100% !important;
     }
 
+    body.change-form .form-row:not(.tabular .form-row):not(.field-zobraz_zive_data):not(.telemetria-box .form-row) > div:has(textarea),
+    body.change-form .form-row:not(.tabular .form-row):not(.field-zobraz_zive_data):not(.telemetria-box .form-row) .fieldBox:has(textarea) {
+        width: 100% !important;
+        max-width: 100% !important;
+        flex: 0 0 100% !important;
+    }
+
     body.change-form .form-row:not(.tabular .form-row) > div input:not([type="checkbox"]),
     body.change-form .form-row:not(.tabular .form-row) > div select,
-    body.change-form .form-row:not(.tabular .form-row) > div .select2-container,
-    body.change-form .form-row:not(.tabular .form-row) > div textarea {
+    body.change-form .form-row:not(.tabular .form-row) > div .select2-container {
         width: 100% !important;
         min-width: 500px !important; /* 🚨 GARANCIA: Všetky polia budú mať PRESNE 500px */
         max-width: 500px !important;
@@ -1080,7 +1090,7 @@ body.change-form .form-row .select2-container .select2-selection {
 }
 
 /* 👥 F. ZRUŠENIE VEDĽA SEBA ZOBRAZENIA N-TÍC (Vynútenie 1 poľa na riadok aj pre n-tice) */
-body.change-form .form-row:not(.tabular .form-row) > div:not(:only-child) {
+body.change-form .form-row:not(.tabular .form-row) > div:not(:only-child):not(:has(textarea)) {
     flex: 0 0 100% !important;
     width: 100% !important;
     max-width: 500px !important;
@@ -1156,15 +1166,16 @@ background-size: 16px !important;
 padding-right: 35px !important; /* Miesto pre šípku */
 cursor: pointer !important;
 }
-/* 📝 Špecifiká pre Textarea (Viacriadkové pole) - Uniformná stredná veľkosť */
+/* 📝 Špecifiká pre Textarea (Viacriadkové pole) - Predvolená veľkosť s voľným roztiahnutím */
 body.change-form .form-row textarea.vLargeTextField,
 body.change-form .form-row textarea {
-height: 120px !important; /* 🛠️ Fixná stredná výška (zabije Django 'rows' atribút) */
+height: 120px; /* Bez !important, aby fungovalo natívne rozťahovanie výšky */
 min-height: 120px !important;
-width: 100% !important;
-max-width: 450px !important; /* 🛠️ Zjednotená stredná šírka */
+width: 500px; /* Bez !important, aby fungovalo natívne rozťahovanie šírky */
+min-width: 280px !important;
+max-width: 100% !important;
 line-height: 1.5 !important;
-resize: vertical !important;
+resize: both !important;
 padding: 12px 14px !important;
 }
 /* ✨ Bezpečný Focus efekt (Prepíše ten pôvodný a ignoruje zamknuté polia) */
@@ -1403,6 +1414,13 @@ body.change-form .form-row .help b {
         box-sizing: border-box !important;
         margin: 0 !important;
         text-align: center !important;
+    }
+
+    html body.change-form .form-row:not(.inline-related .form-row) textarea,
+    html body.change-form .form-row:not(.inline-related .form-row) textarea.vLargeTextField {
+        flex: 0 0 auto !important;
+        resize: vertical !important;
+        text-align: left !important;
     }
 
     /* 3.1 EXKLUZÍVNE CENTROVANIE TEXTU VO VNÚTRI SELECT2 / AUTOCOMPLETE */
