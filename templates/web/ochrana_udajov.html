@@ -152,7 +152,6 @@
                         <p><span class="text-gray-500 font-semibold">Reklamácie a RMA:</span> <a href="mailto:{{ globalne_nastavenia.email_pre_reklamacie }}" class="text-brand font-bold hover:underline break-all">{{ globalne_nastavenia.email_pre_reklamacie }}</a></p>
                         {% endif %}
                         {% if identita.telefon %}
-                        {% if identita.telefon %}
                         <p><span class="text-gray-500 font-semibold">Telefón:</span> <a href="tel:{{ identita.telefon|cut:' ' }}" class="text-brand font-bold hover:underline">{{ identita.telefon }}</a></p>
                         {% endif %}
                         {% if identita.web %}
