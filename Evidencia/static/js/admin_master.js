@@ -2606,7 +2606,7 @@ document.addEventListener("DOMContentLoaded", function() {
             createIsasFolder(cId, '🛠️ Servisná prevádzka', ['uloha', 'servisnyzaznam', 'korekciamotohodinlog', 'dashboardkvality', 'typservisuprace', 'modbuskonfigurator']);
             createIsasFolder(cId, '🌐 Základné nastavenia systému', ['firemnaidentita', 'globalnenastavenia', 'statlokalizacia']);
             createIsasFolder(cId, '🔐 Používatelia a Bezpečnosť', ['user', 'group', 'isasauditlog', 'spotifytoken']);
-            createIsasFolder(cId, '📨 E-mailové stredisko', ['emailovyucet', 'emailovasprava']);
+            createIsasFolder(cId, '📨 E-mailové stredisko', ['emailovyucet', 'emailovasprava', 'emailoptout']);
             createIsasFolder(cId, '🌍 Správa Webstránky', ['webnastavenia', 'webblok', 'webfaq', 'clanok']);
             createIsasFolder(cId, '🔗 API a Webhook Integrácie', ['webhookendpoint', 'webhooklog']);
         });
