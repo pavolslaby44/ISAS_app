@@ -2986,48 +2986,138 @@ document.addEventListener("DOMContentLoaded", function() {
                         searchContainer.appendChild(resultsDiv);
                         
                         if (mCfg.live_search_endpoint) {
-                            const hideResults = () => { resultsDiv.style.display = 'none'; resultsDiv.innerHTML = ''; };
-                            
+                            let searchDebounceTimer = null;
+                            let activeSearchController = null;
+
+                            const hideResults = () => {
+                                if (searchDebounceTimer) { clearTimeout(searchDebounceTimer); searchDebounceTimer = null; }
+                                if (activeSearchController) { activeSearchController.abort(); activeSearchController = null; }
+                                resultsDiv.style.display = 'none';
+                                resultsDiv.replaceChildren();
+                            };
+
+                            const appendHighlightedText = (parent, text, regex) => {
+                                const str = String(text ?? '');
+                                if (!str) return;
+                                if (!regex) { parent.appendChild(document.createTextNode(str)); return; }
+                                regex.lastIndex = 0;
+                                let lastIdx = 0;
+                                let match;
+                                while ((match = regex.exec(str)) !== null) {
+                                    if (match[0].length === 0) { regex.lastIndex++; continue; }
+                                    if (match.index > lastIdx) {
+                                        parent.appendChild(document.createTextNode(str.slice(lastIdx, match.index)));
+                                    }
+                                    const span = document.createElement('span');
+                                    span.className = 'isas-highlight-match';
+                                    span.textContent = match[0];
+                                    parent.appendChild(span);
+                                    lastIdx = match.index + match[0].length;
+                                }
+                                if (lastIdx < str.length) {
+                                    parent.appendChild(document.createTextNode(str.slice(lastIdx)));
+                                }
+                            };
+
+                            const createMetaRow = (emoji, text, styleStr) => {
+                                const row = document.createElement('div');
+                                row.style.marginTop = '4px';
+                                const span = document.createElement('span');
+                                span.style.cssText = styleStr;
+                                span.textContent = `${emoji} ${String(text)}`;
+                                row.appendChild(span);
+                                return row;
+                            };
+
                             searchInput.addEventListener('input', function(e) {
-                                e.preventDefault(); 
-                                const term = this.value.trim(); 
+                                e.preventDefault();
+                                const term = this.value.trim();
                                 if (term.length < 2) { hideResults(); return; }
-                                
-                                fetch(`${mCfg.live_search_endpoint}?term=${encodeURIComponent(term)}`).then(res => res.json()).then(data => {
-                                    if (searchInput.value.trim().length < 2) { hideResults(); return; }
-                                    resultsDiv.innerHTML = '';
-                                    if (data.results && data.results.length > 0) {
-                                        const regex = new RegExp("(" + term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ")", "gi");
-                                        
-                                        data.results.forEach(item => {
-                                            const div = document.createElement('div'); div.className = 'isas-autocomplete-item';
-                                            const highlightedName = item.name ? item.name.replace(regex, "<span class='isas-highlight-match'>$1</span>") : (item.model ? item.model.replace(regex, "<span class='isas-highlight-match'>$1</span>") : "");
-                                            const extraInfo = item.cat || mCfg.live_search_kategoria || "ZÁZNAM";
-                                            
-                                            const itemIcon = item.icon || mCfg.live_search_ikona || '🔍';
-                                            if(item.action_display) {
-                                                const highlightedUser = item.user.replace(regex, "<span class='isas-highlight-match'>$1</span>");
-                                                const highlightedId = item.obj_id.replace(regex, "<span class='isas-highlight-match'>$1</span>");
-                                                div.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center;"><strong>${itemIcon} ${item.action_display}</strong></div><div style="margin-top: 4px;"><span style="font-size: 11px; color: #475569; font-weight: 700;">📂 ${highlightedName} (ID: ${highlightedId}) | 👤 ${highlightedUser}</span></div>`;
-                                            } else {
-                                                const emailInfo = item.email ? `<div style="margin-top: 4px;"><span style="font-size: 11px; color: #475569; font-weight: 700;">📧 ${item.email}</span></div>` : '';
-                                                const telefonInfo = item.telefon ? `<div style="margin-top: 4px;"><span style="font-size: 11px; color: #475569; font-weight: 700;">📞 ${item.telefon}</span></div>` : '';
-                                                const sumaInfo = item.suma ? `<div style="margin-top: 4px;"><span style="font-size: 12px; color: #059669; font-weight: 900;">💳 ${item.suma}</span></div>` : '';
-                                                const dateInfo = item.date ? `<div style="margin-top: 4px;"><span style="font-size: 10px; color: #94a3b8; font-weight: 700;">🕒 ${item.date}</span></div>` : '';
-                                                const rolaInfo = item.rola ? item.rola : extraInfo;
-                                                div.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center;"><strong>${itemIcon} ${highlightedName}</strong><span style="font-size: 11px; font-weight: 900; color: #0f172a; background: #f1f5f9; padding: 2px 6px; border-radius: 4px;">${rolaInfo}</span></div>${emailInfo}${telefonInfo}${sumaInfo}${dateInfo}`;
-                                            }
-                                            
-                                            div.onclick = function(e) { 
-                                                e.stopPropagation(); 
-                                                const searchVal = item.search_value || item.name || item.obj_id;
-                                                window.location.href = "?q=" + encodeURIComponent(searchVal) + "#highlight-" + item.id; 
-                                            };
-                                            resultsDiv.appendChild(div);
-                                        });
-                                        resultsDiv.style.display = 'block';
-                                    } else { hideResults(); }
-                                });
+
+                                if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+                                if (activeSearchController) activeSearchController.abort();
+
+                                searchDebounceTimer = setTimeout(() => {
+                                    activeSearchController = new AbortController();
+                                    const signal = activeSearchController.signal;
+
+                                    fetch(`${mCfg.live_search_endpoint}?term=${encodeURIComponent(term)}`, {
+                                        signal,
+                                        credentials: 'same-origin'
+                                    })
+                                    .then(res => {
+                                        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                                        return res.json();
+                                    })
+                                    .then(data => {
+                                        if (searchInput.value.trim().length < 2) { hideResults(); return; }
+                                        resultsDiv.replaceChildren();
+                                        if (data && Array.isArray(data.results) && data.results.length > 0) {
+                                            const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                                            const regex = escapedTerm ? new RegExp(escapedTerm, 'gi') : null;
+
+                                            data.results.forEach(item => {
+                                                const div = document.createElement('div');
+                                                div.className = 'isas-autocomplete-item';
+                                                const rawName = item.name ?? item.model ?? '';
+                                                const extraInfo = item.cat || mCfg.live_search_kategoria || 'ZÁZNAM';
+                                                const itemIcon = item.icon || mCfg.live_search_ikona || '🔍';
+
+                                                const headerRow = document.createElement('div');
+                                                headerRow.style.cssText = 'display:flex; justify-content:space-between; align-items:center;';
+                                                const strongEl = document.createElement('strong');
+                                                strongEl.appendChild(document.createTextNode(`${itemIcon} `));
+
+                                                if (item.action_display) {
+                                                    strongEl.appendChild(document.createTextNode(String(item.action_display)));
+                                                    headerRow.appendChild(strongEl);
+                                                    div.appendChild(headerRow);
+
+                                                    const subRow = document.createElement('div');
+                                                    subRow.style.marginTop = '4px';
+                                                    const subSpan = document.createElement('span');
+                                                    subSpan.style.cssText = 'font-size: 11px; color: #475569; font-weight: 700;';
+                                                    subSpan.appendChild(document.createTextNode('📂 '));
+                                                    appendHighlightedText(subSpan, rawName, regex);
+                                                    subSpan.appendChild(document.createTextNode(' (ID: '));
+                                                    appendHighlightedText(subSpan, item.obj_id ?? '', regex);
+                                                    subSpan.appendChild(document.createTextNode(') | 👤 '));
+                                                    appendHighlightedText(subSpan, item.user ?? '', regex);
+                                                    subRow.appendChild(subSpan);
+                                                    div.appendChild(subRow);
+                                                } else {
+                                                    appendHighlightedText(strongEl, rawName, regex);
+                                                    headerRow.appendChild(strongEl);
+
+                                                    const badgeSpan = document.createElement('span');
+                                                    badgeSpan.style.cssText = 'font-size: 11px; font-weight: 900; color: #0f172a; background: #f1f5f9; padding: 2px 6px; border-radius: 4px;';
+                                                    badgeSpan.textContent = String(item.rola ? item.rola : extraInfo);
+                                                    headerRow.appendChild(badgeSpan);
+                                                    div.appendChild(headerRow);
+
+                                                    if (item.email) div.appendChild(createMetaRow('📧', item.email, 'font-size: 11px; color: #475569; font-weight: 700;'));
+                                                    if (item.telefon) div.appendChild(createMetaRow('📞', item.telefon, 'font-size: 11px; color: #475569; font-weight: 700;'));
+                                                    if (item.suma) div.appendChild(createMetaRow('💳', item.suma, 'font-size: 12px; color: #059669; font-weight: 900;'));
+                                                    if (item.date) div.appendChild(createMetaRow('🕒', item.date, 'font-size: 10px; color: #94a3b8; font-weight: 700;'));
+                                                }
+
+                                                div.onclick = function(ev) {
+                                                    ev.stopPropagation();
+                                                    const searchVal = String(item.search_value || item.name || item.obj_id || '');
+                                                    const safeId = encodeURIComponent(String(item.id ?? ''));
+                                                    window.location.href = "?q=" + encodeURIComponent(searchVal) + "#highlight-" + safeId;
+                                                };
+                                                resultsDiv.appendChild(div);
+                                            });
+                                            resultsDiv.style.display = 'block';
+                                        } else {
+                                            hideResults();
+                                        }
+                                    })
+                                    .catch(err => {
+                                        if (err && err.name !== 'AbortError') hideResults();
+                                    });
+                                }, 180);
                             });
                             searchInput.addEventListener('search', function() { if (this.value.trim().length < 2) hideResults(); });
                             document.addEventListener('click', function(e) { if (e.target !== searchInput && !resultsDiv.contains(e.target)) { hideResults(); } });

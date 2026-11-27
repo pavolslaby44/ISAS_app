@@ -205,7 +205,7 @@
                         </div>
                         <div class="grid grid-cols-2 gap-2">
                             <a href="{% url 'webbuilder:rental_detail' stroj.slug %}{% if is_preview %}?preview=ai_draft{% endif %}" class="w-full text-center bg-white border-2 border-gray-900 text-gray-900 hover:bg-gray-900 hover:text-white font-bold py-2.5 rounded-xl transition duration-300 flex items-center justify-center text-sm">Detail</a>
-                            <button type="button" data-add-to-cart data-typ="STROJ" data-nazov="{{ stroj.nazov }}" data-detail="{% if stroj.dostupne_pocet > 0 %}Dostupné ihneď ({{ stroj.dostupne_pocet }} ks){% else %}Čakačka (Predbežný dopyt){% endif %}{% if stroj.cena_na_den %} ({{ stroj.cena_na_den }} {{ mena }}/deň){% endif %}" data-db-id="{{ stroj.pk }}" data-orientacna-cena="{{ stroj.cena_na_den|default:'' }}" class="w-full text-center {% if stroj.dostupne_pocet > 0 %}{% if request.user.is_authenticated and request.user.zakaznik_profil %}bg-emerald-600 hover:bg-emerald-700{% else %}bg-gray-900 hover:bg-brand{% endif %} text-white{% else %}bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300{% endif %} font-bold py-2.5 rounded-xl transition duration-300 flex items-center justify-center text-sm cursor-pointer">
+                            <button type="button" data-add-to-cart data-typ="STROJ" data-nazov="{{ stroj.nazov }}" data-detail="{% if stroj.dostupne_pocet > 0 %}Dostupné ihneď ({{ stroj.dostupne_pocet }} ks){% else %}Čakačka (Predbežný dopyt){% endif %}{% if stroj.cena_na_den %} ({{ stroj.cena_na_den }} {{ mena }}/deň){% endif %}" data-db-id="{{ stroj.pk }}" data-orientacna-cena="{{ stroj.cena_na_den|default:'' }}" class="w-full text-center {% if stroj.dostupne_pocet > 0 %}{% if b2b_klient %}bg-emerald-600 hover:bg-emerald-700{% else %}bg-gray-900 hover:bg-brand{% endif %} text-white{% else %}bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300{% endif %} font-bold py-2.5 rounded-xl transition duration-300 flex items-center justify-center text-sm cursor-pointer">
                                 Do dopytu
                             </button>
                         </div>
@@ -279,7 +279,7 @@
 
                 <div>
                     <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Váš e-mail *</label>
-                    <input type="email" name="email" required placeholder="meno@firma.sk" value="{% if request.user.is_authenticated and request.user.zakaznik_profil %}{{ request.user.zakaznik_profil.email|default:request.user.email }}{% endif %}" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 ring-brand outline-none transition">
+                    <input type="email" name="email" required placeholder="meno@firma.sk" value="{% if b2b_klient %}{{ b2b_klient.email|default:request.user.email }}{% endif %}" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 ring-brand outline-none transition">
                 </div>
                 
                 <div>
@@ -287,8 +287,17 @@
                         <span>{{ industry_terms.buyback_photo_label|default:'📸 Fotografia zariadenia alebo štítku' }}</span>
                         <span class="text-[10px] text-gray-400 font-normal flex-shrink-0 text-right">Voliteľné (max 10 MB)</span>
                     </label>
-                    <input type="file" name="priloha" accept="image/*,.pdf" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-brand/10 file:text-brand hover:file:bg-brand/20 transition focus:outline-none">
+                    <input type="file" name="priloha" accept="image/*,.pdf" onchange="const f=this.files[0]; if(f && f.size > 10*1024*1024){ alert('⚠️ Príloha prekračuje maximálny limit 10 MB. Zvoľte menší súbor.'); this.value=''; }" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-brand/10 file:text-brand hover:file:bg-brand/20 transition focus:outline-none">
                 </div>
+
+                {% if not b2b_klient %}
+                <div class="flex items-start gap-2.5 pt-1">
+                    <input type="checkbox" name="gdpr_suhlas" id="buyback_gdpr_suhlas" required class="mt-0.5 w-4 h-4 accent-brand border-gray-300 rounded focus:ring-brand">
+                    <label for="buyback_gdpr_suhlas" class="text-xs text-gray-600 leading-relaxed">
+                        Súhlasím so spracovaním osobných údajov na účely posúdenia ponuky v súlade so <a href="{% url 'webbuilder:ochrana_udajov' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="text-brand font-semibold underline hover:text-gray-900">Zásadami ochrany osobných údajov (GDPR)</a>. *
+                    </label>
+                </div>
+                {% endif %}
                 
                 <button type="submit" class="w-full bg-gray-900 hover:bg-brand text-white font-bold py-3.5 rounded-xl transition duration-300 shadow-md flex justify-center items-center gap-2 text-sm mt-2">
                     <span>Odoslať požiadavku na ocenenie</span>

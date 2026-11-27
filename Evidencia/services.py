@@ -892,8 +892,8 @@ def _vykonaj_financie_crm_dotaz(hladany_vyraz: Optional[str] = None, datum_od: O
         ponuky = CenovaPonuka.objects.select_related('zakaznik', 'vystavil', 'zariadenie__vyrobca').prefetch_related('polozky__zariadenie', 'vytvorene_ulohy', 'vyfakturovane', 'typ_servisu').order_by('-datum_vystavenia')
         objednavky = PrijataObjednavka.objects.select_related('zakaznik', 'zodpovedny_zamestnanec').prefetch_related('zariadenia__vyrobca', 'typ_servisu', 'zdrojove_ponuky', 'vytvorene_ulohy', 'navrhnute_ponuky', 'ignorovane_ponuky', 'faktury').order_by('-datum_prijatia')
         uhrady = EvidenciaUhrad.objects.select_related('vystavena_faktura__zakaznik', 'prijata_faktura__dodavatel').order_by('-datum_uhrady')
-        dodavatelia = Dodavatel.objects.filter(je_anonymizovany=False).prefetch_related('zastupene_znacky', 'ai_zameranie', 'maily')
-        zakaznici = Zakaznik.objects.filter(je_anonymizovany=False).select_related('user').prefetch_related('webhooks', 'maily').all()
+        dodavatelia = Dodavatel.objects.filter(je_anonymizovany=False).prefetch_related('zastupene_znacky', 'ai_zameranie', 'maily', 'email_optouts')
+        zakaznici = Zakaznik.objects.filter(je_anonymizovany=False).select_related('user').prefetch_related('webhooks', 'maily', 'email_optouts').all()
         kosik = Kosik.objects.filter(objednane=False).select_related('dodavatel', 'filialka', 'suvisiaca_objednavka')
         
         if exact_zakaznik_id is not None:
@@ -1122,7 +1122,22 @@ def _vykonaj_financie_crm_dotaz(hladany_vyraz: Optional[str] = None, datum_od: O
                     "erp_id": z.erp_id or "Nepriradené",
                     "erp_last_exported_at": z.erp_last_exported_at.strftime('%d.%m.%Y %H:%M') if z.erp_last_exported_at else "Nikdy",
                     "erp_chybovy_log": z.erp_error_log or "Bez chýb",
-                    "gps_suradnice": f"{z.lat}, {z.lon}" if z.lat and z.lon else "Neznáme"
+                    "gps_suradnice": f"{z.lat}, {z.lon}" if z.lat and z.lon else "Neznáme",
+                    "ma_aktivny_email_opt_out": any(o.aktivny for o in z.email_optouts.all()) if hasattr(z, 'email_optouts') else False,
+                    "email_optout_zaznamy": [
+                        {
+                            "id": o.id,
+                            "email": o.email,
+                            "aktivny": o.aktivny,
+                            "zdroj": o.get_zdroj_display(),
+                            "rozsah": o.get_rozsah_display(),
+                            "dovod": o.dovod,
+                            "poznamka": o.poznamka or "Žiadna",
+                            "vytvorene": o.vytvorene.strftime('%d.%m.%Y %H:%M') if o.vytvorene else "Neznáme",
+                            "aktualizovane": o.aktualizovane.strftime('%d.%m.%Y %H:%M') if o.aktualizovane else "Neznáme",
+                        }
+                        for o in z.email_optouts.all()
+                    ] if hasattr(z, 'email_optouts') else []
                 })
 
         if povolene_sekcie is None or "cenove_ponuky" in povolene_sekcie:
@@ -1249,7 +1264,22 @@ def _vykonaj_financie_crm_dotaz(hladany_vyraz: Optional[str] = None, datum_od: O
                     "erp_status": d.get_erp_export_status_display(),
                     "erp_id": d.erp_id or "Nepriradené",
                     "erp_last_exported_at": d.erp_last_exported_at.strftime('%d.%m.%Y %H:%M') if d.erp_last_exported_at else "Nikdy",
-                    "erp_chybovy_log": d.erp_error_log or "Bez chýb"
+                    "erp_chybovy_log": d.erp_error_log or "Bez chýb",
+                    "ma_aktivny_email_opt_out": any(o.aktivny for o in d.email_optouts.all()) if hasattr(d, 'email_optouts') else False,
+                    "email_optout_zaznamy": [
+                        {
+                            "id": o.id,
+                            "email": o.email,
+                            "aktivny": o.aktivny,
+                            "zdroj": o.get_zdroj_display(),
+                            "rozsah": o.get_rozsah_display(),
+                            "dovod": o.dovod,
+                            "poznamka": o.poznamka or "Žiadna",
+                            "vytvorene": o.vytvorene.strftime('%d.%m.%Y %H:%M') if o.vytvorene else "Neznáme",
+                            "aktualizovane": o.aktualizovane.strftime('%d.%m.%Y %H:%M') if o.aktualizovane else "Neznáme",
+                        }
+                        for o in d.email_optouts.all()
+                    ] if hasattr(d, 'email_optouts') else []
                 })
             
         if povolene_sekcie is None or "caka_v_kosiku_na_objednanie" in povolene_sekcie:
@@ -1610,12 +1640,13 @@ def tool_hr_a_mzdy(meno_osoby: Optional[str] = None, limit: int = 10, offset: in
 
 def tool_systemove_informacie_a_maily(limit: int = 10, offset: int = 0) -> str:
     """
-    Použi na získanie FIREMNEJ IDENTITY, CENNÍKA ÚKONOV a E-MAILOV.
+    Použi na získanie FIREMNEJ IDENTITY, CENNÍKA ÚKONOV, E-MAILOV a OPT-OUT ZOZNAMU (NEZASIELAŤ).
     """
     FiremnaIdentita = apps.get_model('ISASaplikacia', 'FiremnaIdentita')
     GlobalneNastavenia = apps.get_model('ISASaplikacia', 'GlobalneNastavenia')
     EmailovaSprava = apps.get_model('ISASaplikacia', 'EmailovaSprava')
     EmailovyUcet = apps.get_model('ISASaplikacia', 'EmailovyUcet')
+    EmailOptOut = apps.get_model('ISASaplikacia', 'EmailOptOut')
     TypServisuPrace = apps.get_model('Evidencia', 'TypServisuPrace')
     MegaZaloha = apps.get_model('Evidencia', 'MegaZaloha')
     ERPExportNastavenia = apps.get_model('Evidencia', 'ERPExportNastavenia')
@@ -1642,7 +1673,7 @@ def tool_systemove_informacie_a_maily(limit: int = 10, offset: int = 0) -> str:
     except LookupError:
         pass
     
-    data: dict[str, Any] = {"firemne_udaje": {}, "ekonomicke_nastavenia": {}, "statne_lokalizacie_dph_a_efaktury": [], "erp_uctovne_nastavenia": {}, "cennik_pracovnych_ukonov": [], "pravidla_servisnych_intervalov": [], "pripojene_emailove_schranky": [], "neprecitane_maily": [], "nedavne_exporty_a_zalohy": [], "moznosti_exportov_a_zaloh": {}, "nedavne_importy_dat": [], "struktura_excel_importov": {}, "zoznam_filialok": [], "skladove_limity": [], "globalne_nastavenie_skladu": {}, "databaza_vyrobcov_znaciek": [], "verejny_web_nastavenia": {}, "verejny_web_bloky": [], "verejny_web_faq": [], "verejny_web_clanky": [], "webhook_integracie": [], "webhook_nedavne_logy": [], "infrastruktura_a_pozadie": {}, "firemna_hra_2048": {}, "aktivne_odvetvie_a_konfiguracia": {}}
+    data: dict[str, Any] = {"firemne_udaje": {}, "ekonomicke_nastavenia": {}, "statne_lokalizacie_dph_a_efaktury": [], "erp_uctovne_nastavenia": {}, "cennik_pracovnych_ukonov": [], "pravidla_servisnych_intervalov": [], "pripojene_emailove_schranky": [], "neprecitane_maily": [], "opt_out_zoznam_nezasilat": [], "nedavne_exporty_a_zalohy": [], "moznosti_exportov_a_zaloh": {}, "nedavne_importy_dat": [], "struktura_excel_importov": {}, "zoznam_filialok": [], "skladove_limity": [], "globalne_nastavenie_skladu": {}, "databaza_vyrobcov_znaciek": [], "verejny_web_nastavenia": {}, "verejny_web_bloky": [], "verejny_web_faq": [], "verejny_web_clanky": [], "webhook_integracie": [], "webhook_nedavne_logy": [], "infrastruktura_a_pozadie": {}, "firemna_hra_2048": {}, "aktivne_odvetvie_a_konfiguracia": {}}
     
     try:
         identita = FiremnaIdentita.objects.select_related('zodpovedny_zamestnanec_sklad').first()
@@ -1870,23 +1901,26 @@ def tool_systemove_informacie_a_maily(limit: int = 10, offset: int = 0) -> str:
                 "auto_odosielat_mailom": erp.auto_odosielat_mailom
             }
             
-        ukony = TypServisuPrace.objects.all()[offset:offset+limit]
+        ukony = TypServisuPrace.objects.all().order_by('nazov', 'id')[offset:offset+limit]
         for u in ukony:
             data["cennik_pracovnych_ukonov"].append({
+                "id": u.id,
                 "nazov_prace": u.nazov,
                 "je_fakturovatelna": u.je_fakturovatelna,
                 "priorita": u.get_priorita_display(),
+                "priorita_kod": u.priorita,
                 "sposob_uctovania": u.get_sposob_uctovania_display(),
+                "sposob_uctovania_kod": u.sposob_uctovania,
                 "hodinova_sadzba_predaj_eur": float(u.hodinova_sadzba_predaj or 0.0),
                 "fixna_cena_predaj_eur": float(u.fixna_cena_predaj or 0.0),
                 "hodinova_sadzba_naklad_eur": float(u.hodinova_sadzba_naklad or 0.0),
                 "fixny_naklad_eur": float(u.fixny_naklad or 0.0),
-                "normohodiny": float(u.normohodiny) if u.normohodiny else 1.0,
+                "normohodiny": float(u.normohodiny) if u.normohodiny is not None else 1.0,
                 "zaruka_mesiace": u.zaruka_mesiace,
                 "pracovny_postup_sop": u.pracovny_postup or "Žiadny",
                 "zverejnit_postup_na_webe": getattr(u, 'zverejnit_postup_na_webe', False),
                 "zobrazit_na_webe": u.zobrazit_na_webe,
-                "povolit_online_booking": getattr(u, 'povolit_online_booking', True),
+                "povolit_online_booking": getattr(u, 'povolit_online_booking', False),
                 "booking_trvanie_min": getattr(u, 'booking_trvanie_min', None),
                 "marketingovy_popis_web": u.popis_na_webe or "Žiadny",
                 "slug": u.slug
@@ -1912,6 +1946,36 @@ def tool_systemove_informacie_a_maily(limit: int = 10, offset: int = 0) -> str:
                 "ai_kategoria": m.ai_kategoria or "Nezaradené",
                 "ai_zhrnutie": m.ai_zhrnutie,
                 "obsahuje_prilohy": bool(m.prilohy.all())
+            })
+
+        try:
+            safe_lim = max(1, min(int(limit), 100)) if limit is not None else 10
+            safe_off = max(0, int(offset)) if offset is not None else 0
+        except (ValueError, TypeError):
+            safe_lim, safe_off = 10, 0
+
+        opt_out_zaznamy = EmailOptOut.objects.select_related('zakaznik', 'dodavatel', 'sukromna_osoba', 'zdrojova_sprava').order_by('-vytvorene')[safe_off:safe_off+safe_lim]
+        for o in opt_out_zaznamy:
+            data["opt_out_zoznam_nezasilat"].append({
+                "id": o.id,
+                "email": o.email,
+                "aktivny": o.aktivny,
+                "zdroj_kod": o.zdroj,
+                "zdroj": o.get_zdroj_display(),
+                "rozsah_kod": o.rozsah,
+                "rozsah": o.get_rozsah_display(),
+                "dovod": o.dovod or "Bez dôvodu",
+                "poznamka": o.poznamka or "Žiadna",
+                "zdrojova_sprava_id": o.zdrojova_sprava_id,
+                "zdrojova_sprava_predmet": o.zdrojova_sprava.predmet if o.zdrojova_sprava else None,
+                "zakaznik_id": o.zakaznik_id,
+                "zakaznik": o.zakaznik.Nazov_spolocnosti if o.zakaznik else None,
+                "dodavatel_id": o.dodavatel_id,
+                "dodavatel": o.dodavatel.Nazov_spolocnosti if o.dodavatel else None,
+                "sukromna_osoba_id": o.sukromna_osoba_id,
+                "sukromna_osoba": o.sukromna_osoba.meno_a_priezvisko if o.sukromna_osoba else None,
+                "vytvorene": o.vytvorene.strftime('%d.%m.%Y %H:%M') if o.vytvorene else "Neznáme",
+                "aktualizovane": o.aktualizovane.strftime('%d.%m.%Y %H:%M') if o.aktualizovane else "Neznáme",
             })
             
         # 🟢 Pridaný loop pre Exporty a Zálohy
@@ -2291,6 +2355,7 @@ def tool_manazerske_statistiky(typ_reportu: Optional[str] = None, datum_od: Opti
     PovolenieNaVstup = apps.get_model('Evidencia', 'PovolenieNaVstup')
     MegaZaloha = apps.get_model('Evidencia', 'MegaZaloha')
     EmailovaSprava = apps.get_model('ISASaplikacia', 'EmailovaSprava')
+    EmailOptOut = apps.get_model('ISASaplikacia', 'EmailOptOut')
     ImportDatTask = apps.get_model('Evidencia', 'ImportDatTask')
     AIAuditLog = apps.get_model('Evidencia', 'AIAuditLog')
     
@@ -2636,6 +2701,8 @@ def tool_manazerske_statistiky(typ_reportu: Optional[str] = None, datum_od: Opti
                 "zlyhane_systemove_zalohy": zlyhane_zalohy,
                 "zlyhane_importy_dat": zlyhane_importy,
                 "pocet_neprecitanych_emailov": neprecitane_maily,
+                "pocet_aktivnych_opt_out_emailov": EmailOptOut.objects.filter(aktivny=True).count(),
+                "pocet_opt_out_kompletny_zakaz": EmailOptOut.objects.filter(aktivny=True, rozsah='KOMPLETNY').count(),
                 "zlyhane_webhook_odoslania": zlyhane_webhooky_pocet,
                 "deaktivovane_webhook_endpointy_circuit_breaker": deaktivovane_webhooky_pocet,
                 "pocet_bliziacich_sa_planovanych_servisov": planovane_servisy_pocet,
@@ -4159,11 +4226,11 @@ def _vykonaj_email_dotaz(hladany_vyraz: Optional[str] = None, email_id: Optional
         if email_id is not None and str(email_id).strip() and str(email_id).strip().lower() not in ['null', 'none']:
             try:
                 safe_mail_id = int(str(email_id).strip())
-                maily = EmailovaSprava.objects.filter(id=safe_mail_id).select_related('zakaznik', 'dodavatel', 'zamestnanec', 'ucet').prefetch_related('prilohy')
+                maily = EmailovaSprava.objects.filter(id=safe_mail_id).select_related('zakaznik', 'dodavatel', 'zamestnanec', 'ucet').prefetch_related('prilohy', 'optout_zaznamy')
             except ValueError:
                 return json.dumps({"error": f"Neplatné ID e-mailu: '{email_id}'. ID musí byť celé číslo."})
         else:
-            maily = EmailovaSprava.objects.select_related('zakaznik', 'dodavatel', 'zamestnanec', 'ucet').prefetch_related('prilohy').order_by('-datum_prijatia')
+            maily = EmailovaSprava.objects.select_related('zakaznik', 'dodavatel', 'zamestnanec', 'ucet').prefetch_related('prilohy', 'optout_zaznamy').order_by('-datum_prijatia')
             if hladany_vyraz:
                 maily = maily.filter(
                     Q(odosielatel__icontains=hladany_vyraz) |
@@ -4201,7 +4268,21 @@ def _vykonaj_email_dotaz(hladany_vyraz: Optional[str] = None, email_id: Optional
                 "prilohy": prilohy if prilohy else "Žiadne prílohy",
                 "spojene_s_crm_zakaznik": m.zakaznik.Nazov_spolocnosti if m.zakaznik else None,
                 "spojene_s_crm_dodavatel": m.dodavatel.Nazov_spolocnosti if m.dodavatel else None,
-                "spojene_s_crm_zamestnanec": f"{m.zamestnanec.meno} {m.zamestnanec.priezvisko}" if m.zamestnanec else None
+                "spojene_s_crm_zamestnanec": f"{m.zamestnanec.meno} {m.zamestnanec.priezvisko}" if m.zamestnanec else None,
+                "opt_out_zaznamy": [
+                    {
+                        "id": o.id,
+                        "email": o.email,
+                        "aktivny": o.aktivny,
+                        "zdroj": o.get_zdroj_display(),
+                        "rozsah": o.get_rozsah_display(),
+                        "dovod": o.dovod,
+                        "poznamka": o.poznamka or "Žiadna",
+                        "vytvorene": o.vytvorene.strftime('%d.%m.%Y %H:%M') if o.vytvorene else "Neznáme",
+                        "aktualizovane": o.aktualizovane.strftime('%d.%m.%Y %H:%M') if o.aktualizovane else "Neznáme",
+                    }
+                    for o in m.optout_zaznamy.all()
+                ]
             })
             
         return json.dumps({"najdene_emaily": vysledky}) if vysledky else json.dumps({"informacia": "Žiadne e-maily nezodpovedajú hľadaniu."})
@@ -5295,7 +5376,7 @@ def tool_priprav_social_media_post(platforma: str, tema_alebo_id_clanku: str, ci
         "instrukcia_pre_ai": "Zostav profesionálny príspevok na zadané sociálne siete. Použi úderný B2B hook v prvej vete, formátovanie odrážkami, relevantné priemyselné hashtagy a priamu výzvu k akcii (CTA) s odkazom na web."
     })
 
-def tool_priprav_koncept_emailu(prijemca_email_alebo_nazov: str, pokyny_alebo_text_spravy: str, predmet: Optional[str] = None, povodny_email_id: Optional[int] = None, vyrobne_cislo_stroja: Optional[str] = None, prilozit_dokument_model: Optional[str] = None, prilozit_dokument_id: Optional[int] = None, prilozit_dokument_pole: Optional[str] = None) -> str:
+def tool_priprav_koncept_emailu(prijemca_email_alebo_nazov: str, pokyny_alebo_text_spravy: str, predmet: Optional[str] = None, povodny_email_id: Optional[int] = None, vyrobne_cislo_stroja: Optional[str] = None, prilozit_dokument_model: Optional[str] = None, prilozit_dokument_id: Optional[int] = None, prilozit_dokument_pole: Optional[str] = None, je_obchodna_komunikacia: Optional[bool] = False) -> str:
     """
     🧠 ISAS SMART MAIL DRAFTER: Pripraví profesionálny koncept (DRAFT) e-mailu priamo do poštovej schránky majiteľa/dispečera.
     E-mail sa NEODOŠLE klientovi, ale bezpečne uloží do priečinka Koncepty (Drafts) na IMAP serveri cez Celery.
@@ -5307,11 +5388,13 @@ def tool_priprav_koncept_emailu(prijemca_email_alebo_nazov: str, pokyny_alebo_te
     'prilozit_dokument_model' je voliteľný názov modelu pre prílohu (napr. 'CenovaPonuka', 'VystavenaFaktura', 'ServisnyZaznam', 'TechnickaSpecifikacia', 'ServisovaneZariadenie', 'MegaZaloha').
     'prilozit_dokument_id' je voliteľné ID záznamu v databáze.
     'prilozit_dokument_pole' je voliteľný názov poľa súboru/fotografie (napr. 'obrazok_na_webe', 'foto_pred', 'foto_po', 'subor_schema', 'qr_kod'). Podporuje aj viacero polí oddelených čiarkou: 'foto_pred,foto_po'.
+    'je_obchodna_komunikacia' nastavte na True vždy, ak ide o obchodnú ponuku, akvizíciu, novinku, zľavu alebo marketingové/promo oslovenie (bez ohľadu na jazyk správy), aby sa automaticky pridala možnosť odhlásenia.
     """
     try:
         EmailovyUcet = apps.get_model('ISASaplikacia', 'EmailovyUcet')
         EmailovaSprava = apps.get_model('ISASaplikacia', 'EmailovaSprava')
         EmailPriloha = apps.get_model('ISASaplikacia', 'EmailPriloha')
+        EmailOptOut = apps.get_model('ISASaplikacia', 'EmailOptOut')
         Zakaznik = apps.get_model('Evidencia', 'Zakaznik')
         Dodavatel = apps.get_model('Evidencia', 'Dodavatel')
         SukromnaOsoba = apps.get_model('Evidencia', 'SukromnaOsoba')
@@ -5344,10 +5427,13 @@ def tool_priprav_koncept_emailu(prijemca_email_alebo_nazov: str, pokyny_alebo_te
             try: safe_priloha_doc_id = int(str(prilozit_dokument_id).strip())
             except ValueError: safe_priloha_doc_id = None
 
+        je_odpoved_na_email = False
+
         # 1. Režim A: Odpoveď na existujúci e-mail (100% THREADING INTEGRITA)
         if safe_povodny_mail_id:
             povodny_mail = EmailovaSprava.objects.select_related('ucet', 'zakaznik', 'dodavatel', 'zamestnanec').filter(id=safe_povodny_mail_id).first()
             if povodny_mail:
+                je_odpoved_na_email = True
                 ucet = povodny_mail.ucet
                 in_reply_to_msg_id = povodny_mail.message_id or ""
                 to_addr = povodny_mail.odosielatel.split('<')[-1].replace('>', '').strip() if povodny_mail.odosielatel else None
@@ -5567,14 +5653,69 @@ def tool_priprav_koncept_emailu(prijemca_email_alebo_nazov: str, pokyny_alebo_te
 
         else:
             podpis_html = "<p style='margin-top:16px;'>S pozdravom,<br><b>Tím servisu</b></p>"
-        
+
+        safe_je_obchodna = (
+            je_obchodna_komunikacia is True
+            or str(je_obchodna_komunikacia).strip().lower() in ['true', '1', 'ano', 'áno', 'yes']
+        )
+        je_interny_zamestnanec = isinstance(crm_entity, Zamestnanec)
+        je_novy_externy_kontakt = (not je_odpoved_na_email) and (crm_entity is None)
+        text_na_detekciu = f"{final_subject or ''} {pokyny_alebo_text_spravy or ''}"
+        ma_obchodny_charakter = bool(re.search(
+            r'(?i)(?<!\w)('
+            r'ponuk\w*|nab[íi]d\w*|'
+            r'akviz\w*|spolupr[áa]c\w*|'
+            r'z[ľl]av\w*|slev\w*|'
+            r'akci[íiaeouy]\w*|akciov\w*|ak[čc]n[íiy]\w*|'
+            r'katal[óo]g\w*|cenn[íi]k\w*|cen[íi]k\w*|'
+            r'predstavujeme|p[řr]edstavujeme|'
+            r'sp[úu][šs][ťt]a\w*|spou[šs]t[íi]\w*|spusten\w*|spu[šs]t[eě]n\w*|'
+            r'uv[áa]dz\w*|uv[áa]d[íi]\w*|'
+            r'novink\w*|promo\w*|newsletter\w*|'
+            r'v[ýy]hodn\w*|zv[ýy]hodn\w*|'
+            r'zdarma|zadarmo|bezplatn\w*|'
+            r'poz[ýy]vame|zveme|pozv[áa]nk\w*|'
+            r'prezent[áa]c\w*|prezentac\w*|'
+            r'sk[úu][šs]obn\w*|zku[šs]ebn\w*|'
+            r'obchodn[éeyýi]\w*|'
+            r'objednaj\w*|objednej\w*'
+            r')(?!\w)',
+            text_na_detekciu
+        ))
+        je_obchodny_alebo_studeny = (not je_interny_zamestnanec) and (
+            safe_je_obchodna or ((not je_odpoved_na_email) and (je_novy_externy_kontakt or ma_obchodny_charakter))
+        )
+
+        opt_out_zaznam = EmailOptOut.objects.filter(email__iexact=to_addr, aktivny=True).first()
+        je_opt_out = bool(opt_out_zaznam)
+        if opt_out_zaznam and (je_obchodny_alebo_studeny or (opt_out_zaznam.rozsah == 'KOMPLETNY' and not je_odpoved_na_email)):
+            return json.dumps({
+                "error": (
+                    f"Príjemca '{to_addr}' je evidovaný v opt-out zozname ({opt_out_zaznam.get_rozsah_display()}). "
+                    "Vytvorenie tohto e-mailového konceptu bolo automaticky zablokované."
+                )
+            })
+
+        obchodna_paticka_html = ""
+        obchodna_paticka_text = ""
+        if je_obchodny_alebo_studeny:
+            obchodna_paticka_html = (
+                "<p style='margin: 12px 0 0 0; font-size: 11px; color: #94a3b8; line-height: 1.4;'>"
+                "Ak ide o obchodnú alebo akvizičnú komunikáciu a neprajete si dostávať podobné správy, "
+                "odpovedzte prosím na tento e-mail so slovom <b>NEZASIELAŤ</b> a Vašu adresu okamžite vyradíme z ďalšej komunikácie."
+                "</p>"
+            )
+            obchodna_paticka_text = (
+                "\n\n---\nAk si neprajete dostávať obchodné ponuky, odpovedzte prosím na tento e-mail so slovom NEZASIELAŤ."
+            )
+
         final_html = (
             f"<div style=\"font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; "
             f"font-size: 14.5px; line-height: 1.6; color: #1e293b; max-width: 680px;\">"
             f"<p style='margin: 0 0 12px 0;'>{oslovenie}</p>"
             f"{stroj_kontext_html}"
             f"<div style='margin: 12px 0;'>{obsah_html}</div>"
-            f"<div style='margin-top: 16px; border-top: 1px solid #e2e8f0; padding-top: 12px;'>{podpis_html}</div>"
+            f"<div style='margin-top: 16px; border-top: 1px solid #e2e8f0; padding-top: 12px;'>{podpis_html}{obchodna_paticka_html}</div>"
             f"</div>"
         )
 
@@ -5679,7 +5820,7 @@ def tool_priprav_koncept_emailu(prijemca_email_alebo_nazov: str, pokyny_alebo_te
                 predmet=final_subject,
                 datum_prijatia=timezone.now(),
                 telo_html=final_html,
-                telo_text=cisty_text,
+                telo_text=f"{cisty_text}{obchodna_paticka_text}",
                 precitane=True,
                 zlozka='DRAFTS',
                 zakaznik_id=zak_id,
@@ -5726,6 +5867,17 @@ def tool_priprav_koncept_emailu(prijemca_email_alebo_nazov: str, pokyny_alebo_te
         odkaz_na_koncept = f"/admin/ISASaplikacia/emailovasprava/{novy_koncept.id}/change/"
         prilohy_popis = ", ".join([a['nazov'] for a in pripravene_prilohy]) if pripravene_prilohy else "Žiadna"
         
+        spam_upozornenie = (
+            " ⚠️ PRÁVNA POZNÁMKA: Príjemca nie je evidovaný v CRM a nejde o odpoveď na prijatý e-mail. "
+            "Pred ručným odoslaním konceptu overte, že máte predchádzajúci súhlas príjemcu alebo odpovedáte na jeho vlastný dopyt (zákaz nevyžiadanej pošty)."
+            if je_novy_externy_kontakt else ""
+        )
+        opt_out_upozornenie = (
+            " 🚫 POZOR: Príjemca je evidovaný v opt-out zozname (NEZASIELAŤ) pre obchodnú komunikáciu. "
+            "Koncept bol vytvorený iba ako neobchodná / servisná správa — pred odoslaním overte, že neobsahuje marketingový obsah."
+            if je_opt_out else ""
+        )
+
         return json.dumps({
             "status": "success",
             "koncept_id": novy_koncept.id,
@@ -5736,7 +5888,9 @@ def tool_priprav_koncept_emailu(prijemca_email_alebo_nazov: str, pokyny_alebo_te
             "stav_pocitadla_zahrnuty": bool(stroj_kontext_html),
             "prilohy_zahrnute": prilohy_popis,
             "pocet_priloh": len(pripravene_prilohy),
-            "informacia": f"Koncept e-mailu pre '{to_addr}' s predmetom '{final_subject}' bol úspešne pripravený a uložený{' s prílohami: ' + prilohy_popis if pripravene_prilohy else ''}. Pre zobrazenie vlož používateľovi odkaz: [📧 Otvoriť koncept e-mailu]({odkaz_na_koncept})"
+            "vyzaduje_kontrolu_suhlasu": je_novy_externy_kontakt,
+            "je_v_opt_out_zozname": je_opt_out,
+            "informacia": f"Koncept e-mailu pre '{to_addr}' s predmetom '{final_subject}' bol úspešne pripravený a uložený{' s prílohami: ' + prilohy_popis if pripravene_prilohy else ''}.{spam_upozornenie}{opt_out_upozornenie} Pre zobrazenie vlož používateľovi odkaz: [📧 Otvoriť koncept e-mailu]({odkaz_na_koncept})"
         })
 
     except Exception as e:
@@ -6054,6 +6208,7 @@ def ask_isas_ai(user_question: Optional[str] = None, history_text: str = "", aud
                 if not ma_financie:
                     parsed.pop("erp_uctovne_nastavenia", None)
                     parsed.pop("neprecitane_maily", None)
+                    parsed.pop("opt_out_zoznam_nezasilat", None)
                     f_udaje = parsed.get("firemne_udaje")
                     if isinstance(f_udaje, dict):
                         for k in ("iban", "swift", "nazov_banky", "email_fakturacia", "email_uctovnicky"):
@@ -6212,6 +6367,7 @@ def ask_isas_ai(user_question: Optional[str] = None, history_text: str = "", aud
                         "telefon_vratnica", "web", "vyzaduje_povolenie_vstupu",
                         "instrukcie_vstupu", "ma_vlastnu_sablonu_vstupu",
                         "url_vstupneho_portalu", "adresa", "gps_suradnice",
+                        "ma_aktivny_email_opt_out",
                     }
                     povolene_objednavka_polia = {
                         "cislo_interne", "po_number_klienta", "zakaznik", "stav",
@@ -6266,6 +6422,7 @@ def ask_isas_ai(user_question: Optional[str] = None, history_text: str = "", aud
                         "oslovenie", "telefon", "email", "web", "b2b_zlava_percenta",
                         "predvolena_splatnost_dni", "reklamacna_lehota_dni",
                         "fakturacne_udaje", "adresa", "gps_suradnice",
+                        "ma_aktivny_email_opt_out",
                     }
                     povolene_ponuka_polia_ob = {
                         "cislo_ponuky", "zakaznik", "zariadenie", "typy_prac",

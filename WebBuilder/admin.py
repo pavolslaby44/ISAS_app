@@ -1,8 +1,6 @@
 import json
 import logging
 
-from datetime import datetime, timedelta
-
 from django.conf import settings
 from django.contrib import admin, messages
 from django.core.exceptions import ObjectDoesNotExist
@@ -19,6 +17,7 @@ from ISASaplikacia.admin_core import (
     ISASPremiumAdmin,
     ISASSingletonAdminMixin,
     ISASReadOnlyAdminMixin,
+    ISASBaseRelatedFilter,
     ISASRelatedZakaznikFilter,
     ISASDateRangeFilter,
 )
@@ -104,6 +103,11 @@ class HttpStatusGroupFilter(admin.SimpleListFilter):
         if val == 'timeout':
             return queryset.filter(Q(http_status__isnull=True) | Q(http_status=0))
         return queryset
+
+class WebhookEndpointFilter(ISASBaseRelatedFilter):
+    title, parameter_name, isas_default_field, isas_icon, isas_order_by = (
+        '🔗 Endpoint', 'endpoint', 'endpoint', '🔗', 'nazov'
+    )
 
 @admin.register(WebNastavenia)
 class WebNastaveniaAdmin(ISASSingletonAdminMixin, ISASPremiumAdmin):
@@ -265,6 +269,7 @@ class WebBlokAdmin(ISASPremiumAdmin):
     isas_title = "🧱 Webové bloky"
     isas_preloader_text = "⏳ Vstupujete do sekcie web blokov..."
     isas_enable_fast_action = True
+    isas_modern_toggles = True
     isas_clean_choice_fields = {
         'typ': '🧱 Zvoľte typ bloku',
         'verzia': '🏷️ Zvoľte verziu bloku',
@@ -356,7 +361,7 @@ class WebBlokAdmin(ISASPremiumAdmin):
         )[:10]
 
     def format_detective_result(self, obj):
-        safe_name = escape(obj.nadpis or obj.get_typ_display())
+        safe_name = obj.nadpis or obj.get_typ_display()
         return {
             'id': obj.id,
             'name': safe_name,
@@ -440,6 +445,7 @@ class WebFAQAdmin(ISASPremiumAdmin):
     isas_title = "❓ Často kladené otázky (FAQ)"
     isas_preloader_text = "⏳ Vstupujete do sekcie otázok a odpovedí..."
     isas_enable_fast_action = True
+    isas_modern_toggles = True
     isas_delete_success_message = "✨ FAQ otázky boli úspešne odstránené!"
     isas_clean_choice_fields = {
         'kategoria': '📂 Zvoľte kategóriu otázky',
@@ -480,8 +486,8 @@ class WebFAQAdmin(ISASPremiumAdmin):
         ).distinct()[:10]
 
     def format_detective_result(self, obj):
-        safe_name = escape(obj.otazka or "(Bez otázky)")
-        kategoria_nazov = escape(obj.get_kategoria_display() if hasattr(obj, 'get_kategoria_display') else str(obj.kategoria or "VŠEOBECNÉ"))
+        safe_name = obj.otazka or "(Bez otázky)"
+        kategoria_nazov = obj.get_kategoria_display() if hasattr(obj, 'get_kategoria_display') else str(obj.kategoria or "VŠEOBECNÉ")
         return {
             'id': obj.id,
             'name': safe_name,
@@ -521,6 +527,7 @@ class ClanokAdmin(ISASPremiumAdmin):
     isas_title = "📰 Odborné články (Blog)"
     isas_preloader_text = "⏳ Vstupujete do sekcie článkov a blogov..."
     isas_enable_fast_action = True
+    isas_modern_toggles = True
     isas_delete_success_message = "✨ Odborné články boli úspešne odstránené!"
     isas_clean_choice_fields = {
         'kategoria': '📂 Zvoľte kategóriu článku',
@@ -582,18 +589,18 @@ class ClanokAdmin(ISASPremiumAdmin):
         ).distinct()[:10]
 
     def format_detective_result(self, obj):
-        safe_name = escape(obj.nadpis or "(Bez nadpisu)")
-        kategoria_nazov = escape(obj.get_kategoria_display() or "BLOG")
+        safe_name = obj.nadpis or "(Bez nadpisu)"
+        kategoria_nazov = obj.get_kategoria_display() or "BLOG"
 
         # Dynamické rozlíšenie stavu publikovania pre Detective lištu
         if not obj.je_aktivny:
             stav_badge = "🔴 Koncept"
-        elif obj.datum_vydania and obj.datum_vydania > datetime.now().date():
+        elif obj.datum_vydania and obj.datum_vydania > timezone.now().date():
             stav_badge = f"⏳ Plánované ({obj.datum_vydania.strftime('%d.%m.')})"
         else:
             stav_badge = "🚀 Publikované"
 
-        autor_info = f" • ✍️ {escape(obj.autor)}" if obj.autor else ""
+        autor_info = f" • ✍️ {obj.autor}" if obj.autor else ""
         cas_info = f" • ⏱️ {obj.cas_citania} min" if getattr(obj, 'cas_citania', None) else ""
 
         return {
@@ -656,6 +663,7 @@ class WebhookEndpointAdmin(ISASPremiumAdmin):
     isas_title = "🔗 API Integrácie (Webhooks)"
     isas_preloader_text = "⏳ Vstupujete do sekcie webhook endpointov..."
     isas_enable_fast_action = True
+    isas_modern_toggles = True
     isas_clean_choice_fields = {
         'udalost': '⚡ Zvoľte sledovanú udalosť',
     }
@@ -695,10 +703,10 @@ class WebhookEndpointAdmin(ISASPremiumAdmin):
         ).select_related('zakaznik')[:10]
 
     def format_detective_result(self, obj):
-        klient_nazov = escape(getattr(obj.zakaznik, 'Nazov_spolocnosti', str(obj.zakaznik)))
-        nazov_endpointu = escape(obj.nazov or obj.url)
+        klient_nazov = getattr(obj.zakaznik, 'Nazov_spolocnosti', str(obj.zakaznik))
+        nazov_endpointu = obj.nazov or obj.url
         safe_name = f"{klient_nazov} — {nazov_endpointu}"
-        udalost_label = escape(obj.get_udalost_display() if hasattr(obj, 'get_udalost_display') else str(obj.udalost))
+        udalost_label = obj.get_udalost_display() if hasattr(obj, 'get_udalost_display') else str(obj.udalost)
         
         return {
             'id': obj.id,
@@ -831,9 +839,15 @@ class WebhookLogAdmin(ISASReadOnlyAdminMixin, ISASPremiumAdmin):
     isas_magia_kwargs = {
         'live_search_endpoint': "detective-search/",
         'live_search_ikona': "📜",
+        'bez_tlacidla_odstranit': True,
         'custom_buttons_html': '<button type="button" id="btn-resend-failed" class="isas-action-btn btn-orange" data-action="resend_failed">🔄 Znovu odoslať zlyhané</button>',
         'ignore_default_action_ids': ['btn-resend-failed'],
     }
+
+    def fast_action_custom_validation(self, request, action_type, valid_ids, **kwargs):
+        if action_type == 'delete':
+            return JsonResponse({"status": "error", "message": "🔒 Auditné záznamy webhookov nie je možné mazať."}, status=403)
+        return None
 
     isas_action_modals = {
         'btn-resend-failed': {
@@ -862,8 +876,8 @@ class WebhookLogAdmin(ISASReadOnlyAdminMixin, ISASPremiumAdmin):
         ).select_related('endpoint', 'endpoint__zakaznik')[:10]
 
     def format_detective_result(self, obj):
-        endpoint_nazov = escape(obj.endpoint.nazov if obj.endpoint else "Neznámy endpoint")
-        event_str = escape(str(obj.event_id))
+        endpoint_nazov = obj.endpoint.nazov if obj.endpoint else "Neznámy endpoint"
+        event_str = str(obj.event_id)
         safe_name = f"#{event_str[:8]} • {endpoint_nazov}"
         
         status_label = f"HTTP {obj.http_status}" if obj.http_status else "BEZ ODPOVEDE"
@@ -882,7 +896,7 @@ class WebhookLogAdmin(ISASReadOnlyAdminMixin, ISASPremiumAdmin):
     list_display_links = ['get_event_vizual']
     list_select_related = ['endpoint', 'endpoint__zakaznik']
     isas_date_filter_field = 'cas_odoslania'
-    list_filter = ['uspesne', 'pokus', HttpStatusGroupFilter, ISASDateRangeFilter]
+    list_filter = ['uspesne', 'pokus', HttpStatusGroupFilter, WebhookEndpointFilter, ISASDateRangeFilter]
     search_fields = ['event_id', 'endpoint__nazov', 'odpoved_servera']
     ordering = ['-cas_odoslania']
     

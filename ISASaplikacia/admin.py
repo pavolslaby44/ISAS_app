@@ -21,12 +21,15 @@ from decimal import Decimal
 from django.core.exceptions import PermissionDenied
 
 from .admin_core import (
+    ISASDateRangeFilter,
     ISASPremiumAdmin,
     ISASReadOnlyAdminMixin,
     ISASRelatedUserFilter,
+    ISASRelatedZakaznikFilter,
     ISASSingletonAdminMixin,
 )
 from .models import (
+    EmailOptOut,
     EmailovaSprava,
     EmailovyUcet,
     EmailPriloha,
@@ -308,6 +311,8 @@ class CustomUserAdmin(ISASPremiumAdmin, UserAdmin):
                 sprava = f"✅ Úspešne aktivovaných {count} používateľských účtov!{info_extra}"
             return JsonResponse({"status": "success", "message": sprava})
 
+        return super().perform_fast_action(request, action_type, valid_ids, **kwargs)
+
     # --- 🪝 HOOKS PRE DETECTIVE SEARCH ---
     def get_detective_queryset(self, request, term):
         return self.get_queryset(request).filter(
@@ -320,8 +325,8 @@ class CustomUserAdmin(ISASPremiumAdmin, UserAdmin):
         rola = "👑 Superadmin" if obj.is_superuser else ("🛠️ Staff" if obj.is_staff else "👤 Používateľ")
         return {
             'id': obj.id, 
-            'name': escape(name_str), 
-            'search_value': escape(obj.username),
+            'name': name_str, 
+            'search_value': obj.username,
             'rola': rola,
             'cat': '👤 POUŽÍVATEĽ'
         }
@@ -424,8 +429,8 @@ class CustomGroupAdmin(ISASPremiumAdmin, GroupAdmin):
         perm_count = getattr(obj, 'perm_count', 0)
         return {
             'id': obj.id, 
-            'name': escape(obj.name), 
-            'search_value': escape(obj.name),
+            'name': obj.name, 
+            'search_value': obj.name,
             'rola': f"Práva: {perm_count}",
             'cat': '🛡️ SKUPINA'
         }
@@ -527,18 +532,21 @@ class FiremnaIdentitaAdmin(ISASSingletonAdminMixin, ISASPremiumAdmin):
         return None
 
     def perform_fast_action(self, request, action_type, valid_ids, **kwargs):
-        with transaction.atomic():
-            zaznamy = self.model.objects.select_for_update().filter(id__in=valid_ids)
-            
-            # 1. Fyzické zmazanie súborov z disku (Django to samo neurobí)
-            for zaznam in zaznamy:
-                if zaznam.logo: zaznam.logo.delete(save=False)
-                if zaznam.peciatka_podpis: zaznam.peciatka_podpis.delete(save=False)
+        if action_type == 'delete':
+            with transaction.atomic():
+                zaznamy = self.model.objects.select_for_update().filter(id__in=valid_ids)
                 
-            # 2. Zmazanie z DB. ISASAuditQuerySet sa automaticky postará o vytvorenie Audit Logu!
-            zaznamy.delete()
-            
-        return JsonResponse({"status": "success", "message": "✨ Firemná identita bola úspešne resetovaná! Systém je čistý. 🧹"})
+                # 1. Fyzické zmazanie súborov z disku (Django to samo neurobí)
+                for zaznam in zaznamy:
+                    if zaznam.logo: zaznam.logo.delete(save=False)
+                    if zaznam.peciatka_podpis: zaznam.peciatka_podpis.delete(save=False)
+                    
+                # 2. Zmazanie z DB. ISASAuditQuerySet sa automaticky postará o vytvorenie Audit Logu!
+                zaznamy.delete()
+                
+            return JsonResponse({"status": "success", "message": "✨ Firemná identita bola úspešne resetovaná! Systém je čistý. 🧹"})
+
+        return super().perform_fast_action(request, action_type, valid_ids, **kwargs)
     
     @admin.display(description='🏢 Core Identita')
     def get_nazov_vizual(self, obj):
@@ -1048,8 +1056,8 @@ class EmailovyUcetAdmin(ISASPremiumAdmin):
         ).values('id', 'nazov', 'email_adresa')[:30]
 
     def format_detective_result(self, obj):
-        safe_name = escape(obj['nazov'] or "Neznámy účet")
-        safe_email = escape(obj['email_adresa'] or "Bez e-mailu")
+        safe_name = obj['nazov'] or "Neznámy účet"
+        safe_email = obj['email_adresa'] or "Bez e-mailu"
         return {
             'id': obj['id'], 
             'name': safe_name, 
@@ -1122,6 +1130,155 @@ class EmailovyUcetAdmin(ISASPremiumAdmin):
             return render_isas_badge("Aktívny zber", "✅", "success")
         return render_isas_badge("Pozastavené", "⏸️", "danger")
 
+@admin.register(EmailOptOut)
+class EmailOptOutAdmin(ISASPremiumAdmin):
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.select_related('zakaznik', 'dodavatel', 'sukromna_osoba', 'zdrojova_sprava')
+
+    list_display = (
+        'get_optout_card',
+        'get_subjekt_card',
+        'get_zdroj_card',
+        'get_status_card',
+    )
+    list_display_links = ('get_optout_card',)
+    list_filter = ('aktivny', 'zdroj', 'rozsah', ISASRelatedZakaznikFilter, ISASDateRangeFilter)
+    isas_date_filter_field = 'vytvorene'
+    isas_clean_choice_fields = {
+        'zdroj': '📥 Vyberte zdroj záznamu',
+        'rozsah': '⚖️ Vyberte rozsah zákazu',
+    }
+    search_fields = (
+        'email',
+        'dovod',
+        'poznamka',
+        'zakaznik__Nazov_spolocnosti',
+        'zakaznik__ico',
+        'dodavatel__Nazov_spolocnosti',
+        'dodavatel__ico',
+        'sukromna_osoba__meno_a_priezvisko',
+    )
+    raw_id_fields = ('zdrojova_sprava', 'zakaznik', 'dodavatel', 'sukromna_osoba')
+    readonly_fields = ('vytvorene', 'aktualizovane', 'zdrojova_sprava')
+    ordering = ('-vytvorene', 'pk')
+
+    fieldsets = (
+        ('🚫 1. IDENTIFIKÁCIA A STAV ZÁKAZU', {
+            'fields': (
+                ('email', 'aktivny'),
+                ('zdroj', 'rozsah'),
+            ),
+            'description': 'E-mailová adresa zaradená na opt-out zoznam (NEZASIELAŤ). Blokuje automatickú tvorbu obchodných ponúk.'
+        }),
+        ('🏢 2. PREPOJENIE NA CRM SUBJEKT', {
+            'fields': (
+                ('zakaznik', 'dodavatel', 'sukromna_osoba'),
+                'zdrojova_sprava',
+            ),
+            'description': 'Automatické alebo ručné priradenie adresy ku konkrétnemu subjektu v ERP.'
+        }),
+        ('📝 3. DÔVOD A ČASOVÁ PEČIATKA', {
+            'fields': (
+                'dovod',
+                'poznamka',
+                ('vytvorene', 'aktualizovane'),
+            ),
+            'classes': ('vivid-box-flash',),
+            'description': 'Preukázateľný dôvod vyradenia pre prípad kontroly GDPR / ÚOOÚ.'
+        }),
+    )
+
+    # --- ⚙️ ISAS CORE KONFIGURÁCIA ---
+    isas_title = "🚫 Opt-out Zoznam (NEZASIELAŤ)"
+    isas_preloader_text = "⏳ Načítavam opt-out zoznam obchodnej komunikácie..."
+    isas_delete_success_message = "✅ Odstránených {count} opt-out záznamov."
+    isas_magia_kwargs = {
+        'live_search_endpoint': "detective-search/",
+        'live_search_ikona': "🚫",
+    }
+    isas_vivid_box_flash = True
+
+    def has_delete_permission(self, request, obj=None):
+        if not request.user.is_superuser:
+            return False
+        return super().has_delete_permission(request, obj)
+
+    # --- 🪝 HOOKS PRE FAST ACTION ---
+    def fast_action_custom_validation(self, request, action_type, valid_ids, **kwargs):
+        if action_type == 'delete' and not request.user.is_superuser:
+            return JsonResponse({"status": "error", "message": "⛔ Len SuperAdmin môže mazať záznamy zo zákazu oslovovania!"}, status=403)
+        return None
+
+    # --- 🪝 HOOKS PRE DETECTIVE SEARCH ---
+    def get_detective_queryset(self, request, term):
+        clean_term = (term or '').strip()
+        if not clean_term:
+            return self.get_queryset(request).none()
+        return self.get_queryset(request).filter(
+            Q(email__icontains=clean_term) |
+            Q(dovod__icontains=clean_term) |
+            Q(poznamka__icontains=clean_term) |
+            Q(zakaznik__Nazov_spolocnosti__icontains=clean_term) |
+            Q(zakaznik__ico__icontains=clean_term) |
+            Q(dodavatel__Nazov_spolocnosti__icontains=clean_term) |
+            Q(dodavatel__ico__icontains=clean_term) |
+            Q(sukromna_osoba__meno_a_priezvisko__icontains=clean_term)
+        ).order_by('-vytvorene', 'pk')[:30]
+
+    def format_detective_result(self, obj):
+        email_str = obj.email or ""
+        subjekt = obj.zakaznik or obj.dodavatel or obj.sukromna_osoba
+        subjekt_str = str(subjekt) if subjekt else "Externý kontakt mimo CRM"
+        datum = obj.vytvorene.strftime('%d.%m.%Y %H:%M') if obj.vytvorene else ""
+        stav_str = '🚫 OPT-OUT' if obj.aktivny else '⚪ NEAKTÍVNY'
+        return {
+            'id': obj.id,
+            'icon': '🚫' if obj.aktivny else '⚪',
+            'name': email_str,
+            'search_value': email_str,
+            'rola': f"{stav_str} | 🏢 {subjekt_str}",
+            'date': datum,
+            'cat': stav_str,
+        }
+
+    @admin.display(description='🚫 E-mail & Čas', ordering='email')
+    def get_optout_card(self, obj):
+        datum = obj.vytvorene.strftime('%d.%m.%Y %H:%M') if obj.vytvorene else "Neznámy"
+        if obj.aktivny:
+            bg, shadow, icon = '#ef4444, #dc2626', 'rgba(239, 68, 68, 0.3)', '🚫'
+        else:
+            bg, shadow, icon = '#64748b, #475569', 'rgba(100, 116, 139, 0.3)', '⚪'
+        return render_isas_avatar(icon, obj.email, f"🕒 {datum}", bg, shadow)
+
+    @admin.display(description='🏢 CRM Subjekt & Rozsah')
+    def get_subjekt_card(self, obj):
+        subjekt = obj.zakaznik or obj.dodavatel or obj.sukromna_osoba
+        subjekt_nazov = str(subjekt) if subjekt else "Mimo CRM"
+        rozsah_str = obj.get_rozsah_display() if hasattr(obj, 'get_rozsah_display') else obj.rozsah
+        hidden_id = render_isas_hidden_data("optout-id-hidden", obj.id)
+        obsah = render_isas_layout(format_html('{}{}',
+            render_isas_key_value("Subjekt", subjekt_nazov, icon="🏢"),
+            render_isas_key_value("Rozsah", rozsah_str, icon="⚖️"),
+        ), layout="col", center=True, gap=4)
+        return format_html('{}{}', hidden_id, obsah)
+
+    @admin.display(description='📥 Zdroj & Dôvod', ordering='zdroj')
+    def get_zdroj_card(self, obj):
+        zdroj_str = obj.get_zdroj_display() if hasattr(obj, 'get_zdroj_display') else obj.zdroj
+        dovod_str = (obj.dovod or "-")[:60]
+        return render_isas_layout(format_html('{}{}',
+            render_isas_key_value("Zdroj", zdroj_str, icon="📥"),
+            render_isas_key_value("Dôvod", dovod_str, icon="📝"),
+        ), layout="col", center=True, gap=4)
+
+    @admin.display(description='🛡️ Stav Zákazu', ordering='aktivny')
+    def get_status_card(self, obj):
+        if obj.aktivny:
+            return render_isas_badge(text="Blokovaný", icon="🚫", type_color="danger")
+        return render_isas_badge(text="Povolený", icon="✅", type_color="success")
+
+
 @admin.register(EmailovaSprava)
 class EmailovaSpravaAdmin(ISASReadOnlyAdminMixin, ISASPremiumAdmin):
     change_list_template = "admin/sablonapremaily.html"
@@ -1153,16 +1310,17 @@ class ISASAuditLogAdmin(ISASReadOnlyAdminMixin, ISASPremiumAdmin):
         'get_zmeny_card'
     )    
     list_display_links = ('get_akcia_card',)
-    list_filter = ('cas_vykonania', 'akcia', ISASRelatedUserFilter)
+    list_filter = (ISASDateRangeFilter, 'akcia', ISASRelatedUserFilter)
+    isas_date_filter_field = 'cas_vykonania'
     isas_user_filter_field = 'vykonal'
+    isas_user_filter_allow_auto = True
     readonly_fields = ('cas_vykonania', 'vykonal', 'content_type', 'object_id', 'akcia', 'pocet_zmien', 'isas_metadata_json_zmeny', 'zaznam')
 
     # Znak '=' pred object_id vynúti presnú zhodu (využije index). 
     search_fields = ('=object_id', 'vykonal__username', 'content_type__model')
     
     def has_view_permission(self, request, obj=None):
-        super().has_view_permission(request, obj)
-        return True # Povolí nádherný Read-Only detail! 👀
+        return super().has_view_permission(request, obj)
 
     fieldsets = (
         ('🛡️ Základné informácie o akcii', {
@@ -1217,10 +1375,10 @@ class ISASAuditLogAdmin(ISASReadOnlyAdminMixin, ISASPremiumAdmin):
         
         return {
             'id': obj.id, 
-            'name': escape(titulok),
-            'search_value': escape(str(obj.object_id)),
-            'rola': f"👤 {escape(user_name)}",
-            'date': escape(datum),
+            'name': titulok,
+            'search_value': str(obj.object_id),
+            'rola': f"👤 {user_name}",
+            'date': datum,
             'cat': '🛡️ AUDIT LOG'
         }
 
@@ -1295,8 +1453,7 @@ class SpotifyTokenAdmin(ISASReadOnlyAdminMixin, ISASPremiumAdmin):
     search_fields = ('user__username', 'user__email', 'user__first_name', 'user__last_name')
     
     def has_delete_permission(self, request, obj=None):
-        super().has_delete_permission(request, obj)
-        return True
+        return super(ISASReadOnlyAdminMixin, self).has_delete_permission(request, obj)
 
     readonly_fields = ('user', 'access_token_masked', 'refresh_token_masked', 'expires_at', 'vytvorene', 'upravene')
     fieldsets = (
@@ -1356,9 +1513,9 @@ class SpotifyTokenAdmin(ISASReadOnlyAdminMixin, ISASPremiumAdmin):
         spotify_acc = obj.spotify_account_name or "Neznámy účet"
         return {
             'id': obj.id, 
-            'name': escape(name_str), 
-            'search_value': escape(obj.user.username),
-            'rola': f"Účet: {escape(spotify_acc)}",
+            'name': name_str, 
+            'search_value': obj.user.username,
+            'rola': f"Účet: {spotify_acc}",
             'cat': '🎵 SPOTIFY'
         }
 
@@ -1661,9 +1818,9 @@ class StatLokalizaciaAdmin(ISASPremiumAdmin):
         return base_qs.filter(pk__in=zhody_pks).order_by('iso_kod')[:30]
 
     def format_detective_result(self, obj):
-        safe_nazov = escape(obj.nazov or "Neznámy štát")
-        safe_iso = escape(obj.iso_kod or "")
-        safe_mena = escape(obj.mena or "-")
+        safe_nazov = obj.nazov or "Neznámy štát"
+        safe_iso = obj.iso_kod or ""
+        safe_mena = obj.mena or "-"
 
         # 🛡️ 100% defenzívna konverzia sadzieb DPH voči None, float, int a neplatným typom
         def _bezpecny_decimal(val):
@@ -1679,12 +1836,12 @@ class StatLokalizaciaAdmin(ISASPremiumAdmin):
 
         eu_tag = "🇪🇺 EÚ" if getattr(obj, 'je_clen_eu', False) else "🌐 Non-EU"
         eas_val = str(getattr(obj, 'peppol_eas_kod', '') or '').strip()
-        eas_str = f" | EAS: {escape(eas_val)}" if eas_val else ""
+        eas_str = f" | EAS: {eas_val}" if eas_val else ""
 
         return {
             'id': obj.id,
             'name': f"{safe_nazov} ({safe_iso})",
-            'search_value': safe_iso,
+            'search_value': safe_iso or safe_nazov,
             'rola': f"{eu_tag} | Mena: {safe_mena} | DPH: {dph_z} % (zníž. {dph_n} %){eas_str}",
             'cat': '🗺️ ŠTÁT'
         }
@@ -1692,8 +1849,8 @@ class StatLokalizaciaAdmin(ISASPremiumAdmin):
     # --- 🎨 VIZUÁLNE METÓDY (100% DEFENSIVE VOČI NoneType) ---
     @admin.display(description='🗺️ Štát', ordering='iso_kod')
     def get_stat_card(self, obj):
-        iso = escape(obj.iso_kod or "??")
-        nazov = escape((obj.nazov or "Nenastavený štát")).upper()
+        iso = obj.iso_kod or "??"
+        nazov = (obj.nazov or "Nenastavený štát").upper()
         extra = render_isas_badge(f"ISO: {iso}", "🌍", "info", wrapper=False)
         return render_isas_avatar(
             "🗺️", 
@@ -1706,7 +1863,7 @@ class StatLokalizaciaAdmin(ISASPremiumAdmin):
 
     @admin.display(description='💰 Mena & DPH')
     def get_mena_dph_card(self, obj):
-        mena = escape(obj.mena or "-")
+        mena = obj.mena or "-"
         dph_z = obj.dph_zakladna if obj.dph_zakladna is not None else Decimal('0.00')
         dph_n = obj.dph_znizena if obj.dph_znizena is not None else Decimal('0.00')
         top_val = f"{mena} (Základ: {dph_z} %)"
@@ -1719,7 +1876,7 @@ class StatLokalizaciaAdmin(ISASPremiumAdmin):
     @admin.display(description='🇪🇺 EÚ & eFaktúra')
     def get_peppol_eu_card(self, obj):
         eu_badge = render_isas_badge("ČLEN EÚ", "🇪🇺", "success", wrapper=False) if obj.je_clen_eu else render_isas_badge("NON-EU", "🌐", "neutral", wrapper=False)
-        eas = escape(obj.peppol_eas_kod or "-")
+        eas = obj.peppol_eas_kod or "-"
         peppol_badge = render_isas_badge(f"EAS: {eas}", "📬", "info", wrapper=False)
         
         rezim = getattr(obj, 'efaktura_rezim', 'PEPPOL_DIRECT') or 'PEPPOL_DIRECT'
@@ -1776,7 +1933,7 @@ class StatLokalizaciaAdmin(ISASPremiumAdmin):
             badge_type = "warning"
 
         typ_popis = obj.get_lehota_faktury_typ_display() if hasattr(obj, 'get_lehota_faktury_typ_display') else str(obj.lehota_faktury_typ or "")
-        kratky_typ = escape(typ_popis.split('(')[0].strip() if '(' in typ_popis else typ_popis)
+        kratky_typ = typ_popis.split('(')[0].strip() if '(' in typ_popis else typ_popis
         
         return render_isas_layout(format_html('{}{}',
             render_isas_badge(badge_text, "⏳", badge_type, wrapper=False),

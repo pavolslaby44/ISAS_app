@@ -43,6 +43,7 @@ _web_patterns = [
 
     path('nastroje/', views.NastrojeView.as_view(), name='nastroje'),
     path('reklamacie/', views.ReklamaciaView.as_view(), name='reklamacie'),
+    path('ochrana-osobnych-udajov/', views.OchranaUdajovView.as_view(), name='ochrana_udajov'),
     
     path('kariera/', views.KarieraListView.as_view(), name='kariera_list'),
     path('kariera/<slug:slug>/', views.KarieraDetailView.as_view(), name='kariera_detail'),

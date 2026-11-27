@@ -686,7 +686,8 @@ def submit_inquiry(request):
         telefon = request.POST.get('telefon', '').strip()[:20]
         # 🛡️ ANTI-DoS OCHRANA: Tvrdý limit na dĺžku textu (5000 znakov bohato stačí na akýkoľvek dopyt)
         poziadavka = request.POST.get('poziadavka', '').strip()[:5000]
-        gdpr_suhlas = request.POST.get('gdpr_suhlas')
+        gdpr_raw = str(request.POST.get('gdpr_suhlas') or '').strip().lower()
+        gdpr_suhlas = gdpr_raw in ('on', 'true', '1', 'yes', 'ano')
         zariadenie_id = request.POST.get('zariadenie_id')
         znacka_id = request.POST.get('znacka_id')
         sluzba_id = request.POST.get('sluzba_id')
@@ -817,7 +818,7 @@ def submit_inquiry(request):
                 vystavil_za_klienta=vystavil_string,
                 specificky_email_pre_fakturu=email,
                 poznamka_klienta=final_poznamka,
-                interna_poznamka="Priama B2B objednávka z klientskej zóny." if is_b2b_direct else "Dopyt z verejného webu."
+                interna_poznamka="Priama B2B objednávka z klientskej zóny." if is_b2b_direct else f"Dopyt z verejného webu. {gdpr_zaznam}"
             )
             
             # 📸 Uloženie fotky z mobilu (Machine Passport)
@@ -896,7 +897,8 @@ def submit_inquiry(request):
                     else:
                         identifikator_zar = zaklad_nazov
 
-                    nova_objednavka.interna_poznamka = f"{prefix_zdroja} ({identifikator_zar}). Nahlásil: {firma} ({email}, {telefon})."
+                    gdpr_suffix = "" if is_b2b_direct else f" {gdpr_zaznam}"
+                    nova_objednavka.interna_poznamka = f"{prefix_zdroja} ({identifikator_zar}). Nahlásil: {firma} ({email}, {telefon}).{gdpr_suffix}"
                     nova_objednavka.save(update_fields=update_obj_fields)
 
             # 🎯 ISAS BIZNIS: Inteligentné párovanie služby a značky (so savepointom proti DataError)
@@ -1624,6 +1626,7 @@ class WebBaseMixin:
 
         # 🛒 BEZPEČNÉ PROSTREDIE KOŠÍKA (Data-Driven JSON bez rizika XSS a syntax erroru)
         b2b_klient_base, zlava_base = get_b2b_client_and_discount(self.request)
+        context['b2b_klient'] = b2b_klient_base
         dispecing_text = ""
         if globalne_nastavenia and globalne_nastavenia.pracovny_cas_od and globalne_nastavenia.pracovny_cas_do:
             vikend_str = "" if globalne_nastavenia.pracovat_vikendy else ", v pracovné dni"
@@ -2742,7 +2745,7 @@ class ReklamaciaView(WebBaseMixin, TemplateView):
             aktivne_zaruky_prace = []
             dnes = timezone.now().date()
             for sz in nedavne_servisy:
-                d_servisu = sz.vytvorene.date() if sz.vytvorene else None
+                d_servisu = to_date(getattr(sz, 'vytvorene', None))
                 if not d_servisu:
                     continue
                 for ts in sz.typ_servisu.all():
@@ -3264,19 +3267,42 @@ def generate_esg_audit(request):
         if not _is_valid_email_address(email):
             return JsonResponse({'status': 'error', 'message': 'Zadajte platný e-mail.'}, status=400)
 
+        b2b_klient_auth, _ = get_b2b_client_and_discount(request)
+        is_b2b_auth = bool(
+            b2b_klient_auth is not None
+            and request.user.is_authenticated
+            and getattr(request.user, 'is_active', False)
+        )
+        gdpr_raw = str(request.POST.get('gdpr_suhlas') or '').strip().lower()
+        gdpr_accepted = gdpr_raw in ('on', 'true', '1', 'yes', 'ano')
+
+        if not is_b2b_auth and not gdpr_accepted:
+            return JsonResponse({'status': 'error', 'message': 'Pre vygenerovanie a odoslanie auditu je nutný súhlas so spracovaním osobných údajov (GDPR).'}, status=400)
+
         try:
+            cas_suhlasu = timezone.now().strftime('%d.%m.%Y %H:%M:%S')
+            gdpr_zaznam = f"Vygenerované z webovej kalkulačky (ESG Audit). GDPR súhlas udelený: {cas_suhlasu} (IP: {ip_adresa})."
+
             # 1. Vytvorenie Leadu (Zákazník + Objednávka) s ochranou pred race condition
-            zakaznik = Zakaznik.objects.select_for_update().filter(email__iexact=email, je_interny_profil=False).first()
-            if not zakaznik:
-                try:
-                    with transaction.atomic():
-                        zakaznik = Zakaznik.objects.create(
-                            Nazov_spolocnosti=f"Lead ({email})",
-                            email=email,
-                            Ostatne='Vygenerované z webovej kalkulačky (ESG Audit).'
-                        )
-                except Exception:
-                    zakaznik = Zakaznik.objects.filter(email__iexact=email, je_interny_profil=False).first()
+            if is_b2b_auth:
+                zakaznik = b2b_klient_auth
+            else:
+                zakaznik = Zakaznik.objects.select_for_update().filter(email__iexact=email, je_interny_profil=False).first()
+                if not zakaznik:
+                    try:
+                        with transaction.atomic():
+                            zakaznik = Zakaznik.objects.create(
+                                Nazov_spolocnosti=f"Lead ({email})",
+                                email=email,
+                                Ostatne=gdpr_zaznam
+                            )
+                    except Exception:
+                        zakaznik = Zakaznik.objects.filter(email__iexact=email, je_interny_profil=False).first()
+                else:
+                    stare_ostatne = zakaznik.Ostatne or ""
+                    if "GDPR súhlas udelený" not in stare_ostatne:
+                        zakaznik.Ostatne = f"{stare_ostatne}\n{gdpr_zaznam}".strip()
+                        zakaznik.save(update_fields=['Ostatne'])
 
             if not zakaznik:
                 transaction.set_rollback(True)
@@ -3328,8 +3354,10 @@ def generate_esg_audit(request):
 
             # 🛡️ ZERO DATA LEAK: Neverejné zmluvné parametre sa sprístupnia výhradne overenému a autorizovanému klientovi
             je_autorizovany_klient = bool(
-                request.user.is_authenticated and getattr(request.user, 'is_active', False) and (
-                    request.user.is_staff or (request.user.email and request.user.email.strip().lower() == email)
+                is_b2b_auth or (
+                    request.user.is_authenticated and getattr(request.user, 'is_active', False) and (
+                        request.user.is_staff or (request.user.email and request.user.email.strip().lower() == email)
+                    )
                 )
             )
 
@@ -3382,7 +3410,7 @@ def generate_esg_audit(request):
                 forma_prijatia='WEB',
                 specificky_email_pre_fakturu=email,
                 poznamka_klienta=f"Žiadosť o ESG Audit.\n{stroj_label}: {kw_dec} {vykon_jednotka}\nVypočítaná strata: {strata_eur_dec} {mena_firmy}\nUhlíková stopa: {strata_co2_dec} t CO₂",
-                interna_poznamka=f"🔥 ESG LEAD: Zodpovedný garant {auditor_meno}. Odhadovaná ročná úspora {uspora_eur_dec} {mena_firmy}."
+                interna_poznamka=f"🔥 ESG LEAD: Zodpovedný garant {auditor_meno}. Odhadovaná ročná úspora {uspora_eur_dec} {mena_firmy}. {'B2B autorizácia' if is_b2b_auth else gdpr_zaznam}"
             )
 
             kpi_strata_label = get_industry_term('kpi_strata_label', default='Odhadovaná ročná finančná strata')
@@ -3472,7 +3500,8 @@ def submit_career(request):
         email = request.POST.get('email', '').strip().lower()[:254]
         telefon = request.POST.get('telefon', '').strip()[:50]
         motivacna_sprava = request.POST.get('motivacna_sprava', '').strip()[:3000]
-        gdpr_suhlas = request.POST.get('gdpr_suhlas')
+        gdpr_raw = str(request.POST.get('gdpr_suhlas') or '').strip().lower()
+        gdpr_suhlas = gdpr_raw in ('on', 'true', '1', 'yes', 'ano')
         zivotopis = request.FILES.get('zivotopis')
         
         if not meno or not email or not zivotopis:
@@ -3572,7 +3601,21 @@ def submit_special_lead(request):
 
         # 🛡️ RACE CONDITION & B2B INTEGRITA: Prednosť má autentifikovaný B2B klient pred anonymným dohľadaním
         b2b_klient, _ = get_b2b_client_and_discount(request)
-        zakaznik = b2b_klient
+        is_b2b_auth = bool(
+            b2b_klient is not None
+            and request.user.is_authenticated
+            and getattr(request.user, 'is_active', False)
+        )
+        gdpr_raw = str(request.POST.get('gdpr_suhlas') or '').strip().lower()
+        gdpr_accepted = gdpr_raw in ('on', 'true', '1', 'yes', 'ano')
+
+        if not is_b2b_auth and not gdpr_accepted:
+            return JsonResponse({'status': 'error', 'message': 'Pre odoslanie požiadavky je nutný súhlas so spracovaním osobných údajov (GDPR).'}, status=400)
+
+        cas_suhlasu = timezone.now().strftime('%d.%m.%Y %H:%M:%S')
+        gdpr_zaznam = f"Vytvorené z webu ({typ_leadu or 'LEAD'}). GDPR súhlas udelený: {cas_suhlasu} (IP: {ip_adresa})."
+
+        zakaznik = b2b_klient if is_b2b_auth else None
         if not zakaznik:
             zakaznik = Zakaznik.objects.select_for_update().filter(email__iexact=email, je_interny_profil=False).first()
             if not zakaznik:
@@ -3581,44 +3624,57 @@ def submit_special_lead(request):
                         zakaznik = Zakaznik.objects.create(
                             Nazov_spolocnosti=firma or f"Lead ({email})",
                             email=email,
-                            telefon=telefon
+                            telefon=telefon,
+                            Ostatne=gdpr_zaznam
                         )
                 except Exception:
                     zakaznik = Zakaznik.objects.filter(email__iexact=email, je_interny_profil=False).first()
+            else:
+                stare_ostatne = zakaznik.Ostatne or ""
+                if "GDPR súhlas udelený" not in stare_ostatne:
+                    zakaznik.Ostatne = f"{stare_ostatne}\n{gdpr_zaznam}".strip()
+                    zakaznik.save(update_fields=['Ostatne'])
 
         if not zakaznik:
             return JsonResponse({'status': 'error', 'message': 'Nepodarilo sa spracovať profil zákazníka.'}, status=500)
 
         if typ_leadu == 'SLA':
-            stroje = request.POST.get('stroje', '0')
-            typ_strojov = request.POST.get('typ_strojov', '')
-            odozva = request.POST.get('odozva', '')
+            stroje = request.POST.get('stroje', '0').strip()[:20]
+            typ_strojov = request.POST.get('typ_strojov', '').strip()[:200]
+            odozva = request.POST.get('odozva', '').strip()[:100]
+            if not firma or not typ_strojov:
+                return JsonResponse({'status': 'error', 'message': 'Názov firmy a typ technológie sú povinné.'}, status=400)
             pocet_label = get_industry_term('pocet_zariadeni_label', 'Počet zariadení')
             typ_label = get_industry_term('typ_zariadeni_label', 'Typ zariadení')
             poznamka = f"Žiadosť o SLA Zmluvu.\n{pocet_label}: {stroje}\n{typ_label}: {typ_strojov}\nPožadovaná odozva: {odozva}"
-            interna = "🛡️ LEAD: Záujem o servisný paušál (SLA)."
+            interna = f"🛡️ LEAD: Záujem o servisný paušál (SLA). {'B2B autorizácia' if is_b2b_auth else gdpr_zaznam}"
             priorita = 'STREDNA'
             
         elif typ_leadu == 'BUYBACK':
-            znacka = request.POST.get('znacka', '')
-            rok = request.POST.get('rok', '')
+            znacka = request.POST.get('znacka', '').strip()[:150]
+            rok = request.POST.get('rok', '').strip()[:20]
+            stav_vstup = request.POST.get('stav', '').strip()[:100]
+            if not znacka:
+                return JsonResponse({'status': 'error', 'message': 'Značka a model zariadenia sú povinné.'}, status=400)
             zar_genitiv = get_industry_term('zariadenie_genitiv', 'zariadenia')
             rok_label = get_industry_term('rok_vyroby', 'Rok výroby / nasadenia')
-            poznamka = f"Ponuka na odkúpenie ({zar_genitiv}).\nZnačka/Model: {znacka}\n{rok_label}: {rok}\nStav: {request.POST.get('stav', '')}"
-            interna = f"♻️ LEAD: Výkup ({zar_genitiv})."
+            poznamka = f"Ponuka na odkúpenie ({zar_genitiv}).\nZnačka/Model: {znacka}\n{rok_label}: {rok}\nStav: {stav_vstup}"
+            interna = f"♻️ LEAD: Výkup ({zar_genitiv}). {'B2B autorizácia' if is_b2b_auth else gdpr_zaznam}"
             priorita = 'NIZKA'
             
         elif typ_leadu == 'WARRANTY':
             faktura = request.POST.get('faktura', '').strip()[:100]
             zariadenie_manual = request.POST.get('zariadenie_manual', '').strip()[:150]
             popis = request.POST.get('popis', '').strip()[:5000]
+            if not firma or not faktura or not telefon or not popis:
+                return JsonResponse({'status': 'error', 'message': 'Firma, číslo dokladu, telefón a popis vady sú povinné.'}, status=400)
             poznamka_riadky = [f"REKLAMÁCIA (Garančný servis)", f"Doklad / Zákazka: {faktura}"]
             if zariadenie_manual:
                 poznamka_riadky.append(f"Zariadenie / S/N (vstup klienta): {zariadenie_manual}")
             poznamka_riadky.append(f"Popis vady: {popis}")
             poznamka = "\n".join(poznamka_riadky)
             interna_zar = f" ({zariadenie_manual})" if zariadenie_manual else ""
-            interna = f"🚨 REKLAMÁCIA Z WEBU. Doklad: {faktura}{interna_zar}. Skontrolovať a vytvoriť Úlohu s príznakom 'Ide o reklamáciu'."
+            interna = f"🚨 REKLAMÁCIA Z WEBU. Doklad: {faktura}{interna_zar}. Skontrolovať a vytvoriť Úlohu s príznakom 'Ide o reklamáciu'. {'B2B autorizácia' if is_b2b_auth else gdpr_zaznam}"
             priorita = 'VYSOKA'
         else:
             return JsonResponse({'status': 'error', 'message': 'Neznámy typ požiadavky.'}, status=400)
@@ -3678,16 +3734,16 @@ def submit_special_lead(request):
                             zariadenie_obj = ServisovaneZariadenie.objects.filter(
                                 bezpecnostny_kluc=z_uuid, zakaznik=zakaznik
                             ).first()
-                        elif z_raw.isdigit() and b2b_klient is not None:
+                        elif z_raw.isdigit() and is_b2b_auth:
                             zariadenie_obj = ServisovaneZariadenie.objects.filter(
                                 pk=int(z_raw), zakaznik=b2b_klient
                             ).first()
                 except (ValueError, TypeError, DataError):
                     zariadenie_obj = None
 
-            # 2. Relačné prepojenie faktúry alebo zákazky z evidencie (s auto-doplnením zariadenia)
+            # 2. Relačné prepojenie faktúry alebo zákazky z evidencie (výhradne pre autentifikovaného B2B klienta)
             doklad_vstup = request.POST.get('faktura', '').strip()
-            if doklad_vstup and zakaznik:
+            if doklad_vstup and zakaznik and is_b2b_auth:
                 faktura_obj = VystavenaFaktura.objects.filter(cislo_faktury=doklad_vstup, zakaznik=zakaznik).first()
                 if faktura_obj:
                     faktura_obj.zdrojove_objednavky.add(objednavka)
@@ -3877,10 +3933,7 @@ def get_available_slots(request):
         # 🛡️ EDGE CASE 4: Blokujeme sviatky podľa sídla firmy alebo pobočky/klienta (vrátane subdiv v DE, AT, CH, ES)
         if not pracovat_sviatky:
             location_param = request.GET.get('location', '').strip()
-            try:
-                b2b_klient = getattr(request.user, 'zakaznik_profil', None) if request.user.is_authenticated else None
-            except (ObjectDoesNotExist, AttributeError):
-                b2b_klient = None
+            b2b_klient, _ = get_b2b_client_and_discount(request)
             sviatky = get_holidays_for_location(
                 target_date,
                 location_str=location_param,
@@ -4020,10 +4073,15 @@ def submit_booking(request):
             return JsonResponse({'status': 'error', 'message': 'Zadajte platný formát e-mailovej adresy.'}, status=400)
 
         b2b_klient_auth, _ = get_b2b_client_and_discount(request)
+        is_b2b_booking_auth = bool(
+            b2b_klient_auth is not None
+            and request.user.is_authenticated
+            and getattr(request.user, 'is_active', False)
+        )
         gdpr_raw = str(request.POST.get('gdpr_suhlas') or '').strip().lower()
         gdpr_accepted = gdpr_raw in ('on', 'true', '1', 'yes', 'ano')
 
-        if not b2b_klient_auth and not gdpr_accepted:
+        if not is_b2b_booking_auth and not gdpr_accepted:
             return JsonResponse({'status': 'error', 'message': 'Pre odoslanie rezervácie je potrebný súhlas so spracovaním osobných údajov (GDPR).'}, status=400)
 
         # 🛡️ Rate Limiting (Ochrana pred spamovaním klikov)
@@ -4053,10 +4111,7 @@ def submit_booking(request):
             # 🛡️ OCHRANA PRED BYPASSOM: Validácia sviatkov vrátane regiónov a pobočiek (DE, AT, CH, ES)
             pracovat_sviatky = getattr(gn, 'pracovat_sviatky', False)
             if not pracovat_sviatky:
-                try:
-                    b2b_klient_booking = getattr(request.user, 'zakaznik_profil', None) if request.user.is_authenticated else None
-                except (ObjectDoesNotExist, AttributeError):
-                    b2b_klient_booking = None
+                b2b_klient_booking = b2b_klient_auth
                 sviatky = get_holidays_for_location(
                     target_date,
                     location_str=mesto,
@@ -4169,8 +4224,12 @@ def submit_booking(request):
                 return JsonResponse({'status': 'error', 'message': 'Je nám ľúto, ale tento termín sa práve obsadil. Prosím, vyberte si iný.'}, status=400)
 
             # 💾 ZÁPIS DO DATABÁZY
+            cas_suhlasu = timezone.now().strftime('%d.%m.%Y %H:%M:%S')
+            gdpr_zaznam = f"Vytvorené cez Smart Booking. GDPR súhlas udelený: {cas_suhlasu} (IP: {ip_adresa})."
+            is_b2b_booking = bool(b2b_klient_auth and request.user.is_authenticated and getattr(request.user, 'is_active', False))
+
             with transaction.atomic():
-                if b2b_klient_auth and request.user.is_authenticated and getattr(request.user, 'is_active', False):
+                if is_b2b_booking:
                     zakaznik = b2b_klient_auth
                 else:
                     # Defenzívne vytvorenie zákazníka v savepointe
@@ -4182,14 +4241,21 @@ def submit_booking(request):
                                     Nazov_spolocnosti=firma or f"Klient ({email})",
                                     email=email,
                                     telefon=telefon,
-                                    Ostatne="Vytvorené cez Smart Booking."
+                                    Ostatne=gdpr_zaznam
                                 )
                         except Exception:
                             zakaznik = Zakaznik.objects.filter(email__iexact=email, je_interny_profil=False).first()
                     else:
+                        update_fields = []
+                        stare_ostatne = zakaznik.Ostatne or ""
+                        if "GDPR súhlas udelený" not in stare_ostatne:
+                            zakaznik.Ostatne = f"{stare_ostatne}\n{gdpr_zaznam}".strip()
+                            update_fields.append('Ostatne')
                         if not zakaznik.telefon and telefon:
                             zakaznik.telefon = telefon
-                            zakaznik.save(update_fields=['telefon'])
+                            update_fields.append('telefon')
+                        if update_fields:
+                            zakaznik.save(update_fields=update_fields)
 
                 if not zakaznik:
                     return JsonResponse({'status': 'error', 'message': 'Nepodarilo sa vytvoriť zákaznícky profil pre rezerváciu.'}, status=500)
@@ -4204,7 +4270,7 @@ def submit_booking(request):
                     forma_prijatia='WEB',
                     specificky_email_pre_fakturu=email,
                     poznamka_klienta=f"ONLINE REZERVÁCIA TERMÍNU: {datum} ({slot_label})\nSpôsob realizácie: {logistika_popis}\n\n{poznamka}",
-                    interna_poznamka=f"📅 SMART BOOKING: {logistika_popis}. Potvrdiť harmonogram."
+                    interna_poznamka=f"📅 SMART BOOKING: {logistika_popis}. Potvrdiť harmonogram. {'B2B autorizácia' if is_b2b_booking else gdpr_zaznam}"
                 )
 
                 uloha = Uloha.objects.create(
@@ -4279,6 +4345,7 @@ def b2b_login_view(request):
         raw_next and url_has_allowed_host_and_scheme(raw_next, allowed_hosts={request.get_host()}, require_https=request.is_secure())
     ) else ''
     context = {
+        'b2b_klient': None,
         'nastavenia': nastavenia,
         'identita': identita,
         'globalne_nastavenia': gn,
@@ -4334,10 +4401,11 @@ def b2b_login_view(request):
                 return redirect(next_url)
             return redirect('webbuilder:b2b_dashboard')
         else:
-            try:
-                cache.incr(cache_key)
-            except ValueError:
-                cache.set(cache_key, 1, 900) # Zámok na 15 minút
+            if not cache.add(cache_key, 1, 900):
+                try:
+                    cache.incr(cache_key)
+                except ValueError:
+                    cache.set(cache_key, 1, 900) # Zámok na 15 minút
             context['error'] = 'Nesprávne prihlasovacie meno alebo heslo.'
 
     return render(request, 'web/b2b_login.html', context)
@@ -4437,6 +4505,7 @@ def b2b_dashboard_view(request):
     aktivne_bloky_set = get_active_web_blocks(cache_ver=web_ver, is_preview=is_preview)
     context = {
         'klient': b2b_klient,
+        'b2b_klient': b2b_klient,
         'zariadenia': zariadenia,
         'objednavky': objednavky,
         'pocet_objednavok': pocet_objednavok,
@@ -4538,4 +4607,33 @@ class NastrojeView(WebBaseMixin, TemplateView):
             'industry_terms': get_all_industry_terms(),
             'mena': getattr(identita, 'predvolena_mena', None) or get_firemna_mena(),
         })
+        return context
+
+
+class OchranaUdajovView(WebBaseMixin, TemplateView):
+    """🛡️ Informačná povinnosť podľa čl. 13 GDPR napojená na FiremnaIdentita a GlobalneNastavenia."""
+    template_name = 'web/ochrana_udajov.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['titulok_stranky'] = "Ochrana osobných údajov (GDPR)"
+        context['canonical_url'] = self.request.build_absolute_uri(self.request.path)
+
+        krajina_iso = FiremnaIdentita.get_aktivna_krajina_iso() if hasattr(FiremnaIdentita, 'get_aktivna_krajina_iso') else None
+        compliance_cfg = get_compliance_config(iso=krajina_iso) or {}
+        esg_idle_factor = compliance_cfg.get('esg_idle_factor') if compliance_cfg.get('esg_idle_factor') is not None else HUB_CONFIG.get('esg_idle_factor')
+        context['has_esg_audit'] = bool(is_esg_audit_supported() and esg_idle_factor is not None)
+
+        stat_obj = StatLokalizacia.get_for_iso(krajina_iso) if (krajina_iso and krajina_iso not in ('NEZADANE', 'INYKRAJINA')) else None
+        gn_obj = context.get('globalne_nastavenia')
+        context['platna_reklamacna_lehota'] = (
+            (getattr(stat_obj, 'lehota_reklamacie_dni', None) if stat_obj else None) or
+            (getattr(gn_obj, 'standardna_lehota_reklamacie_dni', None) if gn_obj else None)
+        )
+
+        is_preview = context.get('is_preview', False)
+        verzia_blokov = 'DRAFT' if is_preview else 'LIVE'
+        has_booking_blok = WebBlok.objects.filter(typ='BOOKING', je_aktivny=True, verzia=verzia_blokov).exists()
+        has_booking_service = TypServisuPrace.objects.filter(zobrazit_na_webe=True, povolit_online_booking=True).exclude(slug__isnull=True).exclude(slug__exact='').exists()
+        context['has_booking'] = has_booking_blok and has_booking_service
         return context

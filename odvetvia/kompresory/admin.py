@@ -237,7 +237,7 @@ class KompresoryStatLokalizaciaAdmin(ISASPremiumAdmin):
 
     # 🛡️ INTEGRITY GUARD: Vylúčenie už priradených štátov pri pridávaní (100% ochrana pred duplicitou)
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        if db_field.name == "stat" and request and "add" in request.path:
+        if db_field.name == "stat" and request and request.path.rstrip('/').endswith('/add'):
             StatLokalizaciaModel = apps.get_model('ISASaplikacia', 'StatLokalizacia')
             kwargs["queryset"] = StatLokalizaciaModel.objects.exclude(kompresory_lehoty__isnull=False)
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
@@ -301,7 +301,7 @@ class KompresoryStatLokalizaciaAdmin(ISASPremiumAdmin):
             filtre |= Q(stat__aliasy__icontains=term_clean)
 
         term_num = term_str.rstrip('rmd. ').strip()
-        if term_num.isdigit():
+        if term_num.isdigit() and len(term_num) <= 5:
             cislo = int(term_num)
             filtre |= (
                 Q(lehota_vtz_prevadzkova_roky=cislo) |
@@ -318,7 +318,7 @@ class KompresoryStatLokalizaciaAdmin(ISASPremiumAdmin):
                 Q(stat__nazov__icontains=term_clean) |
                 Q(stat__aliasy__icontains=term_clean)
             )
-        return qs.order_by('stat__nazov')[:10]
+        return qs.order_by('stat__nazov', 'pk')[:10]
 
     def format_detective_result(self, obj):
         iso = getattr(obj.stat, 'iso_kod', '??') if obj.stat else '??'
@@ -333,13 +333,12 @@ class KompresoryStatLokalizaciaAdmin(ISASPremiumAdmin):
         man = f"{obj.lehota_vtz_manometer_roky}r" if obj.lehota_vtz_manometer_roky is not None else "Globál"
 
         detail_lehoty = f"Prev:{prev} Vnútr:{vnut} Tlak:{tlak} | PV:{pv} El:{el} Man:{man}"
-        vsetky_hodnoty = f"{iso} {nazov} {getattr(obj.stat, 'aliasy', '') or ''} {detail_lehoty}"
 
         return {
             'id': obj.id,
-            'name': escape(f"{iso} - {nazov}"),
-            'search_value': escape(vsetky_hodnoty),
-            'rola': escape(f"🛢️ {detail_lehoty}"),
+            'name': f"{iso} - {nazov}",
+            'search_value': iso if iso and iso != '??' else nazov,
+            'rola': f"🛢️ {detail_lehoty}",
             'cat': '🗺️ LEHOTY VTZ',
         }
 

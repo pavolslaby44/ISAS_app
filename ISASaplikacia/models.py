@@ -2058,6 +2058,52 @@ class EmailPriloha(ISASAuditMixin, models.Model):
     def __str__(self):
         return self.nazov_suboru or "📎 Nepomenovaná príloha"
 
+class EmailOptOut(ISASAuditMixin, models.Model):
+    ZDROJ_CHOICES = [
+        ('EMAIL_REPLY', '✉️ Odpoveď na e-mail (NEZASIELAŤ)'),
+        ('MANUAL', '👤 Ručné pridanie dispečerom'),
+        ('WEB_FORM', '🌐 Webový / odhlasovací formulár'),
+        ('BOUNCE', '⚠️ Nedoručiteľná adresa (Bounce)'),
+    ]
+    ROZSAH_CHOICES = [
+        ('MARKETING', '📢 Iba obchodná a akvizičná pošta'),
+        ('KOMPLETNY', '🛑 Úplný zákaz proaktívnej komunikácie'),
+    ]
+
+    email = models.EmailField(unique=True, db_index=True, verbose_name="📧 E-mailová adresa", help_text="Normalizovaná e-mailová adresa, ktorá si neželá obchodnú komunikáciu.")
+    aktivny = models.BooleanField(default=True, db_index=True, verbose_name="🚫 Aktívny zákaz")
+    zdroj = models.CharField(max_length=20, choices=ZDROJ_CHOICES, default='MANUAL', db_index=True, verbose_name="📥 Zdroj záznamu")
+    rozsah = models.CharField(max_length=20, choices=ROZSAH_CHOICES, default='MARKETING', db_index=True, verbose_name="⚖️ Rozsah zákazu")
+    dovod = models.CharField(max_length=255, default="Odpoveď NEZASIELAŤ", blank=True, verbose_name="📝 Dôvod vyradenia")
+    poznamka = models.TextField(blank=True, null=True, verbose_name="🗒️ Interná poznámka")
+
+    zdrojova_sprava = models.ForeignKey(EmailovaSprava, on_delete=models.SET_NULL, null=True, blank=True, related_name="optout_zaznamy", verbose_name="✉️ Zdrojový e-mail")
+    zakaznik = models.ForeignKey('Evidencia.Zakaznik', on_delete=models.SET_NULL, null=True, blank=True, related_name="email_optouts", verbose_name="🏢 Zákazník")
+    dodavatel = models.ForeignKey('Evidencia.Dodavatel', on_delete=models.SET_NULL, null=True, blank=True, related_name="email_optouts", verbose_name="🏭 Dodávateľ")
+    sukromna_osoba = models.ForeignKey('Evidencia.SukromnaOsoba', on_delete=models.SET_NULL, null=True, blank=True, related_name="email_optouts", verbose_name="👤 Súkromná osoba")
+
+    vytvorene = models.DateTimeField(auto_now_add=True, verbose_name="🕒 Zaevidované")
+    aktualizovane = models.DateTimeField(auto_now=True, verbose_name="🔄 Aktualizované")
+
+    class Meta:
+        verbose_name = "🚫 Opt-out / Zákaz oslovovania"
+        verbose_name_plural = "🚫 Opt-out zoznam (NEZASIELAŤ)"
+        ordering = ['-vytvorene']
+
+    def clean(self):
+        super().clean()
+        if self.email:
+            self.email = self.email.strip().lower()
+
+    def save(self, *args, **kwargs):
+        if self.email:
+            self.email = self.email.strip().lower()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        stav = "AKTÍVNY ZÁKAZ" if self.aktivny else "Neaktívny"
+        return f"{self.email} ({stav})"
+
 class SpotifyToken(ISASAuditMixin, models.Model):
     """
     Bezpečné úložisko pre Spotify OAuth tokeny. 

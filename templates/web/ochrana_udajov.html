@@ -1,0 +1,406 @@
+{% extends 'web/base.html' %}
+
+{% block title %}{{ titulok_stranky|default:"Ochrana osobných údajov (GDPR)" }} | {{ nastavenia.titulok_webu|default:identita.nazov_spolocnosti }}{% endblock %}
+{% block description %}Informácie o spracúvaní osobných údajov podľa čl. 13 nariadenia GDPR spoločnosťou {{ identita.nazov_spolocnosti }}.{% endblock %}
+{% block og_url %}{{ request.scheme }}://{{ request.get_host }}{% url 'webbuilder:ochrana_udajov' %}{% endblock %}
+{% block og_title %}{{ titulok_stranky|default:"Ochrana osobných údajov (GDPR)" }} | {{ identita.nazov_spolocnosti }}{% endblock %}
+{% block og_description %}Transparentný prehľad spracúvania osobných údajov, dôb uchovávania a práv dotknutej osoby podľa čl. 13 GDPR.{% endblock %}
+
+{% block extra_head %}
+{% if canonical_url %}<link rel="canonical" href="{{ canonical_url }}">{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+    @media print {
+        #prava {
+            background-color: #ffffff !important;
+            color: #111827 !important;
+            border: 1px solid #d1d5db !important;
+            box-shadow: none !important;
+        }
+        #prava h2,
+        #prava p.text-white {
+            color: #111827 !important;
+        }
+        #prava .text-emerald-400 {
+            color: #047857 !important;
+        }
+        #prava .text-gray-300 {
+            color: #374151 !important;
+        }
+        #prava [class*="bg-gray-800"] {
+            background-color: #f9fafb !important;
+            border-color: #e5e7eb !important;
+        }
+    }
+{% endblock %}
+
+{% block content %}
+<nav aria-label="Omrvinková navigácia" class="bg-gray-100 py-4 border-b border-gray-200 print:hidden">
+    <div class="max-w-7xl mx-auto px-6 text-sm text-gray-500 font-medium">
+        <ol class="flex items-center flex-wrap gap-2">
+            <li>
+                <a href="{% url 'webbuilder:home' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="hover:text-brand transition">Domov</a>
+            </li>
+            <li aria-hidden="true" class="text-gray-400">/</li>
+            <li aria-current="page" class="text-gray-900 font-bold">Ochrana osobných údajov (GDPR)</li>
+        </ol>
+    </div>
+</nav>
+
+<section class="py-16 bg-white px-6 flex-grow">
+    <div class="max-w-5xl mx-auto space-y-12 text-gray-700 leading-relaxed">
+        <!-- Hero hlavička zjednotená s dizajnovým jazykom webu -->
+        <div class="text-center max-w-3xl mx-auto">
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-brand/10 text-brand rounded-2xl mb-4 border border-brand/20 shadow-sm">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+            </div>
+            <h1 class="text-3xl md:text-5xl font-extrabold text-gray-900 mb-4 tracking-tight">Ochrana osobných údajov (GDPR)</h1>
+            <p class="text-base md:text-lg text-gray-600">
+                Informačná povinnosť prevádzkovateľa podľa čl. 13 Nariadenia (EÚ) 2016/679 (GDPR) pre webové sídlo
+                <span class="font-bold text-gray-900">{{ request.get_host }}</span>.
+            </p>
+            <div class="mt-5 flex flex-wrap items-center justify-center gap-2 text-xs font-semibold">
+                <span class="px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">✓ Bez marketingových cookies</span>
+                <span class="px-3 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">🔒 Šifrovaný prenos &amp; auditný záznam</span>
+                {% if globalne_nastavenia and globalne_nastavenia.audit_log_retencia_dni %}
+                <span class="px-3 py-1 rounded-full bg-blue-50 text-blue-800 border border-blue-200">⏱️ Retencia auditných logov: {{ globalne_nastavenia.audit_log_retencia_dni }} dní</span>
+                {% endif %}
+            </div>
+
+            <!-- Rýchla navigácia po sekciách + Tlač PDF -->
+            <div class="mt-7 pt-6 border-t border-gray-100 flex flex-wrap items-center justify-center gap-2 print:hidden">
+                <a href="#prevadzkovatel" class="px-3.5 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold transition">1. Prevádzkovateľ</a>
+                <a href="#ucely" class="px-3.5 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold transition">2. Účely a základy</a>
+                <a href="#doba-uchovavania" class="px-3.5 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold transition">3. Doby uchovávania</a>
+                <a href="#cookies" class="px-3.5 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold transition">4. Cookies</a>
+                <a href="#prava" class="px-3.5 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold transition">5. Vaše práva</a>
+                <button type="button" onclick="window.print()" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white hover:bg-gray-50 text-gray-800 border border-gray-300 text-xs font-bold shadow-sm transition cursor-pointer">
+                    <svg class="w-3.5 h-3.5 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                    <span>Vytlačiť / PDF</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- 1. Identifikácia prevádzkovateľa -->
+        <div id="prevadzkovatel" class="bg-white p-6 md:p-8 rounded-3xl border border-gray-200 border-t-4 border-t-brand shadow-xl scroll-mt-24">
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-6 pb-4 border-b border-gray-100">
+                <div>
+                    <span class="text-xs font-extrabold uppercase tracking-wider text-brand">Článok 13 ods. 1 písm. a) GDPR</span>
+                    <h2 class="text-xl md:text-2xl font-extrabold text-gray-900 mt-0.5">1. Identifikácia a kontakty prevádzkovateľa</h2>
+                </div>
+                <span class="text-xs font-bold bg-gray-100 text-gray-800 px-3.5 py-1.5 rounded-xl border border-gray-200">{{ identita.nazov_spolocnosti }}</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+                <div class="bg-gray-50 p-5 rounded-2xl border border-gray-200/80 space-y-3">
+                    <p class="text-[11px] font-extrabold uppercase tracking-wider text-gray-400">Právna identita a sídlo</p>
+                    <div>
+                        <p class="font-extrabold text-gray-900 text-base">{{ identita.nazov_spolocnosti }}</p>
+                        {% if identita.podtitul %}
+                        <p class="text-xs text-gray-500 mt-0.5">{{ identita.podtitul }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="space-y-1.5 text-xs sm:text-sm">
+                        {% if identita.konatel %}
+                        <p><span class="text-gray-500 font-semibold">Štatutárny orgán:</span> <span class="font-medium text-gray-900">{{ identita.konatel }}</span></p>
+                        {% endif %}
+                        {% if identita.sidlo_ulica or identita.sidlo_cislo or identita.sidlo_psc or identita.sidlo_mesto or identita.sidlo_stat %}
+                        <p>
+                            <span class="text-gray-500 font-semibold">Sídlo:</span>
+                            <span class="text-gray-900">
+                                {% if identita.sidlo_ulica or identita.sidlo_cislo %}{{ identita.sidlo_ulica|default:"" }}{% if identita.sidlo_ulica and identita.sidlo_cislo %} {% endif %}{{ identita.sidlo_cislo|default:"" }}{% if identita.sidlo_psc or identita.sidlo_mesto or identita.sidlo_stat %}, {% endif %}{% endif %}
+                                {% if identita.sidlo_psc %}{{ identita.sidlo_psc }} {% endif %}{{ identita.sidlo_mesto|default:"" }}{% if identita.sidlo_stat %}{% if identita.sidlo_psc or identita.sidlo_mesto %}, {% endif %}{{ identita.sidlo_stat }}{% endif %}
+                            </span>
+                        </p>
+                        {% endif %}
+                        {% if identita.koresp_adresa %}
+                        <div>
+                            <span class="text-gray-500 font-semibold block">Korešpondenčná adresa:</span>
+                            <span class="text-gray-900 whitespace-pre-line block">{{ identita.koresp_adresa }}</span>
+                        </div>
+                        {% endif %}
+                        {% if identita.adresa_prevadzky %}
+                        <div>
+                            <span class="text-gray-500 font-semibold block">Hlavná prevádzka:</span>
+                            <span class="text-gray-900 whitespace-pre-line block">{{ identita.adresa_prevadzky }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% if identita.ico or identita.dic or identita.ic_dph %}
+                    <div class="pt-2 border-t border-gray-200/70 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-700">
+                        {% if identita.ico %}<span><strong>IČO:</strong> {{ identita.ico }}</span>{% endif %}
+                        {% if identita.dic %}<span><strong>DIČ:</strong> {{ identita.dic }}</span>{% endif %}
+                        {% if identita.ic_dph %}<span><strong>IČ DPH:</strong> {{ identita.ic_dph }}</span>{% endif %}
+                    </div>
+                    {% endif %}
+                    {% if identita.zapis_v_registri %}
+                    <p class="text-xs text-gray-500 pt-2 border-t border-gray-200/70">{{ identita.zapis_v_registri }}</p>
+                    {% endif %}
+                </div>
+
+                <div class="bg-gray-50 p-5 rounded-2xl border border-gray-200/80 space-y-3 flex flex-col justify-between">
+                    <div class="space-y-2.5 text-xs sm:text-sm">
+                        <p class="text-[11px] font-extrabold uppercase tracking-wider text-gray-400">Oficiálne kontakty prevádzkovateľa</p>
+                        {% if identita.email_vseobecny %}
+                        <p><span class="text-gray-500 font-semibold">Všeobecný kontakt &amp; GDPR:</span> <a href="mailto:{{ identita.email_vseobecny }}" class="text-brand font-bold hover:underline break-all">{{ identita.email_vseobecny }}</a></p>
+                        {% endif %}
+                        {% if identita.email_fakturacia %}
+                        <p><span class="text-gray-500 font-semibold">Fakturačná agenda:</span> <a href="mailto:{{ identita.email_fakturacia }}" class="text-brand font-bold hover:underline break-all">{{ identita.email_fakturacia }}</a></p>
+                        {% endif %}
+                        {% if nav_flags.show_reklamacie and globalne_nastavenia and globalne_nastavenia.email_pre_reklamacie %}
+                        <p><span class="text-gray-500 font-semibold">Reklamácie a RMA:</span> <a href="mailto:{{ globalne_nastavenia.email_pre_reklamacie }}" class="text-brand font-bold hover:underline break-all">{{ globalne_nastavenia.email_pre_reklamacie }}</a></p>
+                        {% endif %}
+                        {% if identita.telefon %}
+                        {% if identita.telefon %}
+                        <p><span class="text-gray-500 font-semibold">Telefón:</span> <a href="tel:{{ identita.telefon|cut:' ' }}" class="text-brand font-bold hover:underline">{{ identita.telefon }}</a></p>
+                        {% endif %}
+                        {% if identita.web %}
+                        <p><span class="text-gray-500 font-semibold">Webové sídlo:</span> <a href="{{ identita.web }}" target="_blank" rel="noopener noreferrer" class="text-brand font-bold hover:underline break-all">{{ identita.web|cut:"https://"|cut:"http://" }}</a></p>
+                        {% endif %}
+                        <p class="text-[11px] text-gray-500 pt-1">Prevádzkovateľ nemá určenú samostatnú zodpovednú osobu (DPO); vo veciach ochrany osobných údajov nás kontaktujte priamo cez vyššie uvedené kontakty.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Rozsah, účely a právne základy (Bez asymetrie v gride pri ľubovoľnom počte aktívnych modulov) -->
+        <div id="ucely" class="space-y-5 scroll-mt-24">
+            <div>
+                <span class="text-xs font-extrabold uppercase tracking-wider text-brand">Článok 6 a čl. 13 ods. 1 písm. c) GDPR</span>
+                <h2 class="text-2xl font-extrabold text-gray-900 mt-0.5">2. Účely, rozsah a právne základy spracúvania</h2>
+            </div>
+
+            <div class="space-y-3 text-sm">
+                <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition flex flex-col md:flex-row md:items-start justify-between gap-4">
+                    <div class="flex items-start gap-3.5">
+                        <div class="w-10 h-10 rounded-xl bg-brand/10 text-brand flex items-center justify-center text-lg shrink-0 font-bold">📩</div>
+                        <div class="space-y-1">
+                            <h3 class="font-bold text-gray-900 text-base">Dopyty, cenové ponuky{% if has_booking %}, online rezervácie{% endif %} a dopytový košík</h3>
+                            <p class="text-xs text-gray-600 leading-relaxed"><strong>Rozsah:</strong> meno/názov firmy, e-mail, telefón, adresa/lokalita realizácie (vrátane určenia polohy pre výjazd), číslo objednávky (PO), údaje o zariadení, priložené súbory a popis požiadavky; pri online schválení cenovej ponuky aj meno schvaľovateľa, čas a IP adresa.</p>
+                            <p class="text-xs text-gray-600 leading-relaxed"><strong>Účel:</strong> vypracovanie a schválenie cenovej ponuky alebo servisnej zmluvy, rezervácia termínu, predzmluvná komunikácia a plnenie zmluvy.</p>
+                        </div>
+                    </div>
+                    <span class="self-start text-[11px] font-bold px-3 py-1 rounded-full bg-brand/10 text-brand border border-brand/20 whitespace-nowrap shrink-0">čl. 6 ods. 1 písm. a), b)</span>
+                </div>
+
+                {% if nav_flags.show_reklamacie %}
+                <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition flex flex-col md:flex-row md:items-start justify-between gap-4">
+                    <div class="flex items-start gap-3.5">
+                        <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center text-lg shrink-0 font-bold">🛡️</div>
+                        <div class="space-y-1">
+                            <h3 class="font-bold text-gray-900 text-base">Garančný servis a reklamácie (RMA)</h3>
+                            <p class="text-xs text-gray-600 leading-relaxed"><strong>Rozsah:</strong> identifikačné a kontaktné údaje, čísla faktúr/zákaziek, identifikácia zariadenia, popis vady a foto/PDF prílohy.</p>
+                            <p class="text-xs text-gray-600 leading-relaxed"><strong>Účel:</strong> posúdenie a vybavenie reklamácie a splnenie zákonných povinností zo zodpovednosti za vady{% if platna_reklamacna_lehota %} (štandardná lehota {{ platna_reklamacna_lehota }} dní){% elif globalne_nastavenia and globalne_nastavenia.standardna_lehota_reklamacie_dni %} (štandardná lehota {{ globalne_nastavenia.standardna_lehota_reklamacie_dni }} dní){% endif %}.</p>
+                        </div>
+                    </div>
+                    <span class="self-start text-[11px] font-bold px-3 py-1 rounded-full bg-brand/10 text-brand border border-brand/20 whitespace-nowrap shrink-0">čl. 6 ods. 1 písm. b), c)</span>
+                </div>
+                {% endif %}
+
+                {% if has_esg_audit %}
+                <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition flex flex-col md:flex-row md:items-start justify-between gap-4">
+                    <div class="flex items-start gap-3.5">
+                        <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 flex items-center justify-center text-lg shrink-0 font-bold">⚡</div>
+                        <div class="space-y-1">
+                            <h3 class="font-bold text-gray-900 text-base">Energetický / ESG audit a PDF reporty</h3>
+                            <p class="text-xs text-gray-600 leading-relaxed"><strong>Rozsah:</strong> e-mailová adresa a zadané prevádzkové parametre zariadenia.</p>
+                            <p class="text-xs text-gray-600 leading-relaxed"><strong>Účel:</strong> vyhotovenie a doručenie výstupného PDF reportu a nadväzujúca odborná konzultácia.</p>
+                        </div>
+                    </div>
+                    <span class="self-start text-[11px] font-bold px-3 py-1 rounded-full bg-brand/10 text-brand border border-brand/20 whitespace-nowrap shrink-0">čl. 6 ods. 1 písm. a)</span>
+                </div>
+                {% endif %}
+
+                {% if nav_flags.show_kariera %}
+                <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition flex flex-col md:flex-row md:items-start justify-between gap-4">
+                    <div class="flex items-start gap-3.5">
+                        <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 border border-blue-200 flex items-center justify-center text-lg shrink-0 font-bold">🤝</div>
+                        <div class="space-y-1">
+                            <h3 class="font-bold text-gray-900 text-base">Kariéra a výberové konania</h3>
+                            <p class="text-xs text-gray-600 leading-relaxed"><strong>Rozsah:</strong> meno, priezvisko, e-mail, telefón, životopis, motivačná správa a záznamy z priebehu výberového konania (vrátane termínu pohovoru).</p>
+                            <p class="text-xs text-gray-600 leading-relaxed"><strong>Účel:</strong> posúdenie žiadosti o zamestnanie, vedenie výberového konania a informovanie o stave prihlášky.</p>
+                        </div>
+                    </div>
+                    <span class="self-start text-[11px] font-bold px-3 py-1 rounded-full bg-brand/10 text-brand border border-brand/20 whitespace-nowrap shrink-0">čl. 6 ods. 1 písm. a), b)</span>
+                </div>
+                {% endif %}
+
+                <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition flex flex-col md:flex-row md:items-start justify-between gap-4">
+                    <div class="flex items-start gap-3.5">
+                        <div class="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 border border-slate-200 flex items-center justify-center text-lg shrink-0 font-bold">🧾</div>
+                        <div class="space-y-1">
+                            <h3 class="font-bold text-gray-900 text-base">Fakturácia, účtovníctvo a daňová agenda</h3>
+                            <p class="text-xs text-gray-600 leading-relaxed"><strong>Rozsah:</strong> fakturačné a identifikačné údaje odberateľa, kontaktný e-mail pre doručenie dokladov, platobné údaje a história plnení.</p>
+                            <p class="text-xs text-gray-600 leading-relaxed"><strong>Účel:</strong> vystavovanie daňových dokladov, vedenie účtovníctva a plnenie zákonných povinností prevádzkovateľa.</p>
+                        </div>
+                    </div>
+                    <span class="self-start text-[11px] font-bold px-3 py-1 rounded-full bg-brand/10 text-brand border border-brand/20 whitespace-nowrap shrink-0">čl. 6 ods. 1 písm. b), c)</span>
+                </div>
+
+                <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition flex flex-col md:flex-row md:items-start justify-between gap-4">
+                    <div class="flex items-start gap-3.5">
+                        <div class="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 border border-slate-200 flex items-center justify-center text-lg shrink-0 font-bold">🏢</div>
+                        <div class="space-y-1">
+                            <h3 class="font-bold text-gray-900 text-base">B2B Klientska zóna, servisné protokoly, QR pasy a Gate Pass</h3>
+                            <p class="text-xs text-gray-600 leading-relaxed"><strong>Rozsah:</strong> prihlasovacie údaje B2B partnerov, elektronický podpis, meno podpisujúceho, čas a poloha podpisu na servisných protokoloch, fotodokumentácia zásahov, hodnotenie spokojnosti{% if nav_flags.show_ticket %}, číslo zákazky{% endif %} a kontakty pre povolenie vstupu technikov (Gate Pass). Zverejnenie referencie prebieha výhradne na základe súhlasu.</p>
+                            <p class="text-xs text-gray-600 leading-relaxed"><strong>Účel a oprávnený záujem:</strong> plnenie zmluvných servisných služieb{% if globalne_nastavenia and globalne_nastavenia.servisy_sledovat_legislativu %}, sledovanie servisných intervalov a revízií{% endif %} a odovzdanie diela; oprávneným záujmom prevádzkovateľa je preukázateľná evidencia servisnej histórie techniky, kontrola kvality a bezpečný vstup technikov do areálov klientov.</p>
+                        </div>
+                    </div>
+                    <span class="self-start text-[11px] font-bold px-3 py-1 rounded-full bg-brand/10 text-brand border border-brand/20 whitespace-nowrap shrink-0">čl. 6 ods. 1 písm. b), f)</span>
+                </div>
+
+                <div class="bg-slate-50 p-5 rounded-2xl border border-slate-200 flex flex-col md:flex-row md:items-start justify-between gap-4">
+                    <div class="flex items-start gap-3.5">
+                        <div class="w-10 h-10 rounded-xl bg-white text-slate-700 border border-slate-200 flex items-center justify-center text-lg shrink-0 font-bold">🔒</div>
+                        <div class="space-y-1">
+                            <h3 class="font-bold text-gray-900 text-base">Bezpečnosť webu, ochrana proti zneužitiu a dôkaz súhlasu</h3>
+                            <p class="text-xs text-gray-600 leading-relaxed"><strong>Rozsah:</strong> IP adresa a časový záznam odoslania formulára. <strong>Účel a oprávnený záujem:</strong> preukázanie udelenia súhlasu podľa čl. 7 ods. 1 GDPR (zákonná povinnosť) a oprávnený záujem na ochrane webovej aplikácie pred spamom, podvodmi a automatizovaným preťažením.</p>
+                        </div>
+                    </div>
+                    <span class="self-start text-[11px] font-bold px-3 py-1 rounded-full bg-slate-200/80 text-slate-800 whitespace-nowrap shrink-0">čl. 6 ods. 1 písm. c), f)</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Príjemcovia a doby uchovávania -->
+        <div id="doba-uchovavania" class="bg-gray-50 p-6 md:p-8 rounded-3xl border border-gray-200 space-y-5 text-sm scroll-mt-24">
+            <div>
+                <span class="text-xs font-extrabold uppercase tracking-wider text-brand">Článok 13 ods. 1 písm. e) a ods. 2 písm. a) GDPR</span>
+                <h2 class="text-xl md:text-2xl font-extrabold text-gray-900 mt-0.5">3. Príjemcovia údajov a doby uchovávania</h2>
+            </div>
+            <p class="text-gray-600">K osobným údajom majú prístup výhradne poverení zamestnanci prevádzkovateľa, zmluvní sprostredkovatelia zabezpečujúci hostingovú, IT, e-mailovú (doručovanie potvrdení a PDF dokumentov) a účtovnú agendu{% if has_booking and globalne_nastavenia and globalne_nastavenia.google_maps_api_key %}, poskytovateľ mapových služieb (Google Maps API) pri automatickom výpočte vzdialenosti a ceny výjazdu zo zadanej lokality{% endif %}, ako aj orgány verejnej moci pri plnení zákonných povinností. Osobné údaje nepredávame tretím stranám na marketingové účely ani neprenášame mimo EÚ/EHP bez primeraných záruk podľa kapitoly V GDPR.</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-1 text-xs">
+                <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
+                    <span class="inline-block text-[10px] font-extrabold uppercase tracking-wider text-brand bg-brand/10 px-2.5 py-0.5 rounded-full mb-2">Dopyty &amp; Ponuky</span>
+                    <p class="font-bold text-gray-900 text-sm mb-1">Nezáväzné dopyty a ponuky</p>
+                    <p class="text-gray-600 leading-relaxed">Po dobu nevyhnutnú na vybavenie dopytu{% if identita.predvolena_platnost_ponuk %} a platnosti cenovej ponuky (štandardne {{ identita.predvolena_platnost_ponuk }} dní){% endif %}, najdlhšie 1 rok od poslednej komunikácie, ak nedôjde k uzavretiu zmluvy.</p>
+                </div>
+                <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
+                    <span class="inline-block text-[10px] font-extrabold uppercase tracking-wider text-brand bg-brand/10 px-2.5 py-0.5 rounded-full mb-2">Zmluvy &amp; Dane</span>
+                    <p class="font-bold text-gray-900 text-sm mb-1">Zmluvné, RMA a účtovné doklady</p>
+                    <p class="text-gray-600 leading-relaxed">Po dobu trvania zmluvného a záručného vzťahu a následne po dobu stanovenú daňovými a účtovnými predpismi.</p>
+                </div>
+                {% if nav_flags.show_kariera %}
+                <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
+                    <span class="inline-block text-[10px] font-extrabold uppercase tracking-wider text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full mb-2">Kariéra</span>
+                    <p class="font-bold text-gray-900 text-sm mb-1">Uchádzači o zamestnanie</p>
+                    <p class="text-gray-600 leading-relaxed">Na základe udeleného súhlasu najdlhšie 2 roky od jeho udelenia, pokiaľ súhlas neodvoláte skôr.</p>
+                </div>
+                {% endif %}
+                <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
+                    <span class="inline-block text-[10px] font-extrabold uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full mb-2">Systémová politika</span>
+                    <p class="font-bold text-gray-900 text-sm mb-1">Bezpečnostné a auditné logy</p>
+                    <p class="text-gray-600 leading-relaxed">{% if globalne_nastavenia and globalne_nastavenia.audit_log_retencia_dni %}Podľa nastavenia retencie v systéme najviac <strong>{{ globalne_nastavenia.audit_log_retencia_dni }} dní</strong> pred automatickou archiváciou alebo výmazom.{% else %}Po dobu nevyhnutnú na preukázanie súhlasu a ochranu pred zneužitím systému.{% endif %}</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 text-xs">
+                <div class="bg-white p-4 rounded-2xl border border-gray-200">
+                    <p class="font-bold text-gray-900 mb-1">Povinnosť poskytnutia údajov (čl. 13 ods. 2 písm. e) GDPR)</p>
+                    <p class="text-gray-600 leading-relaxed">Poskytnutie údajov označených ako povinné je zmluvnou, predzmluvnou alebo zákonnou požiadavkou (najmä pri fakturácii a reklamáciách). Bez ich poskytnutia nie je možné požiadavku vybaviť, vyhotoviť cenovú ponuku ani poskytnúť prístup do B2B zóny.</p>
+                </div>
+                <div class="bg-white p-4 rounded-2xl border border-gray-200">
+                    <p class="font-bold text-gray-900 mb-1">Automatizované rozhodovanie (čl. 13 ods. 2 písm. f) GDPR)</p>
+                    <p class="text-gray-600 leading-relaxed">Prevádzkovateľ nevykonáva automatizované individuálne rozhodovanie ani profilovanie podľa čl. 22 GDPR, ktoré by malo pre dotknutú osobu právne účinky alebo sa jej obdobne významne týkalo.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Technické súbory cookies a úložiská prehliadača -->
+        <div id="cookies" class="space-y-4 text-sm scroll-mt-24">
+            <div>
+                <span class="text-xs font-extrabold uppercase tracking-wider text-brand">Technická nevyhnutnosť</span>
+                <h2 class="text-2xl font-extrabold text-gray-900 mt-0.5">4. Nevyhnutné technické cookies a úložisko prehliadača</h2>
+            </div>
+            <p class="text-gray-600">Táto webová stránka nepoužíva žiadne analytické, sledovacie ani marketingové cookies. Využíva výhradne technicky nevyhnutné prvky na bezpečnosť a základnú funkčnosť:</p>
+            <div class="overflow-x-auto bg-white border border-gray-200 rounded-2xl shadow-sm">
+                <table class="w-full text-left text-xs">
+                    <thead class="bg-gray-50 text-gray-500 uppercase font-bold border-b border-gray-200">
+                        <tr>
+                            <th class="px-5 py-3.5">Názov / Úložisko</th>
+                            <th class="px-5 py-3.5">Typ</th>
+                            <th class="px-5 py-3.5">Účel</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 text-gray-700">
+                        <tr>
+                            <td class="px-5 py-3.5 font-mono font-semibold text-gray-900">csrftoken</td>
+                            <td class="px-5 py-3.5">Technická cookie</td>
+                            <td class="px-5 py-3.5">Ochrana formulárov proti CSRF útokom a neoprávnenému odoslaniu.</td>
+                        </tr>
+                        <tr>
+                            <td class="px-5 py-3.5 font-mono font-semibold text-gray-900">sessionid</td>
+                            <td class="px-5 py-3.5">Technická cookie</td>
+                            <td class="px-5 py-3.5">Bezpečná relácia prihláseného B2B partnera v Klientskej zóne.</td>
+                        </tr>
+                        <tr>
+                            <td class="px-5 py-3.5 font-mono font-semibold text-gray-900">isas_cart</td>
+                            <td class="px-5 py-3.5">localStorage</td>
+                            <td class="px-5 py-3.5">Uchovanie položiek vo vašom dopytovom košíku v prehliadači.</td>
+                        </tr>
+                        <tr>
+                            <td class="px-5 py-3.5 font-mono font-semibold text-gray-900">isas_draft</td>
+                            <td class="px-5 py-3.5">sessionStorage</td>
+                            <td class="px-5 py-3.5">Dočasné technické zachovanie stavu náhľadu konceptu webu (Draft mode).</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 5. Práva dotknutej osoby (Prehľadné karty práv + CTA box) -->
+        <div id="prava" class="bg-gray-900 text-white p-6 md:p-8 rounded-3xl shadow-2xl space-y-6 text-sm scroll-mt-24">
+            <div>
+                <span class="text-xs font-extrabold uppercase tracking-wider text-emerald-400">Články 15 až 22 a čl. 77 GDPR</span>
+                <h2 class="text-2xl md:text-3xl font-extrabold mt-1">5. Vaše práva podľa GDPR a spôsob ich uplatnenia</h2>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
+                <div class="bg-gray-800/80 border border-gray-700/80 p-4 rounded-2xl">
+                    <p class="font-bold text-white mb-1">👁️ Právo na prístup (čl. 15)</p>
+                    <p class="text-gray-300 leading-relaxed">Získať potvrdenie, či spracúvame vaše údaje, a kópiu týchto údajov.</p>
+                </div>
+                <div class="bg-gray-800/80 border border-gray-700/80 p-4 rounded-2xl">
+                    <p class="font-bold text-white mb-1">✏️ Právo na opravu (čl. 16)</p>
+                    <p class="text-gray-300 leading-relaxed">Požadovať opravu nesprávnych alebo doplnenie neúplných údajov.</p>
+                </div>
+                <div class="bg-gray-800/80 border border-gray-700/80 p-4 rounded-2xl">
+                    <p class="font-bold text-white mb-1">🗑️ Právo na výmaz (čl. 17)</p>
+                    <p class="text-gray-300 leading-relaxed">Požadovať vymazanie alebo anonymizáciu údajov po pominutí zákonného dôvodu.</p>
+                </div>
+                <div class="bg-gray-800/80 border border-gray-700/80 p-4 rounded-2xl">
+                    <p class="font-bold text-white mb-1">⏸️ Obmedzenie a námietka (čl. 18, 21)</p>
+                    <p class="text-gray-300 leading-relaxed">Namietať spracúvanie na základe oprávneného záujmu alebo žiadať obmedzenie.</p>
+                </div>
+                <div class="bg-gray-800/80 border border-gray-700/80 p-4 rounded-2xl">
+                    <p class="font-bold text-white mb-1">📦 Prenosnosť údajov (čl. 20)</p>
+                    <p class="text-gray-300 leading-relaxed">Získať údaje poskytnuté na základe súhlasu či zmluvy v štruktúrovanom formáte.</p>
+                </div>
+                <div class="bg-gray-800/80 border border-gray-700/80 p-4 rounded-2xl">
+                    <p class="font-bold text-white mb-1">⚖️ Odvolanie súhlasu &amp; sťažnosť</p>
+                    <p class="text-gray-300 leading-relaxed">Kedykoľvek odvolať súhlas a podať sťažnosť dozornému orgánu na ochranu osobných údajov.</p>
+                </div>
+            </div>
+
+            <div class="pt-4 border-t border-gray-800 flex flex-wrap items-center justify-between gap-4 print:hidden">
+                <p class="text-xs text-gray-300">
+                    Žiadosť o uplatnenie práv nám zašlite priamo na náš oficiálny kontakt{% if globalne_nastavenia and globalne_nastavenia.pracovny_cas_od and globalne_nastavenia.pracovny_cas_do %} (prevádzková doba podpory: {{ globalne_nastavenia.pracovny_cas_od|time:"H:i" }} – {{ globalne_nastavenia.pracovny_cas_do|time:"H:i" }}{% if not globalne_nastavenia.pracovat_vikendy %}, v pracovné dni{% endif %}){% endif %}:
+                </p>
+                <div class="flex flex-wrap items-center gap-3">
+                    {% if identita.email_vseobecny %}
+                    <a href="mailto:{{ identita.email_vseobecny }}" class="inline-flex items-center gap-2 bg-brand hover-bg-brand text-white font-bold px-5 py-2.5 rounded-xl transition text-xs shadow-md">
+                        <span>✉️</span> Uplatniť právo e-mailom ({{ identita.email_vseobecny }})
+                    </a>
+                    {% endif %}
+                    {% if identita.telefon %}
+                    <a href="tel:{{ identita.telefon|cut:' ' }}" class="inline-flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-gray-100 border border-gray-700 font-bold px-5 py-2.5 rounded-xl transition text-xs">
+                        <span>📞</span> {{ identita.telefon }}
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -47,6 +47,13 @@ class StaticViewSitemap(Sitemap):
                 except NoReverseMatch:
                     pass
 
+        try:
+            reverse('webbuilder:ochrana_udajov')
+            if 'webbuilder:ochrana_udajov' not in polozky:
+                polozky.append('webbuilder:ochrana_udajov')
+        except NoReverseMatch:
+            pass
+
         return polozky
 
     def priority(self, item):
@@ -60,6 +67,7 @@ class StaticViewSitemap(Sitemap):
             'webbuilder:blog_list': 0.7,
             'webbuilder:kariera_list': 0.6,
             'webbuilder:reklamacie': 0.5,
+            'webbuilder:ochrana_udajov': 0.3,
         }
         return priority_map.get(item, 0.7)
 
@@ -68,6 +76,8 @@ class StaticViewSitemap(Sitemap):
             return 'daily'
         if item in ['webbuilder:reklamacie']:
             return 'monthly'
+        if item == 'webbuilder:ochrana_udajov':
+            return 'yearly'
         return 'weekly'
 
     def location(self, item):

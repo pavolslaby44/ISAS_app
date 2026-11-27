@@ -461,13 +461,22 @@
                         <div class="border-t border-gray-700 pt-5 grid grid-cols-1 md:grid-cols-2 gap-5 items-end">
                             <div class="min-w-0">
                                 <label for="sla_firma" title="Firma / Obchodné meno *" class="block truncate text-xs font-bold text-gray-300 uppercase mb-2">Firma / Obchodné meno *</label>
-                                <input id="sla_firma" type="text" name="firma" required placeholder="Názov spoločnosti" value="{% if request.user.is_authenticated and request.user.zakaznik_profil %}{{ request.user.zakaznik_profil.Nazov_spolocnosti }}{% endif %}" class="w-full bg-gray-900 border border-gray-600 rounded-xl px-4 py-3 text-white text-sm truncate focus:ring-2 ring-brand outline-none">
+                                <input id="sla_firma" type="text" name="firma" required placeholder="Názov spoločnosti" value="{% if b2b_klient %}{{ b2b_klient.Nazov_spolocnosti }}{% endif %}" class="w-full bg-gray-900 border border-gray-600 rounded-xl px-4 py-3 text-white text-sm truncate focus:ring-2 ring-brand outline-none">
                             </div>
                             <div class="min-w-0">
                                 <label for="sla_email" title="Kontaktný e-mail *" class="block truncate text-xs font-bold text-gray-300 uppercase mb-2">Kontaktný e-mail *</label>
-                                <input id="sla_email" type="email" name="email" required placeholder="meno@firma.com" value="{% if request.user.is_authenticated and request.user.zakaznik_profil %}{{ request.user.zakaznik_profil.email|default:request.user.email }}{% endif %}" class="w-full bg-gray-900 border border-gray-600 rounded-xl px-4 py-3 text-white text-sm truncate focus:ring-2 ring-brand outline-none">
+                                <input id="sla_email" type="email" name="email" required placeholder="meno@firma.com" value="{% if b2b_klient %}{{ b2b_klient.email|default:request.user.email }}{% endif %}" class="w-full bg-gray-900 border border-gray-600 rounded-xl px-4 py-3 text-white text-sm truncate focus:ring-2 ring-brand outline-none">
                             </div>
                         </div>
+
+                        {% if not b2b_klient %}
+                        <div class="flex items-start gap-2.5 pt-1">
+                            <input type="checkbox" name="gdpr_suhlas" id="sla_gdpr_suhlas" required class="mt-0.5 w-4 h-4 accent-brand bg-gray-900 border-gray-600 rounded focus:ring-brand">
+                            <label for="sla_gdpr_suhlas" class="text-xs text-gray-300 leading-relaxed">
+                                Súhlasím so spracovaním osobných údajov na účely vypracovania návrhu SLA zmluvy v súlade so <a href="{% url 'webbuilder:ochrana_udajov' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="text-white font-semibold underline hover:text-gray-200">Zásadami ochrany osobných údajov (GDPR)</a>. *
+                            </label>
+                        </div>
+                        {% endif %}
                         
                         <button type="submit" class="w-full bg-brand hover-bg-brand text-white font-bold text-base py-4 rounded-xl transition shadow-lg flex items-center justify-center gap-2">
                             <span>📄</span>

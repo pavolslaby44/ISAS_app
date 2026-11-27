@@ -539,7 +539,7 @@ class EvidenciaUhradAdmin(ERPExportAdminMixin, ISASPremiumAdmin):
         )[:30]
 
     def format_detective_result(self, obj):
-        safe_name = escape(obj.cislo_dokladu) if obj.cislo_dokladu else f"Úhrada #{obj.id}"
+        safe_name = obj.cislo_dokladu if obj.cislo_dokladu else f"Úhrada #{obj.id}"
         partner = ""
         if obj.vystavena_faktura and obj.vystavena_faktura.zakaznik:
             partner = obj.vystavena_faktura.zakaznik.Nazov_spolocnosti
@@ -553,7 +553,7 @@ class EvidenciaUhradAdmin(ERPExportAdminMixin, ISASPremiumAdmin):
             'cat': f"💸 {obj.typ_uhrady}",
             'suma': f"{obj.suma_uhrady or Decimal('0.00')} {obj.mena or get_firemna_mena()}",
             'date': obj.datum_uhrady.strftime('%d.%m.%Y') if obj.datum_uhrady else "",
-            'rola': escape(partner) if partner else "Neznámy partner"
+            'rola': partner if partner else "Neznámy partner"
         }
 
     @admin.display(description='📑 Doklad', ordering='cislo_dokladu')
@@ -803,9 +803,9 @@ class CertifikatAdmin(ISASPremiumAdmin):
 
         return {
             'id': obj.id,
-            'name': escape(cely_nazov),
-            'search_value': escape(vsetky_hodnoty),
-            'rola': escape(f"👨‍💼 {drzitel} | 📂 {kat_nazov} | {stav_text}"),
+            'name': cely_nazov,
+            'search_value': vsetky_hodnoty,
+            'rola': f"👨‍💼 {drzitel} | 📂 {kat_nazov} | {stav_text}",
             'cat': '📜 CERTIFIKÁT'
         }
 
@@ -1166,9 +1166,9 @@ class ZamestnanecAdmin(ISASSecurityAdminMixin, ERPExportAdminMixin, ISASPremiumA
         telefon = obj.telefon if obj.telefon else "Bez telefónu"
         return {
             'id': obj.id, 
-            'name': escape(celo_meno), 
-            'search_value': escape(celo_meno),
-            'rola': escape(f"{rola} | 📞 {telefon}"),
+            'name': celo_meno, 
+            'search_value': celo_meno,
+            'rola': f"{rola} | 📞 {telefon}",
             'cat': '👨‍💼 ZAMESTNANEC'
         }
 
@@ -1522,9 +1522,9 @@ class SukromnaOsobaAdmin(ISASSecurityAdminMixin, ERPExportAdminMixin, ISASPremiu
         kontakt = obj.telefon if obj.telefon else (obj.email if getattr(obj, 'email', None) else "Bez kontaktu")
         return {
             'id': obj.id, 
-            'name': escape(obj.meno_a_priezvisko), 
-            'search_value': escape(obj.meno_a_priezvisko),
-            'rola': escape(kontakt),
+            'name': obj.meno_a_priezvisko, 
+            'search_value': obj.meno_a_priezvisko,
+            'rola': kontakt,
             'cat': '👤 SÚKROMNÁ OSOBA'
         }
 
@@ -1717,9 +1717,9 @@ class DodavatelAdmin(KontaktnaOsobaAdminMixin, ISASObchodnyPartnerAdminMixin, IS
         
         return {
             'id': obj.id, 
-            'name': escape(nazov), 
-            'search_value': escape(nazov),
-            'rola': escape(podtitul),
+            'name': nazov, 
+            'search_value': nazov,
+            'rola': podtitul,
             'cat': '🏢 DODÁVATEĽ'
         }
 
@@ -2170,9 +2170,9 @@ class ServisovaneZariadenieAdmin(ISASHiddenAdminMixin, ISASPremiumAdmin):
         
         return {
             'id': obj.id, 
-            'name': escape(f"{stroj_nazov} ({sn})"),
-            'search_value': escape(obj.vyrobne_cislo or stroj_nazov),
-            'rola': escape(zakaznik),
+            'name': f"{stroj_nazov} ({sn})", 
+            'search_value': obj.vyrobne_cislo or stroj_nazov,
+            'rola': zakaznik,
             'cat': '⚙️ ZARIADENIE'
         }
 
@@ -2864,9 +2864,9 @@ class ZakaznikAdmin(KontaktnaOsobaAdminMixin, ISASObchodnyPartnerAdminMixin, ISA
         
         return {
             'id': obj.id, 
-            'name': escape(nazov), 
-            'search_value': escape(nazov),
-            'rola': escape(podtitul),
+            'name': nazov, 
+            'search_value': nazov,
+            'rola': podtitul,
             'cat': '🏢 ZÁKAZNÍK'
         }
 
@@ -3072,9 +3072,9 @@ class ZakaznikPrenajomAdmin(ISASReadOnlyAdminMixin, ISASPremiumAdmin):
 
         return {
             'id': obj.id,
-            'name': escape(f"{zakaznik_nazov} ➔ {zariadenie_text}"),
-            'search_value': escape(zakaznik_nazov),
-            'rola': escape(sn),
+            'name': f"{zakaznik_nazov} ➔ {zariadenie_text}",
+            'search_value': zakaznik_nazov,
+            'rola': sn,
             'cat': 'PRENÁJOM'
         }
 
@@ -3232,7 +3232,7 @@ class CenovyKatalogAdmin(ISASPremiumAdmin):
     def format_detective_result(self, obj):
         cat_name = get_kategoria_nazov(obj.content_type.model_class()).upper() if obj.content_type else "KATEGÓRIA"
         cisty_nazov = ocisti_nazov_od_jednotky(obj.polozka_zo_skladu)
-        safe_name = escape(cisty_nazov)
+        safe_name = cisty_nazov
         cena = f"{obj.predajna_cena} {get_firemna_mena()}" if obj.predajna_cena else "Cena neurčená"
         return {
             'id': obj.id, 
@@ -3581,13 +3581,13 @@ class DatabazaVyrobcovAdmin(ISASPremiumAdmin):
         ).order_by('nazov_vyrobcu')[:30]
 
     def format_detective_result(self, obj):
-        safe_name = escape(obj.nazov_vyrobcu)
+        safe_name = obj.nazov_vyrobcu
         krajina = f"🌍 {obj.krajina_povodu}" if obj.krajina_povodu else "Neznáma krajina"
         return {
             'id': obj.id, 
             'name': safe_name, 
             'search_value': safe_name, 
-            'rola': escape(krajina),
+            'rola': krajina,
             'cat': '🏭 VÝROBCA'
         }
 
@@ -4445,7 +4445,7 @@ class StockMovementAdmin(ISASDynamicCategoryAjaxMixin, ISASPremiumAdmin):
                 return JsonResponse({"status": "error", "message": "⚠️ Úlohu na odoslanie sa nepodarilo zaradiť do fronty kvôli výpadku Celery/Redis."}, status=503)
             return JsonResponse({"status": "success", "message": "📧 Požiadavka na odoslanie bola úspešne zaradená do fronty."})
 
-        return JsonResponse({"status": "error", "message": "Neznáma akcia."}, status=400)
+        return super().perform_fast_action(request, action_type, valid_ids, **kwargs)
 
     # --- 🪝 HOOKS PRE DETECTIVE SEARCH ---
     def get_detective_queryset(self, request, term):
@@ -4461,17 +4461,17 @@ class StockMovementAdmin(ISASDynamicCategoryAjaxMixin, ISASPremiumAdmin):
         cisty_nazov = ocisti_nazov_od_jednotky(obj.product_name)
         datum_pohybu = obj.timestamp.strftime("%d.%m.%Y %H:%M") if obj.timestamp else "Neznámy čas"
         
-        safe_name = escape(cisty_nazov)
+        safe_name = cisty_nazov
         akcia_text = "📥 PRIDANIE" if obj.action == 'ADD' else "📤 ODOBRATIE"
         user_name = obj.user.username if obj.user else "AUTO-SYSTÉM"
         
         return {
             'id': obj.id, 
             'name': safe_name, 
-            'search_value': safe_name,
-            'rola': escape(f"👤 {user_name} | {akcia_text}"),
-            'date': escape(datum_pohybu),
-            'cat': escape(cat_name)
+            'search_value': safe_name, 
+            'rola': f"👤 {user_name} | {akcia_text}",
+            'date': datum_pohybu,
+            'cat': cat_name
         }
 
     def save_model(self, request, obj, form, change):
@@ -5194,9 +5194,9 @@ class ServisnyZaznamAdmin(ISASPremiumAdmin):
         
         return {
             'id': obj.id, 
-            'name': escape(zakaznik), 
-            'search_value': escape(zakaznik),
-            'rola': escape(zariadenie),
+            'name': zakaznik, 
+            'search_value': zakaznik,
+            'rola': zariadenie,
             'date': datum,
             'cat': f"🚦 Stav: {stav}"
         }
@@ -5786,10 +5786,10 @@ class TechnickaSpecifikaciaAdmin(ISASPremiumAdmin):
         return self.get_queryset(request).none()
 
     def format_detective_result(self, obj):
-        cisty_nazov = escape(ocisti_nazov_od_jednotky(obj.polozka)) if obj.polozka else "Neznáma položka"
-        cat_name = escape(get_kategoria_nazov(obj.content_type.model_class()).upper()) if obj.content_type else "KATEGÓRIA"
+        cisty_nazov = ocisti_nazov_od_jednotky(obj.polozka) if obj.polozka else "Neznáma položka"
+        cat_name = get_kategoria_nazov(obj.content_type.model_class()).upper() if obj.content_type else "KATEGÓRIA"
         vyrobca = getattr(obj.polozka, 'vyrobca', None)
-        rola = escape(vyrobca.nazov_vyrobcu) if vyrobca else ""
+        rola = vyrobca.nazov_vyrobcu if vyrobca else ""
         
         return {
             'id': obj.id, 
@@ -6139,8 +6139,8 @@ class KosikSPolozkamiNaDoobjednanieAdmin(ISASPremiumAdmin):
             'id': obj.id, 
             'name': cely_nazov, 
             'search_value': cely_nazov,
-            'rola': escape(dodavatel),
-            'suma': escape(mnozstvo),
+            'rola': dodavatel,
+            'suma': mnozstvo,
             'cat': cat_name
         }
 
@@ -6604,7 +6604,7 @@ class TypServisuPraceAdmin(ISASPremiumAdmin):
     def format_detective_result(self, obj):
         """Hook pre formátovanie výsledkov Detective Search."""
         
-        safe_name = escape(obj.nazov)
+        safe_name = obj.nazov
         rezim = "Fixná cena" if obj.sposob_uctovania == 'FIX' else "Hodinová sadzba"
         mena_s = get_firemna_mena()
         cena = f"{obj.fixna_cena_predaj or Decimal('0.00')} {mena_s}" if obj.sposob_uctovania == 'FIX' else f"{obj.hodinova_sadzba_predaj or Decimal('0.00')} {mena_s} / hod"
@@ -6928,9 +6928,9 @@ class UlohaAdmin(ISASPremiumAdmin):
         
         return {
             'id': obj.id, 
-            'name': escape(zakaznik), 
-            'search_value': escape(zakaznik),
-            'rola': escape(f"👨‍🔧 {technici}") if technici else "",
+            'name': zakaznik, 
+            'search_value': zakaznik,
+            'rola': f"👨‍🔧 {technici}" if technici else "",
             'cat': stav,
             'date': datum
         }
@@ -7465,7 +7465,7 @@ class VozidloServisFilter(admin.SimpleListFilter):
         return queryset
 
 @admin.register(Vozidlo)
-class VozidloAdmin(ISASPremiumAdmin, ERPExportAdminMixin, ISASDriverAdminMixin):
+class VozidloAdmin(ERPExportAdminMixin, ISASDriverAdminMixin, ISASPremiumAdmin):
     # 👨‍✈️ ISAS CORE: Konfigurácia pre ISASDriverAdminMixin
     isas_driver_field_employee = 'priradeny_zamestnanec'
     isas_driver_field_person = 'sukromna_osoba'
@@ -7641,9 +7641,9 @@ class VozidloAdmin(ISASPremiumAdmin, ERPExportAdminMixin, ISASDriverAdminMixin):
         vodic = str(obj.priradeny_zamestnanec) if obj.priradeny_zamestnanec else (str(obj.sukromna_osoba) if obj.sukromna_osoba else "Nepriradené")
         return {
             'id': obj.id, 
-            'name': escape(f"{obj.znacka_a_model} [{obj.spz}]"), 
-            'search_value': escape(obj.spz),
-            'rola': f"Vodič: {escape(vodic)}",
+            'name': f"{obj.znacka_a_model} [{obj.spz}]", 
+            'search_value': obj.spz,
+            'rola': f"Vodič: {vodic}",
             'date': '—',
             'cat': '🚘 VOZIDLO'
         }
@@ -7810,7 +7810,7 @@ class VozidloAdmin(ISASPremiumAdmin, ERPExportAdminMixin, ISASDriverAdminMixin):
         return render_isas_layout(format_html('{}{}{}', badges_row, text, sadzba_html), layout="col", center=True, gap=4)
 
 @admin.register(Tankovanie)
-class TankovanieAdmin(ISASPremiumAdmin, ERPExportAdminMixin, ISASDriverAdminMixin):
+class TankovanieAdmin(ERPExportAdminMixin, ISASDriverAdminMixin, ISASPremiumAdmin):
     form = TankovanieAdminForm
 
     # 👨‍✈️ ISAS CORE: Konfigurácia pre ISASDriverAdminMixin
@@ -7845,8 +7845,9 @@ class TankovanieAdmin(ISASPremiumAdmin, ERPExportAdminMixin, ISASDriverAdminMixi
         'cerpacia_stanica',
         'erp_export_status',
         'sposob_platby',
-        ('datum', admin.DateFieldListFilter),
+        ISASDateRangeFilter,
     )
+    isas_date_filter_field = 'datum'
     
     autocomplete_fields = ['vozidlo', 'vodič', 'osoba', 'cerpacia_stanica']
     search_fields = ('vozidlo__spz', 'vodič__meno', 'vodič__priezvisko', 'cerpacia_stanica__Nazov_spolocnosti')
@@ -7936,9 +7937,9 @@ class TankovanieAdmin(ISASPremiumAdmin, ERPExportAdminMixin, ISASDriverAdminMixi
         datum_text = obj.datum.strftime('%d.%m.%Y') if obj.datum else ""
         return {
             'id': obj.id, 
-            'name': escape(spz_text), 
-            'rola': escape(sofer_meno),
-            'search_value': escape(spz_text),
+            'name': spz_text, 
+            'rola': sofer_meno,
+            'search_value': spz_text,
             'suma': f"{obj.cena_celkom or Decimal('0.00')} {obj.mena or get_firemna_mena()}",
             'date': datum_text,
             'cat': '⛽ TANKOVANIE'
@@ -8070,10 +8071,11 @@ class TankovanieAdmin(ISASPremiumAdmin, ERPExportAdminMixin, ISASDriverAdminMixi
         )
 
 @admin.register(EvidenciaJazd)
-class EvidenciaJazdAdmin(ISASPremiumAdmin, ISASDriverAdminMixin):
+class EvidenciaJazdAdmin(ISASDriverAdminMixin, ISASPremiumAdmin):
     list_display = ('get_jazda_card', 'get_vodic_badge', 'get_trasa_a_ciel', 'get_km_stats', 'get_typ_jazdy_badge', 'stav_jazdy_badge', 'stav_fakturacie_badge')
     list_display_links = ('get_jazda_card',)
-    list_filter = ('typ_jazdy', 'vozidlo', ISASDriverTypeFilter, ('datum_cas_start', admin.DateFieldListFilter))
+    list_filter = ('typ_jazdy', 'vozidlo', ISASDriverTypeFilter, ISASDateRangeFilter)
+    isas_date_filter_field = 'datum_cas_start'
     
     autocomplete_fields = [
         'vozidlo', 'zamestnanec', 'sukromna_osoba', 'spolujazdci',
@@ -8202,9 +8204,9 @@ class EvidenciaJazdAdmin(ISASPremiumAdmin, ISASDriverAdminMixin):
         datum_text = obj.datum_cas_start.strftime('%d.%m.%Y %H:%M') if obj.datum_cas_start else "Neznámy čas"
         return {
             'id': obj.id, 
-            'name': escape(spz_text), 
-            'search_value': escape(spz_text),
-            'rola': f"👤 {escape(vodic)}", 
+            'name': spz_text, 
+            'search_value': spz_text,
+            'rola': f"👤 {vodic}",
             'date': datum_text,
             'cat': '🚗 JAZDA'
         }
@@ -8337,7 +8339,7 @@ class EvidenciaJazdAdmin(ISASPremiumAdmin, ISASDriverAdminMixin):
         return render_isas_badge(text="NA CESTE", icon="🟢", type_color="success", css_class="pulse-green")
 
 @admin.register(PrichodziaFaktura)
-class PrichodziaFakturaAdmin(ISASSmartMatcherAdminMixin, ISASPremiumAdmin, ERPExportAdminMixin):
+class PrichodziaFakturaAdmin(ISASSmartMatcherAdminMixin, ERPExportAdminMixin, ISASPremiumAdmin):
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         # ISAS ENGINE: Eliminácia N+1 dotazov pre dodávateľov a M2M párovanie
@@ -8354,7 +8356,8 @@ class PrichodziaFakturaAdmin(ISASSmartMatcherAdminMixin, ISASPremiumAdmin, ERPEx
         'get_platobny_terminal',
     )    
     list_display_links = ('get_faktura_identity',)
-    list_filter = ['zdroj', 'erp_export_status', ('datum_prijatia', admin.DateFieldListFilter), ('dodavatel', admin.RelatedOnlyFieldListFilter), 'stav_uhrady', 'spracovane']
+    list_filter = ['zdroj', 'erp_export_status', ISASDateRangeFilter, ('dodavatel', admin.RelatedOnlyFieldListFilter), 'stav_uhrady', 'spracovane']
+    isas_date_filter_field = 'datum_prijatia'
     search_fields = ['dodavatel__Nazov_spolocnosti', 'dodavatel__ico', 'variabilny_symbol', 'iban']
     filter_horizontal = ('suvisiace_objednavky', 'navrhnute_objednavky')
     autocomplete_fields = ['dodavatel', 'ignorovane_objednavky']
@@ -8786,6 +8789,8 @@ class PrichodziaFakturaAdmin(ISASSmartMatcherAdminMixin, ISASPremiumAdmin, ERPEx
                 return JsonResponse({"status": "success", "message": "🔗 Faktúra bola úspešne spárovaná s objednávkami!"})
 
         elif action_type == 'smart_pair':
+            if not request.user.has_perm('Evidencia.change_prichodziafaktura'):
+                return JsonResponse({"status": "error", "message": "Nemáte oprávnenie upravovať faktúru. 🛑"}, status=403)
             try:
                 data = json.loads(request.body)
                 left_id = data.get('left_id')
@@ -8807,6 +8812,8 @@ class PrichodziaFakturaAdmin(ISASSmartMatcherAdminMixin, ISASPremiumAdmin, ERPEx
             return JsonResponse({"status": "success", "message": "🔗 Úspešne spárované!"})
 
         elif action_type == 'smart_ignore':
+            if not request.user.has_perm('Evidencia.change_prichodziafaktura'):
+                return JsonResponse({"status": "error", "message": "Nemáte oprávnenie upravovať faktúru. 🛑"}, status=403)
             try:
                 data = json.loads(request.body)
                 left_id = data.get('left_id')
@@ -8922,9 +8929,9 @@ class PrichodziaFakturaAdmin(ISASSmartMatcherAdminMixin, ISASPremiumAdmin, ERPEx
         
         return {
             'id': obj.id, 
-            'name': escape(vs_zobrazenie), 
-            'search_value': escape(vs_zobrazenie),
-            'rola': escape(f"🏢 {dodavatel}"),
+            'name': vs_zobrazenie, 
+            'search_value': vs_zobrazenie,
+            'rola': f"🏢 {dodavatel}",
             'suma': suma_str, 
             'date': datum,
             'cat': 'FAKTÚRA'
@@ -9384,7 +9391,8 @@ class MegaZalohaAdmin(ISASPremiumAdmin):
         'get_stiahnut_link'
     )
     list_display_links = ('get_export_card',)    
-    list_filter = (ExportTypFilter, 'stav_spracovania', ExportRetenciaFilter, ('datum_vytvorenia', admin.DateFieldListFilter))
+    list_filter = (ExportTypFilter, 'stav_spracovania', ExportRetenciaFilter, ISASDateRangeFilter)
+    isas_date_filter_field = 'datum_vytvorenia'
     search_fields = ('nazov_zalohy', 'poznamka', 'vyziadal_uzivatel__username')
     list_select_related = ('vyziadal_uzivatel',)
     
@@ -9464,8 +9472,8 @@ class MegaZalohaAdmin(ISASPremiumAdmin):
     def format_detective_result(self, obj):
         return {
             'id': obj.id, 
-            'name': escape(obj.nazov_zalohy), 
-            'search_value': escape(obj.nazov_zalohy),
+            'name': obj.nazov_zalohy, 
+            'search_value': obj.nazov_zalohy,
             'rola': obj.get_typ_zalohy_display(),
             'date': f"🚦 Stav: {obj.get_stav_spracovania_display()}",
             'cat': '💾 ZÁLOHA'
@@ -9757,7 +9765,9 @@ class CenovaPonukaAdmin(ISASTaskConversionAdminMixin, ISASInvoiceGeneratorAdminM
 
     list_display = ('get_ponuka_card', 'get_zakaznik_badge', 'zobraz_typ_servisu', 'get_sumy', 'get_sparovanie_status', 'zobraz_vystavovatela', 'get_stav_badge', 'get_akcie', 'zobraz_ulohy')
     list_display_links = ('get_ponuka_card',)
-    list_filter = (('vystavil', admin.RelatedOnlyFieldListFilter), 'stav', ('zakaznik', admin.RelatedOnlyFieldListFilter), ('datum_vystavenia', admin.DateFieldListFilter), 'prenos_danovej_povinnosti')
+    list_filter = (ISASRelatedUserFilter, 'stav', ISASRelatedZakaznikFilter, ISASDateRangeFilter, 'prenos_danovej_povinnosti')
+    isas_user_filter_field = 'vystavil'
+    isas_date_filter_field = 'datum_vystavenia'
     search_fields = ('cislo_ponuky', 'zakaznik__Nazov_spolocnosti', 'zariadenie__model_zariadenia')
 
     def add_view(self, request, form_url='', extra_context=None):
@@ -9921,9 +9931,9 @@ class CenovaPonukaAdmin(ISASTaskConversionAdminMixin, ISASInvoiceGeneratorAdminM
         
         return {
             'id': obj.id, 
-            'name': escape(cislo), 
-            'search_value': escape(cislo),
-            'rola': f"🏢 {escape(customer_str)}", 
+            'name': cislo, 
+            'search_value': cislo,
+            'rola': f"🏢 {customer_str}",
             'date': obj.datum_vystavenia.strftime('%d.%m.%Y') if obj.datum_vystavenia else 'Nešpecifikované',
             'cat': '💰 PONUKA'
         }
@@ -10033,6 +10043,8 @@ class CenovaPonukaAdmin(ISASTaskConversionAdminMixin, ISASInvoiceGeneratorAdminM
             return self.generate_merge_invoice(request, self.model.objects.filter(id__in=valid_ids), 'ponuka')
             
         elif action_type == 'smart_pair':
+            if not request.user.has_perm('Evidencia.change_prijataobjednavka'):
+                return JsonResponse({"status": "error", "message": "🚫 Nemáte oprávnenie upravovať prijaté objednávky."}, status=403)
             try:
                 data = json.loads(request.body)
                 left_id = data.get('left_id')
@@ -10054,6 +10066,8 @@ class CenovaPonukaAdmin(ISASTaskConversionAdminMixin, ISASInvoiceGeneratorAdminM
             return JsonResponse({"status": "success", "message": "🔗 Úspešne spárované!"})
 
         elif action_type == 'smart_ignore':
+            if not request.user.has_perm('Evidencia.change_prijataobjednavka'):
+                return JsonResponse({"status": "error", "message": "🚫 Nemáte oprávnenie upravovať prijaté objednávky."}, status=403)
             try:
                 data = json.loads(request.body)
                 left_id = data.get('left_id')
@@ -10298,7 +10312,8 @@ class OdoslanaObjednavkaAdmin(ISASPremiumAdmin):
         'stiahnut_pdf_card'
     )    
     list_display_links = ('get_objednavka_card',)
-    list_filter = (('vytvorene', admin.DateFieldListFilter), ObjednavkaVelkostFilter, ('dodavatel', admin.RelatedOnlyFieldListFilter))
+    list_filter = (ISASDateRangeFilter, ObjednavkaVelkostFilter, ('dodavatel', admin.RelatedOnlyFieldListFilter))
+    isas_date_filter_field = 'vytvorene'
     search_fields = ('cislo_objednavky', 'dodavatel__Nazov_spolocnosti')
   
     readonly_fields = ('dodavatel', 'cislo_objednavky', 'poradove_cislo_dodavatela', 'pdf_dokument', 'vytvorene', 'celkovy_pocet_poloziek')
@@ -10338,10 +10353,10 @@ class OdoslanaObjednavkaAdmin(ISASPremiumAdmin):
         datum = obj.vytvorene.strftime('%d.%m.%Y') if obj.vytvorene else ""
         return {
             'id': obj.id, 
-            'name': escape(obj.cislo_objednavky), 
-            'search_value': escape(obj.cislo_objednavky),
-            'rola': f"🏢 {escape(dodavatel_nazov)}",
-            'date': escape(datum),
+            'name': obj.cislo_objednavky, 
+            'search_value': obj.cislo_objednavky,
+            'rola': f"🏢 {dodavatel_nazov}",
+            'date': datum,
             'cat': '📦 OBJEDNÁVKA'
         }
 
@@ -10533,10 +10548,11 @@ class PovolenieNaVstupAdmin(ISASPremiumAdmin):
     list_filter = (
         'stav', 
         DatumVstupuFilter, 
-        ('zakaznik', admin.RelatedOnlyFieldListFilter), 
-        ('zamestnanci', admin.RelatedOnlyFieldListFilter), 
+        ISASRelatedZakaznikFilter, 
+        ISASRelatedTechnikFilter, 
         ('vozidla', admin.RelatedOnlyFieldListFilter)
     )
+    isas_technici_filter_field = 'zamestnanci'
     search_fields = ('zakaznik__Nazov_spolocnosti', 'zamestnanci__priezvisko', 'vozidla__spz')
     autocomplete_fields = ['zakaznik', 'uloha']
     filter_horizontal = ('zamestnanci', 'vozidla')
@@ -10727,7 +10743,7 @@ class PovolenieNaVstupAdmin(ISASPremiumAdmin):
             'id': obj.id,
             'name': f"{zakaznik_nazov} - {datum}",
             'search_value': str(obj.id),
-            'rola': escape(auta) if auta else "",
+            'rola': auta if auta else "",
             'cat': "VSTUP"
         }
 
@@ -11036,14 +11052,16 @@ class PovolenieNaVstupAdmin(ISASPremiumAdmin):
         return render(request, "admin/kniha_vstupov.html", context)
 
 @admin.register(VystavenaFaktura)
-class VystavenaFakturaAdmin(ISASPremiumAdmin, ERPExportAdminMixin):
+class VystavenaFakturaAdmin(ERPExportAdminMixin, ISASPremiumAdmin):
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         return qs.select_related('zakaznik', 'vystavil', 'zariadenie').prefetch_related('typ_servisu', 'polozky', 'polozky__zariadenie')
 
     list_display_links = ('get_identifikacia_card',)
     list_display = ('erp_status_ikona', 'get_identifikacia_card', 'get_odberatel_card', 'zobraz_typ_servisu', 'zobraz_zdroje', 'get_financie_card', 'zobraz_vystavovatela', 'get_akcie_card')
-    list_filter = ('typ_dokladu', ('vystavil', admin.RelatedOnlyFieldListFilter), 'erp_export_status', 'stav', 'peppol_status', ('datum_vystavenia', admin.DateFieldListFilter), 'prenos_danovej_povinnosti', ('zakaznik', admin.RelatedOnlyFieldListFilter))
+    list_filter = ('typ_dokladu', ISASRelatedUserFilter, 'erp_export_status', 'stav', 'peppol_status', ISASDateRangeFilter, 'prenos_danovej_povinnosti', ISASRelatedZakaznikFilter)
+    isas_user_filter_field = 'vystavil'
+    isas_date_filter_field = 'datum_vystavenia'
     autocomplete_fields = ['zakaznik', 'zariadenie', 'povodna_faktura', 'zdrojova_uloha', 'zdrojove_ponuky', 'zdrojove_objednavky', 'zdrojove_zaznamy']
     search_fields = ('=id', 'cislo_faktury', 'zakaznik__Nazov_spolocnosti', 'zakaznik__ico', 'odberatel_nazov', 'odberatel_ico', 'variabilny_symbol')
     
@@ -11289,18 +11307,18 @@ class VystavenaFakturaAdmin(ISASPremiumAdmin, ERPExportAdminMixin):
         if zariadenia_nazvy:
             customer_str += f" ({', '.join(zariadenia_nazvy)})"
             
-        safe_name = escape(obj.cislo_faktury if obj.cislo_faktury else f"DRAFT-#{obj.id}")
+        safe_name = obj.cislo_faktury if obj.cislo_faktury else f"DRAFT-#{obj.id}"
         mena_fav = obj.mena or get_firemna_mena()
-        safe_suma = escape(f"{obj.celkom_s_dph} {mena_fav}") if obj.celkom_s_dph is not None else escape(f"0.00 {mena_fav}")
+        safe_suma = f"{obj.celkom_s_dph} {mena_fav}" if obj.celkom_s_dph is not None else f"0.00 {mena_fav}"
         
         return {
             'id': obj.id, 
             'name': safe_name, 
             'search_value': safe_name,
-            'rola': escape(customer_str),
-            'cat': escape('FAKTÚRA'),
+            'rola': customer_str,
+            'cat': 'FAKTÚRA',
             'suma': safe_suma,
-            'date': escape(obj.datum_vystavenia.strftime('%d.%m.%Y')) if obj.datum_vystavenia else escape('Nešpecifikované')
+            'date': obj.datum_vystavenia.strftime('%d.%m.%Y') if obj.datum_vystavenia else 'Nešpecifikované'
         }
 
     def get_search_results(self, request, queryset, search_term):
@@ -11949,12 +11967,12 @@ class FilialkaAdmin(ISASPremiumAdmin):
 
         return {
             'id': obj.id,
-            'name': escape(cele_meno),
-            'search_value': escape(f"{nazov_skladu} {obj.kod_pobocky or ''}".strip()),
-            'rola': escape(adresa_alebo_veduci),
-            'cat': escape('🏢 FILIÁLKA / SKLAD'),
-            'date': escape('AKTÍVNA' if obj.je_aktivna else 'ZRUŠENÁ'),
-            'suma': escape(obj.get_typ_skladu_display())
+            'name': cele_meno,
+            'search_value': f"{nazov_skladu} {obj.kod_pobocky or ''}".strip(),
+            'rola': adresa_alebo_veduci,
+            'cat': '🏢 FILIÁLKA / SKLAD',
+            'date': 'AKTÍVNA' if obj.je_aktivna else 'ZRUŠENÁ',
+            'suma': obj.get_typ_skladu_display()
         }
 
     @admin.display(description='🏢 Pobočka / Sklad', ordering='nazov')
@@ -12200,7 +12218,8 @@ class PrijataObjednavkaAdmin(ISASTaskConversionAdminMixin, ISASInvoiceGeneratorA
         'zobraz_ulohy'
     )    
     list_display_links = ('get_objednavka_card',)
-    list_filter = (('datum_prijatia', admin.DateFieldListFilter), 'stav', 'forma_prijatia', ('zakaznik', admin.RelatedOnlyFieldListFilter))
+    list_filter = (ISASDateRangeFilter, 'stav', 'forma_prijatia', ISASRelatedZakaznikFilter)
+    isas_date_filter_field = 'datum_prijatia'
     search_fields = ('cislo_objednavky_interne', 'cislo_objednavky_klienta', 'zakaznik__Nazov_spolocnosti')
     readonly_fields = ('cislo_objednavky_interne',)
     filter_horizontal = ('zariadenia', 'typ_servisu')
@@ -12489,15 +12508,15 @@ class PrijataObjednavkaAdmin(ISASTaskConversionAdminMixin, ISASInvoiceGeneratorA
         zobrazeny_nazov = f"{obj.cislo_objednavky_interne}{po_number}"
         datum_str = obj.datum_prijatia.strftime('%d.%m.%Y') if obj.datum_prijatia else "Neznámy"
         mena_obj = obj.mena or get_firemna_mena()
-        safe_suma = escape(f"{obj.celkova_suma_bez_dph} {mena_obj}") if obj.celkova_suma_bez_dph is not None else escape("Neurčený")
+        safe_suma = f"{obj.celkova_suma_bez_dph} {mena_obj}" if obj.celkova_suma_bez_dph is not None else "Neurčený"
         
         return {
             'id': obj.id, 
-            'name': escape(zobrazeny_nazov), 
-            'search_value': escape(zobrazeny_nazov),
-            'rola': escape(zakaznik_nazov),
-            'date': escape(datum_str),
-            'cat': escape('OBJEDNÁVKA'),
+            'name': zobrazeny_nazov, 
+            'search_value': zobrazeny_nazov,
+            'rola': zakaznik_nazov,
+            'date': datum_str,
+            'cat': 'OBJEDNÁVKA',
             'suma': safe_suma
         }
 
@@ -12705,8 +12724,9 @@ class ImportDatTaskAdmin(ISASPremiumAdmin):
         'stav', 
         'typ_importu', 
         'rezim_importu',
-        ('vytvorene', admin.DateFieldListFilter),
+        ISASDateRangeFilter,
     )
+    isas_date_filter_field = 'vytvorene'
     search_fields = ['chybovy_log', 'vytvoril__username']
     list_select_related = ('vytvoril',)    
     readonly_fields = [
@@ -12763,11 +12783,11 @@ class ImportDatTaskAdmin(ISASPremiumAdmin):
         
         return {
             'id': obj.id,
-            'name': escape(nazov),
-            'search_value': escape(nazov),
-            'rola': escape(f"👤 {autor}"),
-            'date': escape(datum),
-            'cat': escape("IMPORT")
+            'name': nazov,
+            'search_value': nazov,
+            'rola': f"👤 {autor}",
+            'date': datum,
+            'cat': "IMPORT"
         }
 
     @admin.display(description="📥 Vzorové súbory na stiahnutie")
@@ -12940,7 +12960,8 @@ class KorekciaMotohodinLogAdmin(ISASReadOnlyAdminMixin, ISASPremiumAdmin):
     )
     
     list_display_links = None 
-    list_filter = (('vykonal', admin.RelatedOnlyFieldListFilter), 'datum')
+    list_filter = (ISASRelatedUserFilter, 'datum')
+    isas_user_filter_field = 'vykonal'
     search_fields = ['zariadenie__vyrobne_cislo', 'zariadenie__nazov', 'dovod']
     list_select_related = ('zariadenie', 'vykonal')
     readonly_fields = (
@@ -12990,11 +13011,11 @@ class KorekciaMotohodinLogAdmin(ISASReadOnlyAdminMixin, ISASPremiumAdmin):
         
         return {
             'id': obj.id,
-            'name': escape(vysledok),
-            'search_value': escape(vysledok),
-            'rola': escape(f"👤 {autor}"),
-            'date': escape(datum),
-            'cat': escape("KOREKCIA")
+            'name': vysledok,
+            'search_value': vysledok,
+            'rola': f"👤 {autor}",
+            'date': datum,
+            'cat': "KOREKCIA"
         }
 
     @admin.display(description='⚙️ Zariadenie', ordering='zariadenie')
@@ -13214,11 +13235,11 @@ class AIAuditLogAdmin(ISASReadOnlyAdminMixin, ISASPremiumAdmin):
             
         return {
             'id': obj.id,
-            'name': escape(meno),
-            'search_value': escape(meno),
-            'rola': escape(otazka_text),
-            'date': escape(datum),
-            'cat': escape('AI LOG')
+            'name': meno,
+            'search_value': meno,
+            'rola': otazka_text,
+            'date': datum,
+            'cat': 'AI LOG'
         }
 
     def perform_fast_action(self, request, action_type, valid_ids, **kwargs):
@@ -13391,7 +13412,8 @@ class NepritomnostAdmin(ISASPremiumAdmin):
         'get_dokument_card'
     )
     list_display_links = ('get_zamestnanec_card',)
-    list_filter = ('stav', 'typ', ('zamestnanec', admin.RelatedOnlyFieldListFilter))
+    list_filter = ('stav', 'typ', ISASRelatedTechnikFilter)
+    isas_technici_filter_field = 'zamestnanec'
     search_fields = ('zamestnanec__meno', 'zamestnanec__priezvisko')
     readonly_fields = ('pocet_pracovnych_dni', 'schvalil')
     
@@ -13462,11 +13484,11 @@ class NepritomnostAdmin(ISASPremiumAdmin):
         
         return {
             'id': obj.id,
-            'name': escape(meno),
-            'search_value': escape(meno),
-            'rola': escape(obj.get_typ_display()),
-            'date': escape(f"{datum_od} - {datum_do}"),
-            'cat': escape('ABSENCIA')
+            'name': meno,
+            'search_value': meno,
+            'rola': obj.get_typ_display(),
+            'date': f"{datum_od} - {datum_do}",
+            'cat': 'ABSENCIA'
         }
     
     @admin.display(description='👤 Zamestnanec & Typ', ordering='zamestnanec__priezvisko')
@@ -13705,10 +13727,10 @@ class PracovnaPoziciaAdmin(ISASPremiumAdmin):
     def format_detective_result(self, obj):
         return {
             'id': obj.id,
-            'name': escape(obj.nazov),
-            'search_value': escape(obj.nazov),
-            'cat': escape('KARIÉRA'),
-            'rola': escape(f"{obj.get_typ_uvazku_display()} | {obj.mzda}")
+            'name': obj.nazov,
+            'search_value': obj.nazov,
+            'cat': 'KARIÉRA',
+            'rola': f"{obj.get_typ_uvazku_display()} | {obj.mzda}",
         }
 
     # --- 🎨 ISAS UI DISPLAY METÓDY ---
@@ -14043,16 +14065,16 @@ class KandidatAdmin(ISASSecurityAdminMixin, ISASPremiumAdmin):
     def format_detective_result(self, obj):
         pozicia_str = obj.pozicia.nazov if obj.pozicia else "Všeobecný záujem"
         datum_str = obj.vytvorene.strftime('%d.%m.%Y') if obj.vytvorene else ""
-        safe_meno = escape(obj.meno or "(Bez mena)")
+        safe_meno = obj.meno or "(Bez mena)"
         return {
             'id': obj.id,
             'name': safe_meno,
             'search_value': safe_meno,
-            'cat': escape('UCHÁDZAČ'),
-            'email': escape(obj.email or ''),
-            'telefon': escape(obj.telefon or ''),
-            'date': escape(datum_str),
-            'rola': escape(f"{obj.get_stav_display()} | {pozicia_str}")
+            'cat': 'UCHÁDZAČ',
+            'email': obj.email or '',
+            'telefon': obj.telefon or '',
+            'date': datum_str,
+            'rola': f"{obj.get_stav_display()} | {pozicia_str}"
         }
 
     # --- 🎨 ISAS UI DISPLAY METÓDY ---

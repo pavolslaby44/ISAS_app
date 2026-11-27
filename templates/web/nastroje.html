@@ -54,7 +54,7 @@
                         <div class="space-y-4">
                             <div><label class="text-xs font-bold text-gray-500 uppercase">{{ industry_terms.esg_audit_stroj_label|default:"Príkon zariadenia (kW)" }}</label><input type="number" id="esg-kw" class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-white border border-gray-200 hover:border-gray-300 focus:border-brand text-gray-900 shadow-sm focus:outline-none focus:ring-4 focus:ring-brand/15 transition-all duration-200" value="{{ hub_config.esg_default_kw|default:'' }}"></div>
                             <div><label class="text-xs font-bold text-gray-500 uppercase">{{ industry_terms.esg_audit_podiel_label|default:"Chod bez záťaže / naprázdno (%)" }}</label><input type="number" id="esg-percent" class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-white border border-gray-200 hover:border-gray-300 focus:border-brand text-gray-900 shadow-sm focus:outline-none focus:ring-4 focus:ring-brand/15 transition-all duration-200" value="{{ hub_config.esg_default_percent|default:'' }}"></div>
-                            <div><label class="text-xs font-bold text-gray-500 uppercase flex items-center justify-between"><span>{{ industry_terms.esg_energy_price_label|default:"Cena energie" }} ({{ mena }}/kWh)</span>{% if request.user.is_authenticated and request.user.zakaznik_profil.cena_za_kwh_eur %}<span class="text-[10px] text-emerald-600 font-extrabold normal-case">✓ Zo zmluvy</span>{% endif %}</label><input type="number" id="esg-price" step="0.01" class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-white border border-gray-200 hover:border-gray-300 focus:border-brand text-gray-900 shadow-sm focus:outline-none focus:ring-4 focus:ring-brand/15 transition-all duration-200" value="{{ hub_config.esg_default_price|default:'' }}"></div>
+                            <div><label class="text-xs font-bold text-gray-500 uppercase flex items-center justify-between"><span>{{ industry_terms.esg_energy_price_label|default:"Cena energie" }} ({{ mena }}/kWh)</span>{% if b2b_klient and b2b_klient.cena_za_kwh_eur %}<span class="text-[10px] text-emerald-600 font-extrabold normal-case">✓ Zo zmluvy</span>{% endif %}</label><input type="number" id="esg-price" step="0.01" class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-white border border-gray-200 hover:border-gray-300 focus:border-brand text-gray-900 shadow-sm focus:outline-none focus:ring-4 focus:ring-brand/15 transition-all duration-200" value="{{ hub_config.esg_default_price|default:'' }}"></div>
                             <button onclick="calcEsg()" class="w-full bg-brand text-white font-bold py-2.5 rounded-xl hover-bg-brand shadow-sm transition">Vypočítať stratu</button>
                             <div id="esg-result" class="hidden mt-4 p-4 bg-red-50 border border-red-100 rounded-xl text-center">
                                 <p class="text-xs text-red-600 font-bold uppercase">{{ industry_terms.kpi_strata_label|default:"Ročná finančná strata" }}</p>
@@ -65,9 +65,17 @@
                                 <div class="border-t border-red-200 pt-4 mt-2">
                                     <p class="text-xs font-bold text-gray-700 mb-2">Stiahnuť detailný report v PDF:</p>
                                     <div class="flex gap-2">
-                                        <input type="email" id="esg-lead-email" placeholder="Váš e-mail" class="w-full text-base md:text-sm px-3.5 py-2 rounded-xl bg-white border border-gray-200 hover:border-gray-300 focus:border-brand text-gray-900 shadow-sm focus:outline-none focus:ring-4 focus:ring-brand/15 transition-all duration-200">
+                                        <input type="email" id="esg-lead-email" placeholder="Váš e-mail" value="{% if b2b_klient %}{{ b2b_klient.email|default:request.user.email }}{% endif %}" class="w-full text-base md:text-sm px-3.5 py-2 rounded-xl bg-white border border-gray-200 hover:border-gray-300 focus:border-brand text-gray-900 shadow-sm focus:outline-none focus:ring-4 focus:ring-brand/15 transition-all duration-200">
                                         <button onclick="downloadEsgPdf()" id="esg-pdf-btn" class="bg-gray-900 hover:bg-brand text-white px-3.5 py-2 rounded-xl font-bold text-sm transition whitespace-nowrap shadow-sm">📥 PDF</button>
                                     </div>
+                                    {% if not b2b_klient %}
+                                    <div class="flex items-start gap-2 mt-2.5 text-left">
+                                        <input type="checkbox" id="esg-gdpr-suhlas" class="mt-0.5 w-4 h-4 accent-brand border-gray-300 rounded focus:ring-brand">
+                                        <label for="esg-gdpr-suhlas" class="text-[11px] text-gray-600 leading-snug">
+                                            Súhlasím so spracovaním osobných údajov na doručenie ESG auditu podľa <a href="{% url 'webbuilder:ochrana_udajov' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="text-brand font-semibold underline hover:text-gray-900">Zásad ochrany osobných údajov (GDPR)</a>. *
+                                        </label>
+                                    </div>
+                                    {% endif %}
                                     <p id="esg-lead-msg" class="text-xs mt-2 font-bold hidden"></p>
                                 </div>
                             </div>
@@ -387,6 +395,13 @@
             msg.className = "text-xs mt-2 font-bold text-red-600 block";
             return;
         }
+
+        const gdprCheck = document.getElementById('esg-gdpr-suhlas');
+        if (gdprCheck && !gdprCheck.checked) {
+            msg.innerText = "Pre vygenerovanie a doručenie auditu potvrďte súhlas so spracovaním osobných údajov (GDPR).";
+            msg.className = "text-xs mt-2 font-bold text-red-600 block";
+            return;
+        }
         
         btn.disabled = true;
         btn.innerText = "⏳";
@@ -395,6 +410,9 @@
         const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
         formData.append('csrfmiddlewaretoken', csrfToken);
         formData.append('email', email);
+        if (gdprCheck && gdprCheck.checked) {
+            formData.append('gdpr_suhlas', 'on');
+        }
         formData.append('kw', document.getElementById('esg-kw').value);
         formData.append('strata_eur', document.getElementById('esg-res-eur').innerText);
         formData.append('strata_co2', document.getElementById('esg-res-co2').innerText);

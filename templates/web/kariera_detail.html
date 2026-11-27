@@ -201,7 +201,7 @@
                         <div class="flex items-start gap-2 pt-1">
                             <input type="checkbox" id="id_gdpr_suhlas" name="gdpr_suhlas" required class="mt-0.5 rounded bg-gray-800 border-gray-700 text-brand focus:ring-brand">
                             <label for="id_gdpr_suhlas" class="text-[11px] text-gray-400 leading-tight">
-                                Súhlasím so spracovaním osobných údajov za účelom výberového konania. *
+                                Súhlasím so spracovaním osobných údajov za účelom výberového konania podľa <a href="{% url 'webbuilder:ochrana_udajov' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="text-white font-semibold underline hover:text-gray-200">Zásad ochrany osobných údajov (GDPR)</a>. *
                             </label>
                         </div>
 

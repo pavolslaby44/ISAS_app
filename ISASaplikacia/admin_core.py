@@ -16,7 +16,7 @@ from django import forms
 from django.contrib import admin, messages
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
-from django.db.models import Exists, OuterRef, ProtectedError, Q
+from django.db.models import DateTimeField, Exists, OuterRef, ProtectedError, Q
 from django.http import JsonResponse
 from django.urls import path, reverse
 from django.utils import timezone
@@ -1073,20 +1073,44 @@ class ISASDateRangeFilter(admin.SimpleListFilter):
 
     def queryset(self, request, queryset):
         val = self.value()
-        if not val: return queryset
-            
+        if not val:
+            return queryset
+
         date_field = getattr(self.isas_model_admin, 'isas_date_filter_field', 'vytvorene')
-        dnes = timezone.now().date()
-        
-        filters = {
-            'dnes': Q(**{f"{date_field}__date": dnes}) | Q(**{f"{date_field}": dnes}),
-            'vcera': Q(**{f"{date_field}__date": dnes - datetime.timedelta(days=1)}) | Q(**{f"{date_field}": dnes - datetime.timedelta(days=1)}),
-            'tyzden': Q(**{f"{date_field}__gte": dnes - datetime.timedelta(days=dnes.weekday())}),
-            'mesiac': Q(**{f"{date_field}__year": dnes.year, f"{date_field}__month": dnes.month}),
-            'minuly_mesiac': Q(**{f"{date_field}__year": (dnes.replace(day=1) - datetime.timedelta(days=1)).year, f"{date_field}__month": (dnes.replace(day=1) - datetime.timedelta(days=1)).month}),
-            'rok': Q(**{f"{date_field}__year": dnes.year}),
-            'buducnost': Q(**{f"{date_field}__gt": timezone.now()})
-        }
+        now = timezone.now()
+        if timezone.is_aware(now):
+            now = timezone.localtime(now).replace(tzinfo=None)
+        dnes = now.date()
+        vcera = dnes - datetime.timedelta(days=1)
+        tyzden_od = dnes - datetime.timedelta(days=dnes.weekday())
+        minuly_mesiac_ref = dnes.replace(day=1) - datetime.timedelta(days=1)
+
+        try:
+            field_obj = queryset.model._meta.get_field(date_field)
+            is_datetime = isinstance(field_obj, DateTimeField)
+        except Exception:
+            is_datetime = True
+
+        if is_datetime:
+            filters = {
+                'dnes': Q(**{f"{date_field}__date": dnes}),
+                'vcera': Q(**{f"{date_field}__date": vcera}),
+                'tyzden': Q(**{f"{date_field}__gte": datetime.datetime.combine(tyzden_od, datetime.time.min)}),
+                'mesiac': Q(**{f"{date_field}__year": dnes.year, f"{date_field}__month": dnes.month}),
+                'minuly_mesiac': Q(**{f"{date_field}__year": minuly_mesiac_ref.year, f"{date_field}__month": minuly_mesiac_ref.month}),
+                'rok': Q(**{f"{date_field}__year": dnes.year}),
+                'buducnost': Q(**{f"{date_field}__gt": now}),
+            }
+        else:
+            filters = {
+                'dnes': Q(**{f"{date_field}": dnes}),
+                'vcera': Q(**{f"{date_field}": vcera}),
+                'tyzden': Q(**{f"{date_field}__gte": tyzden_od}),
+                'mesiac': Q(**{f"{date_field}__year": dnes.year, f"{date_field}__month": dnes.month}),
+                'minuly_mesiac': Q(**{f"{date_field}__year": minuly_mesiac_ref.year, f"{date_field}__month": minuly_mesiac_ref.month}),
+                'rok': Q(**{f"{date_field}__year": dnes.year}),
+                'buducnost': Q(**{f"{date_field}__gt": dnes}),
+            }
         return queryset.filter(filters[val]) if val in filters else queryset
 
 class ISASHasMaterialFilter(admin.SimpleListFilter):

@@ -16,7 +16,9 @@ from django.utils.html import strip_tags
 from email.utils import parsedate_to_datetime, parseaddr
 from django.utils import timezone
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
+from django.core.validators import validate_email
 from django.db import close_old_connections, transaction
 from celery import shared_task
 from google import genai
@@ -29,7 +31,7 @@ from django.core.files.storage import default_storage
 from Evidencia.utils_helper import clean_and_parse_ai_json, generate_dynamic_greeting
 from Evidencia.utils import ISASNotifier, ISASNotificationBuilder
 from Evidencia.industry_loader import ZARIADENIA_CHOICES
-from ISASaplikacia.models import EmailovyUcet, EmailovaSprava, EmailPriloha, FiremnaIdentita, GlobalneNastavenia
+from ISASaplikacia.models import EmailovyUcet, EmailovaSprava, EmailPriloha, EmailOptOut, FiremnaIdentita, GlobalneNastavenia
 from Evidencia.models import Zakaznik, Dodavatel, Zamestnanec, SukromnaOsoba, TypServisuPrace, ServisovaneZariadenie, PrichodziaFaktura
 from ISASaplikacia.isas_imap_engine import (
     connect_imap, clean_header, extract_email_content, mark_imap_read, 
@@ -292,6 +294,78 @@ def sync_isas_mail_task():
                                                 mime_type=att.get('mime') or 'application/octet-stream'
                                             )
                                             priloha.subor.save(subor_nazov, ContentFile(att['data']))
+
+                            # 🚫 OPT-OUT DETEKCIA (Izolovaná mimo hlavnej transakcie — nikdy nezablokuje uloženie e-mailu)
+                            if created and db_folder == 'INBOX' and email_from:
+                                try:
+                                    cisty_sender_email = str(email_from).strip().lower()
+                                    auto_submitted = str(msg.get('Auto-Submitted', '') or '').strip().lower()
+                                    je_auto_odpoved = bool(auto_submitted and auto_submitted != 'no')
+                                    je_systemovy_bounce = cisty_sender_email.startswith(('mailer-daemon@', 'postmaster@'))
+
+                                    if not je_auto_odpoved and not je_systemovy_bounce and len(cisty_sender_email) <= 254:
+                                        validate_email(cisty_sender_email)
+                                        vlastne_adresy = {
+                                            str(a).strip().lower()
+                                            for a in EmailovyUcet.objects.values_list('email_adresa', flat=True)
+                                            if a
+                                        }
+                                        if cisty_sender_email not in vlastne_adresy:
+                                            raw_optout_text = (body_text if body_text else html.unescape(strip_tags(body_html or '')))[:20000]
+                                            riadky_bez_citacie = [
+                                                r for r in raw_optout_text.splitlines()
+                                                if not r.lstrip().startswith('>')
+                                            ]
+                                            text_bez_citacie = "\n".join(riadky_bez_citacie)
+                                            text_bez_citacie = re.split(
+                                                r'(?im)^\s*(?:dňa\s+.+?napísal|dne\s+.+?napsal|on\s+.+?wrote:|-{2,}\s*original message\s*-{2,}|_{5,}|(?:from|od):\s*[^\n]*@)',
+                                                text_bez_citacie,
+                                                maxsplit=1
+                                            )[0]
+                                            text_bez_citacie = re.sub(
+                                                r'(?is)ak\s+(?:ide\s+o\s+obchodn|si\s+neprajete\s+dostávať).{0,400}?nezasiela[ťt].{0,150}?(?:\n|$)',
+                                                ' ',
+                                                text_bez_citacie
+                                            )
+                                            text_na_optout = f"{(subject or '')[:500]}\n{text_bez_citacie}"
+                                            if re.search(r'(?i)(?<!\w)(nezasiela[ťt]|nezasielat|nezasílat|nezasilat|unsubscribe|odhl[áa]si[ťt]|odhlasit)(?!\w)', text_na_optout):
+                                                with transaction.atomic():
+                                                    opt_obj, opt_created = EmailOptOut.objects.get_or_create(
+                                                        email=cisty_sender_email,
+                                                        defaults={
+                                                            'aktivny': True,
+                                                            'zdroj': 'EMAIL_REPLY',
+                                                            'rozsah': 'MARKETING',
+                                                            'dovod': f"Automatická detekcia z e-mailu ({(subject or '')[:120]})",
+                                                            'zdrojova_sprava': novy_mail,
+                                                            'zakaznik': zakaznik,
+                                                            'dodavatel': dodavatel,
+                                                            'sukromna_osoba': sukromna_osoba,
+                                                        }
+                                                    )
+                                                    if not opt_created:
+                                                        update_fields_opt = ['zdroj', 'dovod', 'zdrojova_sprava', 'aktualizovane']
+                                                        if not opt_obj.aktivny:
+                                                            opt_obj.aktivny = True
+                                                            update_fields_opt.append('aktivny')
+                                                        opt_obj.zdroj = 'EMAIL_REPLY'
+                                                        opt_obj.dovod = f"Opätovná žiadosť z e-mailu ({(subject or '')[:120]})"
+                                                        opt_obj.zdrojova_sprava = novy_mail
+                                                        if zakaznik and not opt_obj.zakaznik_id:
+                                                            opt_obj.zakaznik = zakaznik
+                                                            update_fields_opt.append('zakaznik')
+                                                        if dodavatel and not opt_obj.dodavatel_id:
+                                                            opt_obj.dodavatel = dodavatel
+                                                            update_fields_opt.append('dodavatel')
+                                                        if sukromna_osoba and not opt_obj.sukromna_osoba_id:
+                                                            opt_obj.sukromna_osoba = sukromna_osoba
+                                                            update_fields_opt.append('sukromna_osoba')
+                                                        opt_obj.save(update_fields=update_fields_opt)
+                                                logger.info(f"🚫 Opt-out automaticky zaevidovaný pre '{cisty_sender_email}' (správa ID {novy_mail.id}).")
+                                except ValidationError:
+                                    logger.debug(f"Opt-out kontrola preskočená: neplatný formát e-mailu odosielateľa '{email_from}'.")
+                                except Exception as opt_err:
+                                    logger.warning(f"⚠️ Opt-out detekcia zlyhala pre správu ID {novy_mail.id} ({email_from}): {opt_err}")
 
                             logger.info(f"✨ Spracované: {subject} | Kat: {ai_kat}")
 

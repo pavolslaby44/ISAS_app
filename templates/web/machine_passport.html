@@ -1,3 +1,5 @@
+{% load static %}
+
 <!DOCTYPE html>
 <html lang="sk" class="scroll-smooth">
 <head>
@@ -6,17 +8,18 @@
     <meta name="robots" content="noindex, nofollow">
     {% if canonical_url %}<link rel="canonical" href="{{ canonical_url }}">{% endif %}
     <title>{{ industry_terms.pas_title|default:"Digitálny Pas Zariadenia" }} | {{ zariadenie.vyrobne_cislo }}</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'vendor/fonts/inter.css' %}">
+    <link rel="stylesheet" href="{% static 'vendor/tailwind/tailwind.min.css' %}">
+    <style>:root { --brand-rgb: 15 23 42; }</style>
     <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: { sans: ['Inter', 'sans-serif'] },
-                    colors: { brand: '{{ nastavenia.hlavna_farba|default:"#0f172a"|escapejs }}' }
-                }
+        (function() {
+            var h = '{{ nastavenia.hlavna_farba|default:"#0f172a"|escapejs }}'.replace('#', '').trim();
+            if (h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+            if (/^[0-9a-fA-F]{6}$/.test(h)) {
+                var n = parseInt(h, 16);
+                document.documentElement.style.setProperty('--brand-rgb', ((n >> 16) & 255) + ' ' + ((n >> 8) & 255) + ' ' + (n & 255));
             }
-        }
+        })();
     </script>
     <style>
         input::placeholder {
@@ -890,10 +893,14 @@
                     <label for="passport_priloha" class="block text-sm font-bold text-gray-700 mb-1">📸 Odfotiť poruchu / Priložiť protokol (Obrázok, Video, PDF)</label>
                     <input type="file" id="passport_priloha" name="priloha" accept="image/*,video/*,.pdf" capture="environment" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 ring-brand transition text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-brand/10 file:text-brand hover:file:bg-brand/20">
                 </div>
+                {% if b2b_klient and request.user.is_authenticated %}
+                <input type="hidden" name="gdpr_suhlas" value="on">
+                {% else %}
                 <div class="flex items-start gap-3 mt-2 mb-4">
                     <input type="checkbox" name="gdpr_suhlas" id="gdpr_suhlas" required class="mt-1 w-5 h-5 text-brand border-gray-300 rounded focus:ring-brand">
-                    <label for="gdpr_suhlas" class="text-xs text-gray-500">Súhlasím so spracovaním osobných údajov (GDPR). *</label>
+                    <label for="gdpr_suhlas" class="text-xs text-gray-500">Súhlasím so spracovaním osobných údajov podľa <a href="{% url 'webbuilder:ochrana_udajov' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="text-brand font-semibold underline hover:text-gray-900">Zásad ochrany osobných údajov (GDPR)</a>. *</label>
                 </div>
+                {% endif %}
                 
                 <button type="submit" id="submitBtn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold text-lg py-4 rounded-xl transition duration-300 shadow-lg flex justify-center items-center gap-2">
                     <span id="btnText">Odoslať na dispečing</span>
@@ -949,7 +956,10 @@
             {% if identita.sidlo_ulica and identita.sidlo_mesto %}
                 <p class="text-gray-500 text-[11px]">{{ identita.sidlo_ulica }} {{ identita.sidlo_cislo }}, {{ identita.sidlo_psc }} {{ identita.sidlo_mesto }}{% if identita.sidlo_stat %}, {{ identita.sidlo_stat }}{% endif %}</p>
             {% endif %}
-            <p class="text-gray-500 text-[11px]">&copy; {{ dnes|date:"Y" }} {{ identita.nazov_spolocnosti|default:"Servisné Stredisko" }}. Všetky práva vyhradené.</p>
+            <p class="text-gray-500 text-[11px]">
+                &copy; {{ dnes|date:"Y" }} {{ identita.nazov_spolocnosti|default:"Servisné Stredisko" }}. Všetky práva vyhradené. &bull;
+                <a href="{% url 'webbuilder:ochrana_udajov' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="text-gray-300 hover:text-white underline transition">Ochrana osobných údajov (GDPR)</a>
+            </p>
         </div>
     </footer>
 

@@ -976,21 +976,21 @@
                         {% csrf_token %}
                         <!-- 🛡️ HONEYPOT -->
                         <input type="text" name="website_url" class="hidden" tabindex="-1" autocomplete="off">
-                        {% if request.user.is_authenticated and request.user.zakaznik_profil %}
+                        {% if b2b_klient %}
                         <input type="hidden" name="is_b2b_direct" value="true">
                         <div class="bg-emerald-50 border border-emerald-200 p-3 rounded-xl text-xs text-emerald-900 mb-2 space-y-1">
                             <p class="font-bold flex items-center gap-1.5">
-                                <span>🏢</span> Prihlásený partner: <b>{{ request.user.zakaznik_profil.Nazov_spolocnosti }}</b>
+                                <span>🏢</span> Prihlásený partner: <b>{{ b2b_klient.Nazov_spolocnosti }}</b>
                             </p>
                             <div class="text-[11px] text-emerald-800 flex flex-wrap gap-x-3 pt-0.5">
-                                {% if request.user.zakaznik_profil.b2b_zlava_percenta and request.user.zakaznik_profil.b2b_zlava_percenta > 0 %}
-                                <span>💰 Zmluvná zľava: <strong>-{{ request.user.zakaznik_profil.b2b_zlava_percenta }} %</strong></span>
+                                {% if b2b_klient.b2b_zlava_percenta and b2b_klient.b2b_zlava_percenta > 0 %}
+                                <span>💰 Zmluvná zľava: <strong>-{{ b2b_klient.b2b_zlava_percenta }} %</strong></span>
                                 {% endif %}
-                                {% if request.user.zakaznik_profil.predvolena_splatnost_dni %}
-                                <span>💳 Splatnosť faktúr: <strong>{{ request.user.zakaznik_profil.predvolena_splatnost_dni }} dní</strong></span>
+                                {% if b2b_klient.predvolena_splatnost_dni %}
+                                <span>💳 Splatnosť faktúr: <strong>{{ b2b_klient.predvolena_splatnost_dni }} dní</strong></span>
                                 {% endif %}
                             </div>
-                            {% if request.user.zakaznik_profil.vyzaduje_povolenie_vstupu %}
+                            {% if b2b_klient.vyzaduje_povolenie_vstupu %}
                             <p class="text-[10px] text-amber-900 bg-amber-100/80 px-2 py-0.5 rounded border border-amber-300 mt-1 inline-block">
                                 🛂 Vstup vyžaduje evidenciu povolenia (Gate Pass)
                             </p>
@@ -1000,14 +1000,14 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-5 items-end">
                             <div>
                                 <label class="block text-sm font-bold text-gray-700 mb-2">Firma / Meno *</label>
-                                <input type="text" name="firma" required value="{% if request.user.is_authenticated and request.user.zakaznik_profil %}{{ request.user.zakaznik_profil.Nazov_spolocnosti }}{% endif %}" class="w-full bg-gray-50/80 hover:bg-gray-50 focus:bg-white border border-gray-200 hover:border-gray-300 focus:border-brand rounded-xl px-4 py-3 text-gray-900 shadow-sm focus:outline-none focus:ring-4 focus:ring-brand/15 transition-all duration-200">
+                                <input type="text" name="firma" required value="{% if b2b_klient %}{{ b2b_klient.Nazov_spolocnosti }}{% endif %}" class="w-full bg-gray-50/80 hover:bg-gray-50 focus:bg-white border border-gray-200 hover:border-gray-300 focus:border-brand rounded-xl px-4 py-3 text-gray-900 shadow-sm focus:outline-none focus:ring-4 focus:ring-brand/15 transition-all duration-200">
                             </div>
                             <div>
                                 <label class="block text-sm font-bold text-gray-700 mb-2">Číslo objednávky / PO <span class="text-xs text-gray-400 font-normal">(Voliteľné pre B2B)</span></label>
                                 <input type="text" name="cislo_objednavky_klienta" placeholder="Napr. PO-{% now 'Y' %}-089" class="w-full bg-gray-50/80 hover:bg-gray-50 focus:bg-white border border-gray-200 hover:border-gray-300 focus:border-brand rounded-xl px-4 py-3 text-gray-900 shadow-sm focus:outline-none focus:ring-4 focus:ring-brand/15 transition-all duration-200">
                             </div>
                         </div>
-                        {% if request.user.is_authenticated and request.user.zakaznik_profil and klient_zariadenia %}
+                        {% if b2b_klient and klient_zariadenia %}
                         <div>
                             <label class="block text-sm font-bold text-gray-700 mb-2">Vaše evidované zariadenie <span class="text-xs text-gray-400 font-normal">(Voliteľné)</span></label>
                             <div class="relative group">
@@ -1024,11 +1024,11 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-5 items-end">
                             <div>
                                 <label class="block text-sm font-bold text-gray-700 mb-2">E-mail *</label>
-                                <input type="email" name="email" value="{% if request.user.is_authenticated and request.user.zakaznik_profil %}{{ request.user.zakaznik_profil.email|default:request.user.email }}{% endif %}" required class="w-full bg-gray-50/80 hover:bg-gray-50 focus:bg-white border border-gray-200 hover:border-gray-300 focus:border-brand rounded-xl px-4 py-3 text-gray-900 shadow-sm focus:outline-none focus:ring-4 focus:ring-brand/15 transition-all duration-200">
+                                <input type="email" name="email" value="{% if b2b_klient %}{{ b2b_klient.email|default:request.user.email }}{% endif %}" required class="w-full bg-gray-50/80 hover:bg-gray-50 focus:bg-white border border-gray-200 hover:border-gray-300 focus:border-brand rounded-xl px-4 py-3 text-gray-900 shadow-sm focus:outline-none focus:ring-4 focus:ring-brand/15 transition-all duration-200">
                             </div>
                             <div>
                                 <label class="block text-sm font-bold text-gray-700 mb-2">Telefón</label>
-                                <input type="text" name="telefon" value="{% if request.user.is_authenticated and request.user.zakaznik_profil %}{{ request.user.zakaznik_profil.telefon|default:'' }}{% endif %}" class="w-full bg-gray-50/80 hover:bg-gray-50 focus:bg-white border border-gray-200 hover:border-gray-300 focus:border-brand rounded-xl px-4 py-3 text-gray-900 shadow-sm focus:outline-none focus:ring-4 focus:ring-brand/15 transition-all duration-200">
+                                <input type="text" name="telefon" value="{% if b2b_klient %}{{ b2b_klient.telefon|default:'' }}{% endif %}" class="w-full bg-gray-50/80 hover:bg-gray-50 focus:bg-white border border-gray-200 hover:border-gray-300 focus:border-brand rounded-xl px-4 py-3 text-gray-900 shadow-sm focus:outline-none focus:ring-4 focus:ring-brand/15 transition-all duration-200">
                             </div>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-5 items-end">
@@ -1095,11 +1095,11 @@
                             </label>
                             <input type="file" id="dopytPrilohaInput" name="priloha" accept=".jpg,.jpeg,.png,.webp,.pdf,.mp4,.mov" onchange="const f=this.files[0]; if(f && f.size > 10*1024*1024){ alert('⚠️ Zvolený súbor má ' + (f.size/(1024*1024)).toFixed(1) + ' MB. Maximálny povolený limit je 10 MB. Pre úspešné odoslanie zvoľte fotografiu v bežnom rozlíšení.'); this.value=''; }" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs file:mr-3 file:py-1.5 file:px-3.5 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-brand/10 file:text-brand hover:file:bg-brand/20 transition focus:outline-none">
                         </div>
-                        {% if not request.user.is_authenticated or not request.user.zakaznik_profil %}
+                        {% if not b2b_klient %}
                         <div class="flex items-start gap-3 mt-4 mb-2">
                             <input type="checkbox" name="gdpr_suhlas" id="gdpr_suhlas" required class="mt-1 w-5 h-5 text-brand border-gray-300 rounded focus:ring-brand">
                             <label for="gdpr_suhlas" class="text-sm text-gray-600">
-                                Súhlasím so spracovaním osobných údajov za účelom vybavenia tohto dopytu v súlade s platnou legislatívou (GDPR). *
+                                Súhlasím so spracovaním osobných údajov za účelom vybavenia tohto dopytu podľa <a href="{% url 'webbuilder:ochrana_udajov' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="text-brand font-semibold underline hover:text-gray-900">Zásad ochrany osobných údajov (GDPR)</a>. *
                             </label>
                         </div>
                         {% endif %}
@@ -1142,11 +1142,11 @@
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
-                            <span id="btnText">{% if request.user.is_authenticated and request.user.zakaznik_profil %}Odoslať záväznú požiadavku{% else %}Odoslať požiadavku{% endif %}</span>
+                            <span id="btnText">{% if b2b_klient %}Odoslať záväznú požiadavku{% else %}Odoslať požiadavku{% endif %}</span>
                         </button>
                         <p class="text-[11px] text-gray-400 text-center mt-3">
-                            {% if request.user.is_authenticated and request.user.zakaznik_profil %}
-                            🏢 Požiadavka bude evidovaná pod vaším B2B profilom ({{ request.user.zakaznik_profil.Nazov_spolocnosti }}).
+                            {% if b2b_klient %}
+                            🏢 Požiadavka bude evidovaná pod vaším B2B profilom ({{ b2b_klient.Nazov_spolocnosti }}).
                             {% else %}
                             🔒 Odoslanie je nezáväzné. Dostupnosť a podrobnosti potvrdíme e-mailom alebo telefonicky.
                             {% endif %}
@@ -1237,7 +1237,7 @@
 
                                     <!-- Možnosť: Výjazd (Mesto + Live výpočet) -->
                                     <div id="bookingVyjazdWrap">
-                                        <input type="text" id="bookingLocationInput" name="mesto" required value="{% if request.user.is_authenticated and request.user.zakaznik_profil %}{{ request.user.zakaznik_profil.psc|default:'' }} {{ request.user.zakaznik_profil.mesto|default:'' }}{% endif %}" placeholder="Vaše mesto alebo PSČ (napr. 811 01 Bratislava)" class="w-full bg-white border border-gray-200 hover:border-gray-300 focus:border-brand rounded-xl px-4 py-3 text-gray-900 shadow-sm focus:outline-none focus:ring-4 focus:ring-brand/15 transition-all duration-200 text-base md:text-sm">
+                                        <input type="text" id="bookingLocationInput" name="mesto" required value="{% if b2b_klient %}{{ b2b_klient.psc|default:'' }} {{ b2b_klient.mesto|default:'' }}{% endif %}" placeholder="Vaše mesto alebo PSČ (napr. 811 01 Bratislava)" class="w-full bg-white border border-gray-200 hover:border-gray-300 focus:border-brand rounded-xl px-4 py-3 text-gray-900 shadow-sm focus:outline-none focus:ring-4 focus:ring-brand/15 transition-all duration-200 text-base md:text-sm">
                                         <div id="bookingLiveCalcBadge" class="hidden mt-2 p-2.5 bg-brand/5 border border-brand/20 rounded-xl text-xs text-gray-700 flex flex-wrap items-center justify-between gap-2">
                                             <span id="bookingLiveDistance" class="font-bold text-gray-900"></span>
                                             <span id="bookingLiveTravel" class="font-extrabold text-brand"></span>
@@ -1285,16 +1285,16 @@
                             <div class="space-y-6">
                                 <div>
                                     <label class="block text-sm font-bold text-gray-700 mb-2">Firma / Meno *</label>
-                                    <input type="text" name="firma" required value="{% if request.user.is_authenticated and request.user.zakaznik_profil %}{{ request.user.zakaznik_profil.Nazov_spolocnosti }}{% endif %}" class="w-full bg-white border border-gray-200 hover:border-gray-300 focus:border-brand rounded-xl px-4 py-3 text-gray-900 shadow-sm focus:outline-none focus:ring-4 focus:ring-brand/15 transition-all duration-200">
+                                    <input type="text" name="firma" required value="{% if b2b_klient %}{{ b2b_klient.Nazov_spolocnosti }}{% endif %}" class="w-full bg-white border border-gray-200 hover:border-gray-300 focus:border-brand rounded-xl px-4 py-3 text-gray-900 shadow-sm focus:outline-none focus:ring-4 focus:ring-brand/15 transition-all duration-200">
                                 </div>
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div>
                                         <label class="block text-sm font-bold text-gray-700 mb-2">E-mail *</label>
-                                        <input type="email" name="email" required value="{% if request.user.is_authenticated and request.user.zakaznik_profil %}{{ request.user.zakaznik_profil.email|default:request.user.email }}{% endif %}" class="w-full bg-white border border-gray-200 hover:border-gray-300 focus:border-brand rounded-xl px-4 py-3 text-gray-900 shadow-sm focus:outline-none focus:ring-4 focus:ring-brand/15 transition-all duration-200">
+                                        <input type="email" name="email" required value="{% if b2b_klient %}{{ b2b_klient.email|default:request.user.email }}{% endif %}" class="w-full bg-white border border-gray-200 hover:border-gray-300 focus:border-brand rounded-xl px-4 py-3 text-gray-900 shadow-sm focus:outline-none focus:ring-4 focus:ring-brand/15 transition-all duration-200">
                                     </div>
                                     <div>
                                         <label class="block text-sm font-bold text-gray-700 mb-2">Telefón *</label>
-                                        <input type="text" name="telefon" required value="{% if request.user.is_authenticated and request.user.zakaznik_profil %}{{ request.user.zakaznik_profil.telefon|default:'' }}{% endif %}" class="w-full bg-white border border-gray-200 hover:border-gray-300 focus:border-brand rounded-xl px-4 py-3 text-gray-900 shadow-sm focus:outline-none focus:ring-4 focus:ring-brand/15 transition-all duration-200">
+                                        <input type="text" name="telefon" required value="{% if b2b_klient %}{{ b2b_klient.telefon|default:'' }}{% endif %}" class="w-full bg-white border border-gray-200 hover:border-gray-300 focus:border-brand rounded-xl px-4 py-3 text-gray-900 shadow-sm focus:outline-none focus:ring-4 focus:ring-brand/15 transition-all duration-200">
                                     </div>
                                 </div>
                                 <div>
@@ -1307,11 +1307,11 @@
                             </div>
                         </div>
 
-                        {% if not request.user.is_authenticated or not request.user.zakaznik_profil %}
+                        {% if not b2b_klient %}
                         <div class="flex items-start gap-3 pt-2">
                             <input type="checkbox" name="gdpr_suhlas" id="booking_gdpr_suhlas" required class="mt-1 w-5 h-5 text-brand border-gray-300 rounded focus:ring-brand">
                             <label for="booking_gdpr_suhlas" class="text-sm text-gray-600">
-                                Súhlasím so spracovaním osobných údajov za účelom vybavenia tejto rezervácie v súlade s platnou legislatívou (GDPR). *
+                                Súhlasím so spracovaním osobných údajov za účelom vybavenia tejto rezervácie podľa <a href="{% url 'webbuilder:ochrana_udajov' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="text-brand font-semibold underline hover:text-gray-900">Zásad ochrany osobných údajov (GDPR)</a>. *
                             </label>
                         </div>
                         {% endif %}

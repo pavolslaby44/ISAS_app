@@ -1,3 +1,5 @@
+{% load static %}
+
 <!DOCTYPE html>
 <html lang="sk" class="scroll-smooth">
 <head>
@@ -23,21 +25,19 @@
         {% endif %}
     {% endblock %}
     
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
+    <link rel="stylesheet" href="{% static 'vendor/fonts/inter.css' %}">
+    <link rel="stylesheet" href="{% static 'vendor/tailwind/tailwind.min.css' %}">
+    <script src="{% static 'vendor/chartjs/chart.umd.min.js' %}"></script>
+    <style>:root { --brand-rgb: 15 23 42; }</style>
     <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: { sans: ['Inter', 'sans-serif'], },
-                    colors: { brand: '{{ nastavenia.hlavna_farba|default:"#0f172a"|escapejs }}', }
-                }
+        (function() {
+            var h = '{{ nastavenia.hlavna_farba|default:"#0f172a"|escapejs }}'.replace('#', '').trim();
+            if (h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+            if (/^[0-9a-fA-F]{6}$/.test(h)) {
+                var n = parseInt(h, 16);
+                document.documentElement.style.setProperty('--brand-rgb', ((n >> 16) & 255) + ' ' + ((n >> 8) & 255) + ' ' + (n & 255));
             }
-        }
+        })();
     </script>
     {% if is_preview %}
     <meta name="robots" content="noindex, nofollow">
@@ -135,7 +135,7 @@
                 </button>
                 {% endif %}
                 
-                {% if request.user.is_authenticated and request.user.zakaznik_profil %}
+                {% if b2b_klient %}
                     <a href="{% url 'webbuilder:b2b_dashboard' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="flex items-center gap-2 {% if request.resolver_match and request.resolver_match.url_name == 'b2b_dashboard' %}text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg{% else %}text-emerald-600 hover:text-emerald-700{% endif %} font-bold transition">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
                         Môj profil
@@ -188,7 +188,7 @@
                 {% endif %}
                 
                 <div class="pt-4 border-t border-gray-100 space-y-3">
-                    {% if request.user.is_authenticated and request.user.zakaznik_profil %}
+                    {% if b2b_klient %}
                         <a href="{% url 'webbuilder:b2b_dashboard' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="mobile-link flex items-center justify-center gap-2 text-emerald-600 hover:text-emerald-700 transition bg-emerald-50 py-3 rounded-xl border border-emerald-100">
                             Môj profil
                         </a>
@@ -226,21 +226,21 @@
 
     <!-- 🟢 HLAVNÝ OBSAH -->
     <main class="flex-grow">
-        {% if request.user.is_authenticated and request.user.zakaznik_profil %}
+        {% if b2b_klient %}
         <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white px-6 py-2 border-b border-indigo-900/60 shadow-inner">
             <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3 text-xs">
                 <div class="flex items-center gap-2">
                     <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 font-black text-[10px]">✓</span>
-                    <span>Prihlásený B2B partner: <strong class="text-emerald-300 font-bold">{{ request.user.zakaznik_profil.Nazov_spolocnosti }}</strong></span>
+                    <span>Prihlásený B2B partner: <strong class="text-emerald-300 font-bold">{{ b2b_klient.Nazov_spolocnosti }}</strong></span>
                 </div>
                 <div class="flex items-center gap-4 text-slate-300 font-medium">
-                    {% if request.user.zakaznik_profil.b2b_zlava_percenta and request.user.zakaznik_profil.b2b_zlava_percenta > 0 %}
-                    <span class="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-md font-bold">Zmluvná zľava -{{ request.user.zakaznik_profil.b2b_zlava_percenta }}%</span>
+                    {% if b2b_klient.b2b_zlava_percenta and b2b_klient.b2b_zlava_percenta > 0 %}
+                    <span class="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-md font-bold">Zmluvná zľava -{{ b2b_klient.b2b_zlava_percenta }}%</span>
                     {% endif %}
-                    {% if request.user.zakaznik_profil.predvolena_splatnost_dni %}
-                    <span>Splatnosť faktúr: <strong class="text-white">{{ request.user.zakaznik_profil.predvolena_splatnost_dni }} dní</strong></span>
+                    {% if b2b_klient.predvolena_splatnost_dni %}
+                    <span>Splatnosť faktúr: <strong class="text-white">{{ b2b_klient.predvolena_splatnost_dni }} dní</strong></span>
                     {% endif %}
-                    {% if request.user.zakaznik_profil.vyzaduje_povolenie_vstupu %}
+                    {% if b2b_klient.vyzaduje_povolenie_vstupu %}
                     <span class="text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded border border-amber-400/30" title="Pre areál je evidovaná požiadavka na priepustku">🛂 Gate Pass aktívny</span>
                     {% endif %}
                 </div>
@@ -338,6 +338,9 @@
                             <span>🔍</span> Overiť stav zákazky (Ticket Checker)
                         </button>
                         {% endif %}
+                        <a href="{% url 'webbuilder:ochrana_udajov' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="text-gray-300 hover:text-white transition flex items-center gap-1.5 font-semibold">
+                            <span>🔒</span> Ochrana osobných údajov (GDPR)
+                        </a>
                     </div>
                 </div>
             </div>
@@ -438,7 +441,7 @@
                 <span id="cartSubtotalVal" class="font-bold"></span>
             </div>
             <div id="cartDiscountRow" class="hidden flex justify-between items-center text-emerald-600 font-semibold pt-1">
-                <span>B2B zľava (-{{ request.user.zakaznik_profil.b2b_zlava_percenta|default:"0" }}%):</span>
+                <span>B2B zľava (-{{ b2b_klient.b2b_zlava_percenta|default:"0" }}%):</span>
                 <span id="cartDiscountVal"></span>
             </div>
             <div class="flex justify-between items-center text-gray-900 font-extrabold text-sm pt-1 border-t border-gray-200 mt-1">
@@ -453,34 +456,34 @@
                 {% csrf_token %}
                 <input type="text" name="website_url" class="hidden" tabindex="-1" autocomplete="off">
                 
-                {% if request.user.is_authenticated and request.user.zakaznik_profil %}
+                {% if b2b_klient %}
                     <input type="hidden" name="is_b2b_direct" value="true">
-                    <input type="hidden" name="firma" value="{{ request.user.zakaznik_profil.Nazov_spolocnosti|default:request.user.get_full_name|default:request.user.username }}">
-                    <input type="hidden" name="email" value="{{ request.user.zakaznik_profil.email|default:request.user.email }}">
-                    <input type="hidden" name="telefon" value="{{ request.user.zakaznik_profil.telefon|default:'' }}">
+                    <input type="hidden" name="firma" value="{{ b2b_klient.Nazov_spolocnosti|default:request.user.get_full_name|default:request.user.username }}">
+                    <input type="hidden" name="email" value="{{ b2b_klient.email|default:request.user.email }}">
+                    <input type="hidden" name="telefon" value="{{ b2b_klient.telefon|default:'' }}">
                     <input type="hidden" name="gdpr_suhlas" value="on">
                     <div class="bg-emerald-50 border border-emerald-200 p-3 rounded-xl text-sm text-emerald-800 mb-4 space-y-1">
-                        <p>Ste prihlásený ako <b>{{ request.user.zakaznik_profil.Nazov_spolocnosti }}</b>.{% if request.user.zakaznik_profil.b2b_zlava_percenta and request.user.zakaznik_profil.b2b_zlava_percenta > 0 %} Objednávka bude vytvorená s vašou individuálnou B2B zľavou <b>-{{ request.user.zakaznik_profil.b2b_zlava_percenta }}%</b>.{% else %} Objednávka bude vytvorená s vašou B2B zľavou.{% endif %}</p>
-                        {% if request.user.zakaznik_profil.predvolena_splatnost_dni or identita.splatnost_faktur or identita.predvolena_platnost_ponuk %}
+                        <p>Ste prihlásený ako <b>{{ b2b_klient.Nazov_spolocnosti }}</b>.{% if b2b_klient.b2b_zlava_percenta and b2b_klient.b2b_zlava_percenta > 0 %} Objednávka bude vytvorená s vašou individuálnou B2B zľavou <b>-{{ b2b_klient.b2b_zlava_percenta }}%</b>.{% else %} Objednávka bude vytvorená s vašou B2B zľavou.{% endif %}</p>
+                        {% if b2b_klient.predvolena_splatnost_dni or identita.splatnost_faktur or identita.predvolena_platnost_ponuk %}
                         <p class="text-xs text-emerald-700 border-t border-emerald-200/60 pt-1.5 mt-1.5 flex flex-wrap gap-x-3">
-                            {% if request.user.zakaznik_profil.predvolena_splatnost_dni %}
-                            <span>💳 Zmluvná B2B splatnosť: <strong>{{ request.user.zakaznik_profil.predvolena_splatnost_dni }} dní</strong></span>
+                            {% if b2b_klient.predvolena_splatnost_dni %}
+                            <span>💳 Zmluvná B2B splatnosť: <strong>{{ b2b_klient.predvolena_splatnost_dni }} dní</strong></span>
                             {% elif identita.splatnost_faktur %}
                             <span>💳 Splatnosť faktúr: <strong>{{ identita.splatnost_faktur }} dní</strong></span>
                             {% endif %}
                             {% if identita.predvolena_platnost_ponuk %}<span>⏱️ Garancia cien ponuky: <strong>{{ identita.predvolena_platnost_ponuk }} dní</strong></span>{% endif %}
                         </p>
                         {% endif %}
-                        {% if request.user.zakaznik_profil.vyzaduje_povolenie_vstupu %}
+                        {% if b2b_klient.vyzaduje_povolenie_vstupu %}
                         <div id="cartGatePassAlert" class="hidden p-2.5 bg-amber-50 border border-amber-300 rounded-xl text-xs text-amber-900 mt-2 space-y-1">
                             <p class="font-bold flex items-center gap-1.5 text-amber-950"><span>🛂</span> Areál vyžaduje povolenie na vstup (Gate Pass):</p>
-                            {% if request.user.zakaznik_profil.instrukcie_vstupu %}
-                            <p class="text-[11px] text-amber-900 leading-tight">{{ request.user.zakaznik_profil.instrukcie_vstupu }}</p>
+                            {% if b2b_klient.instrukcie_vstupu %}
+                            <p class="text-[11px] text-amber-900 leading-tight">{{ b2b_klient.instrukcie_vstupu }}</p>
                             {% endif %}
                             <p class="text-[10px] text-amber-800 flex flex-wrap gap-x-2.5 pt-0.5">
-                                {% if request.user.zakaznik_profil.telefon_vratnica %}<span>📞 SBS: {{ request.user.zakaznik_profil.telefon_vratnica }}</span>{% endif %}
-                                {% if request.user.zakaznik_profil.email_vratnice %}<span>📧 SBS: {{ request.user.zakaznik_profil.email_vratnice }}</span>{% endif %}
-                                {% if request.user.zakaznik_profil.url_vstupneho_portalu %}<a href="{{ request.user.zakaznik_profil.url_vstupneho_portalu }}" target="_blank" rel="noopener noreferrer" class="underline font-bold text-amber-950 hover:text-black">🔗 Vstupný portál</a>{% endif %}
+                                {% if b2b_klient.telefon_vratnica %}<span>📞 SBS: {{ b2b_klient.telefon_vratnica }}</span>{% endif %}
+                                {% if b2b_klient.email_vratnice %}<span>📧 SBS: {{ b2b_klient.email_vratnice }}</span>{% endif %}
+                                {% if b2b_klient.url_vstupneho_portalu %}<a href="{{ b2b_klient.url_vstupneho_portalu }}" target="_blank" rel="noopener noreferrer" class="underline font-bold text-amber-950 hover:text-black">🔗 Vstupný portál</a>{% endif %}
                             </p>
                         </div>
                         {% endif %}
@@ -501,7 +504,7 @@
                     <input type="text" name="telefon" aria-label="Vaše telefónne číslo" placeholder="Telefón" class="w-full bg-white border border-gray-200 hover:border-gray-300 focus:border-brand rounded-xl px-4 py-2.5 text-base md:text-sm text-gray-900 shadow-sm focus:ring-4 focus:ring-brand/15 outline-none transition-all duration-200">
                     <div class="flex items-start gap-2 mt-2 mb-2">
                         <input type="checkbox" name="gdpr_suhlas" id="cart_gdpr" required class="mt-1 w-4 h-4 accent-brand border-gray-300 rounded">
-                        <label for="cart_gdpr" class="text-xs text-gray-500">Súhlasím so spracovaním údajov (GDPR). *</label>
+                        <label for="cart_gdpr" class="text-xs text-gray-500">Súhlasím so <a href="{% url 'webbuilder:ochrana_udajov' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="text-brand font-semibold underline hover:text-gray-900">spracovaním osobných údajov (GDPR)</a>. *</label>
                     </div>
                 {% endif %}
                 
@@ -579,7 +582,7 @@
                 </p>
                 {% endif %}
                 <button type="submit" id="cartSubmitBtn" class="w-full bg-gray-900 hover:bg-brand text-white font-bold py-3.5 rounded-xl transition shadow-md flex justify-center items-center gap-2">
-                    <span id="cartBtnText">{% if request.user.is_authenticated and request.user.zakaznik_profil %}{{ industry_terms.cart_order_btn|default:"Záväzne objednať" }}{% else %}{{ industry_terms.cart_inquiry_btn|default:"Odoslať dopyt" }}{% endif %}</span>
+                    <span id="cartBtnText">{% if b2b_klient %}{{ industry_terms.cart_order_btn|default:"Záväzne objednať" }}{% else %}{{ industry_terms.cart_inquiry_btn|default:"Odoslať dopyt" }}{% endif %}</span>
                 </button>
             </form>
         </div>
@@ -1096,11 +1099,14 @@
                     body: new FormData(form),
                     headers: { 'X-Requested-With': 'XMLHttpRequest' }
                 })
-                .then(res => res.json())
-                .then(data => {
-                    alert(data.status === 'success' ? `✅ ${data.message}` : `❌ Chyba: ${data.message}`);
-                    if (data.status === 'success') {
+                .then(res => res.json().then(data => ({ ok: res.ok, status: res.status, data })).catch(() => ({ ok: false, status: res.status, data: null })))
+                .then(({ ok, status, data }) => {
+                    if (ok && data && data.status === 'success') {
+                        alert(`✅ ${data.message}`);
                         form.reset();
+                    } else {
+                        const errMsg = (data && data.message) ? data.message : (status === 413 ? 'Priložený súbor je príliš veľký (max 10 MB).' : 'Požiadavku sa nepodarilo odoslať.');
+                        alert(`❌ Chyba: ${errMsg}`);
                     }
                 })
                 .catch(() => alert('❌ Nastala chyba pri komunikácii so serverom.'))
@@ -1319,7 +1325,7 @@
 
             <div class="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between gap-3 text-xs text-gray-500">
                 <span class="leading-tight">Potrebujete protokoly a faktúry?</span>
-                {% if request.user.is_authenticated and request.user.zakaznik_profil %}
+                {% if b2b_klient %}
                 <a href="{% url 'webbuilder:b2b_dashboard' %}{% if is_preview %}?preview=ai_draft{% endif %}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-emerald-600 text-emerald-700 hover:text-white border border-emerald-200/80 hover:border-emerald-600 font-bold text-xs shadow-sm transition whitespace-nowrap shrink-0">
                     <span>Môj profil</span>
                     <span aria-hidden="true">&rarr;</span>
