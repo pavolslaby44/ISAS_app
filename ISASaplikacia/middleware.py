@@ -162,9 +162,15 @@ class ISASTenantMiddleware:
                 # Defenzívne overenie prefixov s garanciou lomiek
                 is_blocked_root = any(path_clean == prefix or path_clean.startswith(f"{prefix}/") for prefix in tenant_blocked)
                 
-                # V evidencii na subdoméne povoľujeme výhradne IoT Dashboard a jeho vnorené telemetrické endpointy
+                # V evidencii na subdoméne povoľujeme výhradne IoT Dashboard a jeho klientske read-only telemetrické API
                 is_evidencia_path = path_clean == 'evidencia' or path_clean.startswith('evidencia/')
-                is_valid_iot_dashboard = path_clean == 'evidencia/iot-dashboard' or path_clean.startswith('evidencia/iot-dashboard/')
+                is_valid_iot_dashboard = (
+                    path_clean == 'evidencia/iot-dashboard'
+                    or path_clean.startswith('evidencia/iot-dashboard/')
+                    or path_clean == 'evidencia/api/iot/devices'
+                    or path_clean.startswith('evidencia/api/iot/devices/')
+                    or path_clean.startswith('evidencia/api/iot/live/')
+                )
                 is_unauthorized_evidencia = is_evidencia_path and not is_valid_iot_dashboard
 
                 if is_blocked_root or is_unauthorized_evidencia:

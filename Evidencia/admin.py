@@ -2758,7 +2758,7 @@ class ZakaznikAdmin(KontaktnaOsobaAdminMixin, ISASObchodnyPartnerAdminMixin, ISA
                 ('domena', 'subdomena'),
                 ('datum_narodenia',)
             ),
-            'description': '📞 Kontaktné údaje na zodpovednú osobu za stranu zákazníka. 🌐 Doména slúži pre AI a rýchly preklik na ich web.'
+            'description': '📞 Kontaktné údaje na zodpovednú osobu za stranu zákazníka. 🌐 Doména slúži pre AI a rýchly preklik na ich web (subdoménu vypĺňajte iba pri aktívnom multitenant wildcard režime).'
         }),
         ('📍 SÍDLO SPOLOČNOSTI', {
             'fields': (

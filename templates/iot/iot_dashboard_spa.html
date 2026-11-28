@@ -708,10 +708,10 @@
                     const targetDev = allDevices.find(d => String(d.id) === String(preselectedId));
                     if (targetDev) {
                         if (!isClientPortal && targetDev.zakaznik) {
-                            $('#filter-zakaznik').val(targetDev.zakaznik).trigger('change.select2');
+                            $('#filter-zakaznik').val(targetDev.zakaznik).trigger('change');
                         }
                         if (targetDev.kategoria) {
-                            $('#filter-kategoria').val(targetDev.kategoria).trigger('change.select2');
+                            $('#filter-kategoria').val(targetDev.kategoria).trigger('change');
                         }
                         $('#filter-zariadenie').val(targetDev.id).trigger('change');
                     }

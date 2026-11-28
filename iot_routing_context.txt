@@ -1,0 +1,647 @@
+﻿
+============================================================
+FILE / SEARCH: Evidencia\urls.py
+============================================================
+from django.urls import path
+from . import views
+
+app_name = "evidencia"
+
+urlpatterns = [
+    path("stockmovement/ajax/get-categories/", views.get_categories, name="get_categories"),
+    path("stockmovement/ajax/get-subcategories/", views.get_subcategories, name="get_subcategories"),
+    path("stockmovement/ajax/get-products/", views.get_products, name="get_products"),
+    path("stockmovement/ajax/get-totals/", views.get_totals, name="get_totals"),
+    path("zariadenie_autocomplete/", views.zariadenie_autocomplete, name="zariadenie_autocomplete"),
+    path("get_zariadenia_for_zakaznik/", views.get_zariadenia_for_zakaznik, name="get_zariadenia_for_zakaznik"),
+    path("ajax/delete-item/", views.delete_item_ajax, name="delete_item_ajax"),
+    path("ajax/get-sklad-items/", views.get_sklad_items, name="get_sklad_items"),
+    path("ajax/bleskove-ulozit/", views.bleskove_ulozit, name="bleskove_ulozit"),
+    path('ai-chat/', views.ai_chat_view, name='ai_chat'),
+    path('ai-chat/status/<str:task_id>/', views.ai_chat_status_view, name='ai_chat_status'),
+    path('ai-chat/reset/', views.ai_chat_reset_view, name='ai_chat_reset'),
+    path('ai-chat/pdf-cache/<str:filename>/', views.ai_pdf_cache_image_view, name='ai_pdf_cache_image'),
+    path('admin/evidencia/konfigurator/<int:zariadenie_id>/', views.konfigurator_dielov_view, name='konfigurator_dielov'),
+    path('admin/evidencia/api/diely/', views.ajax_get_diely, name='ajax_get_diely'),
+    path('protokol/<uuid:kluc>/', views.servisny_protokol_view, name='servisny_protokol'),
+    path('protokol/<uuid:kluc>/ulozit/', views.ulozit_podpis_ajax, name='ulozit_podpis_ajax'),
+    path('protokol/ai-vygeneruj/', views.generuj_protokol_ai_ajax, name='generuj_protokol_ai_ajax'),
+    path('api/cenove-ponuky/kalkulacia/', views.api_kalkulacia_predpisu, name='api_ponuka_kalkulacia'),
+    path('api/cenove-ponuky/ulozit/', views.api_ulozit_ponuku, name='api_ponuka_ulozit'),
+    path('api/cenove-ponuky/ai-uvod/', views.api_ai_generuj_uvod, name='api_ponuka_ai_uvod'),
+    path('api/cenove-ponuky/vytvorit/', views.cenova_ponuka_builder_view, name='cenova_ponuka_builder'),
+    path('api/cenove-ponuky/cena-dielu/', views.api_cena_dielu, name='api_ponuka_cena_dielu'),
+    path('ponuka/<uuid:kluc>/', views.verejny_portal_ponuky_view, name='verejny_portal_ponuky'),
+    path('api/ponuka/<uuid:kluc>/schvalit/', views.api_schvalit_ponuku_klientom, name='api_schvalit_ponuku'),
+    path('vstup-sbs/schvalit/<uuid:kluc>/', views.schvalit_vstup_sbs_view, name='schvalit_vstup_sbs'),
+    path('vstup-sbs/pdf/<uuid:kluc>/', views.stiahni_vstup_sbs_pdf_view, name='stiahni_vstup_sbs_pdf'),
+    path('faktura-builder/nova/', views.faktura_builder_nova_view, name='faktura_builder_nova'),
+    path('faktura-builder/<int:faktura_id>/', views.faktura_builder_edit_view, name='faktura_builder'),   
+    path('api/faktury/ulozit-builder/', views.api_ulozit_fakturu_builder, name='api_ulozit_fakturu_builder'),
+    path('api/get-ponuka-polozky/', views.api_get_ponuka_polozky, name='api_get_ponuka_polozky'),
+    path('api/medziskladovy-presun/', views.api_medziskladovy_presun, name='api_medziskladovy_presun'),
+    path('api/dashboard-kvality/', views.dashboard_reklamacie, name='dashboard_reklamacie'),
+    path('import/vzor/<str:typ_importu>/', views.stiahni_vzorovy_subor_importu, name='stiahni_vzor_importu'),
+    path('api/doklady-pre-fakturu/', views.api_get_doklady_pre_fakturu, name='api_get_doklady_pre_fakturu'),
+    path('zariadenie/sepkar/draft/<str:token>/', views.ai_sepkar_uloz_draft, name='ai_sepkar_uloz_draft'),
+    path('zariadenie/sepkar/<str:token>/', views.ai_sepkar_mobilny_view, name='ai_sepkar_mobilny'),
+    path('erp-setup/<str:token>/', views.accountant_erp_setup_view, name='accountant-erp-setup'),
+    path('hr-dashboard/', views.hr_dashboard_view, name='hr_dashboard'),
+    path('api/iot/telemetry/', views.api_iot_telemetry_ingest, name='api_iot_telemetry_ingest'),
+    path('iot-dashboard/', views.iot_dashboard_spa, name='iot_dashboard_spa'),
+    path('api/iot/devices/', views.api_iot_get_devices, name='api_iot_get_devices'),
+    path('api/iot/live/<int:zariadenie_id>/', views.api_iot_get_live_data, name='api_iot_get_live_data'),
+    path('admin/modbus-konfigurator/', views.modbus_konfigurator_view, name='modbus_konfigurator'),
+    path('api/iot/registers/<int:zariadenie_id>/', views.api_iot_get_registers, name='api_iot_get_registers'),
+    path('api/iot/register/save/', views.api_iot_save_register, name='api_iot_save_register'),
+    path('api/iot/registers/bulk-save/', views.api_iot_save_registers_bulk, name='api_iot_save_registers_bulk'),
+    path('api/iot/register/delete/<int:register_id>/', views.api_iot_delete_register, name='api_iot_delete_register'),
+    path('api/iot/clone-registers/', views.api_iot_clone_registers, name='api_iot_clone_registers'),
+    path('api/iot/latest-telemetry/<int:zariadenie_id>/', views.api_iot_latest_telemetry, name='api_iot_latest_telemetry'),
+    path('api/iot/write/<int:zariadenie_id>/', views.api_iot_write_parameter, name='api_iot_write_parameter'),
+    path('api/iot/toggle-service-mode/<int:zariadenie_id>/', views.api_iot_toggle_service_mode, name='api_iot_toggle_service_mode'),
+    path('api/iot/alarm/<int:alarm_id>/resolve/', views.api_iot_resolve_alarm, name='api_iot_resolve_alarm')
+]
+
+
+============================================================
+FILE / SEARCH: Evidencia\views.py (lines 3920-4401)
+============================================================
+3920:     except ValueError:
+3921:         # Ak kľúč pre danú hodinu ešte neexistuje, vytvoríme ho s expiráciou 3700s (hodina + rezerva)
+3922:         cache.set(cache_key_rate, 1, timeout=3700)
+3923:         current_requests = 1
+3924:     
+3925:     # Fallback na 1000 zápisov, ak technik nevyplnil limit v databáze (Ochrana pred TypeError)
+3926:     limit_raw = config_data.get('limit')
+3927:     try:
+3928:         limit = int(limit_raw) if limit_raw is not None else 1000
+3929:     except (ValueError, TypeError):
+3930:         limit = 1000
+3931:         
+3932:     if current_requests > limit:
+3933:         return JsonResponse({'error': 'Prekročený limit zápisov (Rate Limit)'}, status=429)
+3934: 
+3935:     # ⚡ OFFLOADING: Odoslanie do Celery fronty s núdzovým Redis spoolingom
+3936:     try:
+3937:         process_iot_payload_task.delay(payload, config_data['zariadenie_id'])
+3938:     except Exception as exc:
+3939:         logger.warning(f"Zlyhalo zaradenie process_iot_payload_task do Celery: {exc}. Ukladám do záložného Redis spoolu.")
+3940:         try:
+3941:             # 🛡️ ATOMICKÝ SPOOL: Využívame natívny redis klient pre bezpečný push bez race condition
+3942:             client = cache._cache.get_client()
+3943:             spool_payload = json.dumps({'payload': payload, 'config_id': config_data['zariadenie_id']})
+3944:             if client.llen('iot_fallback_spool_queue') < 20000:
+3945:                 client.rpush('iot_fallback_spool_queue', spool_payload)
+3946:                 return JsonResponse({'status': 'spooled', 'message': 'Dáta prijaté do núdzovej pamäte'}, status=202)
+3947:         except Exception as spool_err:
+3948:             logger.critical(f"Kritické zlyhanie núdzového spoolingu telemetrie: {spool_err}")
+3949:         return JsonResponse({'error': 'Telemetrická fronta je dočasne nedostupná'}, status=503)
+3950: 
+3951:     return JsonResponse({'status': 'queued', 'message': 'Dáta prijaté na spracovanie'}, status=200)
+3952: 
+3953: def iot_dashboard_spa(request):
+3954:     """
+3955:     🎨 ISAS CORE: VIVID LIGHT SPA Dashboard (HTML Shell).
+3956:     """
+3957:     identita = FiremnaIdentita.objects.first()
+3958:     firemna_mena = getattr(identita, 'predvolena_mena', None) or get_firemna_mena()
+3959: 
+3960:     # 1. Klient pristupujúci cez vyhradenú firemnú subdoménu
+3961:     if getattr(request, 'is_subdomain', False) and request.tenant:
+3962:         if not request.user.is_authenticated:
+3963:             raise Http404("Prístup odopretý. Musíte sa prihlásiť.")
+3964:             
+3965:         # 🛡️ TENANT ISOLATION: Cudzia firma na subdoméne nesmie vidieť dáta tohto tenanta
+3966:         user_tenant = getattr(request.user, 'zakaznik_profil', None)
+3967:         if not request.user.is_staff and user_tenant != request.tenant:
+3968:             raise Http404("Prístup odopretý. Nemáte oprávnenie pre tento klientsky portál.")
+3969: 
+3970:         context = {
+3971:             'tenant': request.tenant, 
+3972:             'is_client_portal': True,
+3973:             'servis_firma': identita,
+3974:             'mena': firemna_mena,
+3975:             'meter_label': get_industry_term('meter_label', 'Počítadlo'),
+3976:             'meter_unit': get_industry_term('meter_unit', 'hod.'),
+3977:             'meter_load_label': get_industry_term('meter_load_label', 'Záťaž'),
+3978:             'meter_load_unit': get_industry_term('meter_load_unit', 'hod.'),
+3979:         }
+3980:         return render(request, 'iot/iot_dashboard_spa.html', context)
+3981: 
+3982:     # 2. 🚀 ISAS FIX: Autorizovaný B2B klient prihlásený cez hlavný web
+3983:     if request.user.is_authenticated and getattr(request.user, 'zakaznik_profil', None):
+3984:         context = {
+3985:             'tenant': request.user.zakaznik_profil,
+3986:             'is_client_portal': True,
+3987:             'servis_firma': identita,
+3988:             'mena': firemna_mena,
+3989:             'meter_label': get_industry_term('meter_label', 'Počítadlo'),
+3990:             'meter_unit': get_industry_term('meter_unit', 'hod.'),
+3991:             'meter_load_label': get_industry_term('meter_load_label', 'Záťaž'),
+3992:             'meter_load_unit': get_industry_term('meter_load_unit', 'hod.'),
+3993:         }
+3994:         return render(request, 'iot/iot_dashboard_spa.html', context)
+3995:     
+3996:     # 3. Interný personál (Technik / Dispečer)
+3997:     if not request.user.is_authenticated or not request.user.is_staff:
+3998:         raise Http404("Prístup odopretý.")
+3999:         
+4000:     context = {
+4001:         'is_client_portal': False,
+4002:         'servis_firma': identita,
+4003:         'mena': firemna_mena,
+4004:         'meter_label': get_industry_term('meter_label', 'Počítadlo'),
+4005:         'meter_unit': get_industry_term('meter_unit', 'hod.'),
+4006:         'meter_load_label': get_industry_term('meter_load_label', 'Záťaž'),
+4007:         'meter_load_unit': get_industry_term('meter_load_unit', 'hod.'),
+4008:     }
+4009: 
+4010:     return render(request, 'iot/iot_dashboard_spa.html', context)
+4011: 
+4012: def api_iot_get_devices(request):
+4013:     """
+4014:     🧠 ISAS CORE: API pre kaskádový filter a Globálne Alarmy.
+4015:     """
+4016:     # 🔒 TENANT ISOLATION (🛡️ ISAS SECURITY: Vyžaduje sa prihlásený používateľ aj na subdoméne)
+4017:     b2b_klient = getattr(request.user, 'zakaznik_profil', None) if request.user.is_authenticated else None
+4018: 
+4019:     if getattr(request, 'is_subdomain', False) and request.tenant and request.user.is_authenticated:
+4020:         # 🛡️ BOLA OCHRANA: Overenie, či používateľ skutočne patrí k tenantovi na subdoméne
+4021:         if not request.user.is_staff and b2b_klient != request.tenant:
+4022:             return JsonResponse({'error': 'Forbidden'}, status=403)
+4023:         zariadenia = ServisovaneZariadenie.objects.select_related('zakaznik').filter(
+4024:             Q(zakaznik=request.tenant) | Q(prenajmy__zakaznik=request.tenant),
+4025:             iot_je_aktivny=True
+4026:         ).distinct()
+4027:         alarmy_qs = AlarmLog.objects.select_related('zariadenie').filter(
+4028:             Q(zakaznik=request.tenant) | Q(zariadenie__prenajmy__zakaznik=request.tenant),
+4029:             vyriesene=False
+4030:         ).distinct().order_by('-casova_peciatka', '-id')[:10]
+4031:     elif b2b_klient:
+4032:         zariadenia = ServisovaneZariadenie.objects.select_related('zakaznik').filter(
+4033:             Q(zakaznik=b2b_klient) | Q(prenajmy__zakaznik=b2b_klient),
+4034:             iot_je_aktivny=True
+4035:         ).distinct()
+4036:         alarmy_qs = AlarmLog.objects.select_related('zariadenie').filter(
+4037:             Q(zakaznik=b2b_klient) | Q(zariadenie__prenajmy__zakaznik=b2b_klient),
+4038:             vyriesene=False
+4039:         ).distinct().order_by('-casova_peciatka', '-id')[:10]
+4040:     elif request.user.is_authenticated and request.user.is_staff:
+4041:         zariadenia = ServisovaneZariadenie.objects.select_related('zakaznik').filter(iot_je_aktivny=True)
+4042:         alarmy_qs = AlarmLog.objects.select_related('zariadenie').filter(vyriesene=False).order_by('-casova_peciatka', '-id')[:10]
+4043:     else:
+4044:         return JsonResponse({'error': 'Unauthorized'}, status=401)
+4045: 
+4046:     data = []
+4047:     for z in zariadenia:
+4048:         data.append({
+4049:             'id': z.id,
+4050:             'nazov': z.nazov or z.model_zariadenia,
+4051:             'sn': z.vyrobne_cislo,
+4052:             'kategoria': z.get_kategoria_display(),
+4053:             'zakaznik': z.zakaznik.Nazov_spolocnosti if z.zakaznik else 'Neznámy'
+4054:         })
+4055:         
+4056:     # 🚨 Globálne alarmy pre úvodnú obrazovku (🛡️ Ochrana pred AttributeError ak alarm nemá priradené zariadenie)
+4057:     globalne_alarmy = [{
+4058:         'id': a.id, # 👈 PRIDANÉ PRE JS
+4059:         'cas': a.casova_peciatka.strftime('%d.%m.%Y %H:%M'),
+4060:         'zariadenie': f"{a.zariadenie.model_zariadenia or a.zariadenie.nazov or 'Zariadenie'} (SN: {a.zariadenie.vyrobne_cislo})" if a.zariadenie else "Systémový alarm",
+4061:         'kod': a.kod_chyby,
+4062:         'popis': a.popis,
+4063:         'zavaznost': a.zavaznost,
+4064:         'vyriesene': a.vyriesene
+4065:     } for a in alarmy_qs]
+4066:     
+4067:     return JsonResponse({'zariadenia': data, 'globalne_alarmy': globalne_alarmy})
+4068: 
+4069: def api_iot_get_live_data(request, zariadenie_id):
+4070:     """
+4071:     🧠 ISAS CORE: API pre živé budíky (Gauges) a čiernu skrinku.
+4072:     """
+4073:     # 🔒 TENANT ISOLATION & ZERO N+1 OPTIMALIZÁCIA PRE 5S POLLING
+4074:     b2b_klient = getattr(request.user, 'zakaznik_profil', None) if request.user.is_authenticated else None
+4075:     param_relations = get_active_parameter_reverse_names()
+4076:     zar_qs = ServisovaneZariadenie.objects.select_related(
+4077:         'zakaznik', 'vyrobca', *param_relations
+4078:     )
+4079: 
+4080:     if getattr(request, 'is_subdomain', False) and request.tenant and request.user.is_authenticated:
+4081:         # 🛡️ BOLA OCHRANA: Blokovanie neoprávneného prístupu k telemetrii cudzieho stroja (vrátane prenájmov)
+4082:         if not request.user.is_staff and b2b_klient != request.tenant:
+4083:             return JsonResponse({'error': 'Forbidden'}, status=403)
+4084:         zariadenie = zar_qs.filter(
+4085:             Q(zakaznik=request.tenant) | Q(prenajmy__zakaznik=request.tenant),
+4086:             id=zariadenie_id
+4087:         ).first()
+4088:     elif b2b_klient:
+4089:         zariadenie = zar_qs.filter(
+4090:             Q(zakaznik=b2b_klient) | Q(prenajmy__zakaznik=b2b_klient),
+4091:             id=zariadenie_id
+4092:         ).first()
+4093:     elif request.user.is_authenticated and request.user.is_staff:
+4094:         zariadenie = zar_qs.filter(id=zariadenie_id).first()
+4095:     else:
+4096:         return JsonResponse({'error': 'Unauthorized'}, status=401)
+4097: 
+4098:     if not zariadenie:
+4099:         return JsonResponse({'error': 'Zariadenie nenájdené'}, status=404)
+4100: 
+4101:     # Dynamický časový rozsah pre graf (z URL parametra)
+4102:     time_range = request.GET.get('range', '1h')
+4103:     now = datetime.now()
+4104:     
+4105:     if time_range == '1h':
+4106:         start_time = now - timedelta(hours=1)
+4107:         format_casu = '%H:%M:%S'
+4108:     elif time_range == '24h':
+4109:         start_time = now - timedelta(hours=24)
+4110:         format_casu = '%H:%M'
+4111:     elif time_range == '3d':
+4112:         start_time = now - timedelta(days=3)
+4113:         format_casu = '%d.%m. %H:%M'
+4114:     elif time_range == '7d':
+4115:         start_time = now - timedelta(days=7)
+4116:         format_casu = '%d.%m. %H:%M'
+4117:     elif time_range == '14d':
+4118:         start_time = now - timedelta(days=14)
+4119:         format_casu = '%d.%m. %H:%M'
+4120:     elif time_range == '30d':
+4121:         start_time = now - timedelta(days=30)
+4122:         format_casu = '%d.%m.'
+4123:     elif time_range == '90d':
+4124:         start_time = now - timedelta(days=90)
+4125:         format_casu = '%d.%m.%Y'
+4126:     elif time_range == '180d':
+4127:         start_time = now - timedelta(days=180)
+4128:         format_casu = '%d.%m.%Y'
+4129:     elif time_range == '365d':
+4130:         start_time = now - timedelta(days=365)
+4131:         format_casu = '%m/%Y'
+4132:     else:
+4133:         start_time = now - timedelta(hours=1)
+4134:         format_casu = '%H:%M:%S'
+4135: 
+4136:     # 🛡️ DEFENZÍVA: Podpora Delta Pollingu (ak klient pošle last_id, ťaháme len prírastok)
+4137:     last_id_param = request.GET.get('last_id')
+4138:     is_delta = False
+4139: 
+4140:     if last_id_param and last_id_param.isdigit():
+4141:         historia_qs = TelemetryHistory.objects.filter(
+4142:             zariadenie=zariadenie,
+4143:             id__gt=int(last_id_param)
+4144:         ).only('id', 'casova_peciatka', 'analogove_hodnoty').order_by('id')[:200]
+4145:         historia = list(historia_qs)
+4146:         is_delta = True
+4147:     else:
+4148:         historia_qs = TelemetryHistory.objects.filter(
+4149:             zariadenie=zariadenie, 
+4150:             casova_peciatka__gte=start_time
+4151:         ).only('id', 'casova_peciatka', 'analogove_hodnoty').order_by('-casova_peciatka', '-id')[:1000]
+4152:         historia = list(reversed(list(historia_qs)))
+4153:     
+4154:     # Posledný záznam ťaháme absolútne, aby budíky a status fungovali aj keď v danom časovom okne grafu nie sú dáta
+4155:     posledny_zaznam = TelemetryHistory.objects.filter(zariadenie=zariadenie).order_by('-casova_peciatka', '-id').first()
+4156:     
+4157:     # 🚀 Reálny výpočet ONLINE stavu (Dáta nesmú byť staršie ako 2 minúty)
+4158:     is_online = False
+4159:     if posledny_zaznam and posledny_zaznam.casova_peciatka:
+4160:         casovy_rozdiel = datetime.now() - posledny_zaznam.casova_peciatka
+4161:         # Ochrana pred časovým posunom do budúcnosti (tolerancia max 30s dopredu a max 120s dozadu)
+4162:         if -30 <= casovy_rozdiel.total_seconds() < 120:
+4163:             is_online = True
+4164:             
+4165:     # Pripravíme dáta pre Chart.js (s prírastkovým streamingom bez sieťového preťaženia)
+4166:     current_last_id = historia[-1].id if historia else (int(last_id_param) if is_delta else (posledny_zaznam.id if posledny_zaznam else None))
+4167:     graf_data = {
+4168:         'casy': [z.casova_peciatka.strftime(format_casu) for z in historia],
+4169:         'hodnoty': [z.analogove_hodnoty or {} for z in historia],
+4170:         'is_delta': is_delta,
+4171:         'last_id': current_last_id
+4172:     }
+4173:     
+4174:     # Získame posledných 5 nevyriešených alarmov s deterministickým radením
+4175:     alarmy = AlarmLog.objects.filter(zariadenie=zariadenie, vyriesene=False).order_by('-casova_peciatka', '-id')[:5]
+4176:     alarmy_data = [{
+4177:         'id': a.id,
+4178:         'cas': a.casova_peciatka.strftime('%d.%m.%Y %H:%M:%S'),
+4179:         'kod': a.kod_chyby,
+4180:         'popis': a.popis,
+4181:         'zavaznost': a.zavaznost,
+4182:         'vyriesene': a.vyriesene
+4183:     } for a in alarmy]
+4184: 
+4185:     # 🧠 ISAS CORE: Výpočet energetickej efektivity, strát a ESG (CO2)
+4186:     mh_celkove = zariadenie.aktualne_motohodiny or 0
+4187:     mh_zataz = getattr(zariadenie, 'motohodiny_v_zatazi', 0) or 0
+4188:     efektivita = 0
+4189:     strata_eur = Decimal('0.00')
+4190:     co2_tony = 0
+4191:     
+4192:     if mh_celkove > 0:
+4193:         vypocitana_efekt = (mh_zataz / mh_celkove) * 100
+4194:         efektivita = round(min(100.0, max(0.0, vypocitana_efekt)), 1)
+4195:         
+4196:         if HAS_ENERGY_ESG_AUDIT:
+4197:             param_obj = get_zariadenie_parametre(zariadenie)
+4198:             vykon_raw = getattr(param_obj, 'vykon_kw', None) if param_obj else None
+4199: 
+4200:             if vykon_raw is not None:
+4201:                 try:
+4202:                     vykon_kw = float(str(vykon_raw).replace(',', '.'))
+4203:                 except (ValueError, TypeError):
+4204:                     vykon_kw = None
+4205:                         
+4206:                 if vykon_kw:
+4207:                     # 🧠 UNIVERZÁLNY KOEFICIENT: Delegovaný na model odvetvia (pre kompresor 0.30, inak 0.0)
+4208:                     koef_naprazdno_raw = getattr(param_obj, 'koeficient_naprazdno', 0.0)
+4209:                     try:
+4210:                         koef_naprazdno = float(koef_naprazdno_raw)
+4211:                     except (ValueError, TypeError):
+4212:                         koef_naprazdno = 0.0
+4213: 
+4214:                     # 1. Výpočet strát (Chod naprázdno)
+4215:                     mh_naprazdno = max(0, mh_celkove - mh_zataz)
+4216:                     spotreba_naprazdno_kwh = 0.0
+4217:                     if mh_naprazdno > 0 and koef_naprazdno > 0:
+4218:                         spotreba_naprazdno_kwh = mh_naprazdno * (vykon_kw * koef_naprazdno)
+4219:                         try:
+4220:                             cena_kwh = Decimal(str(zariadenie.zakaznik.cena_za_kwh_eur).replace(',', '.')) if (zariadenie.zakaznik and zariadenie.zakaznik.cena_za_kwh_eur is not None) else Decimal('0.000')
+4221:                         except (InvalidOperation, TypeError, ValueError):
+4222:                             cena_kwh = Decimal('0.000')
+4223:                         strata_eur = (Decimal(str(spotreba_naprazdno_kwh)) * cena_kwh).quantize(Decimal('0.01'))
+4224: 
+4225:                     # 2. 🍃 ISAS ESG CO2 Tracker
+4226:                     celkova_spotreba_kwh = (mh_zataz * vykon_kw) + spotreba_naprazdno_kwh
+4227:                     
+4228:                     # Vytiahnutie certifikovaného faktora priamo z karty zákazníka
+4229:                     emisny_faktor = 0.0
+4230:                     if zariadenie.zakaznik and zariadenie.zakaznik.emisny_faktor_co2 is not None:
+4231:                         try:
+4232:                             emisny_faktor = float(str(zariadenie.zakaznik.emisny_faktor_co2).replace(',', '.'))
+4233:                         except (ValueError, TypeError):
+4234:                             emisny_faktor = 0.0
+4235:                     
+4236:                     # Výpočet: Spotreba (kWh) * Faktor (kg/kWh) = kg CO2
+4237:                     co2_kg = celkova_spotreba_kwh * emisny_faktor
+4238:                     co2_tony = round(co2_kg / 1000, 2) # Prevod na tony pre prehľadnosť na Dashboarde
+4239: 
+4240:     # História servisov (VŠETKY záznamy s extrémnou optimalizáciou RAM a N+1)
+4241:     servisy_qs = ServisnyZaznam.objects.filter(
+4242:         zariadenie=zariadenie, dokoncene=True
+4243:     ).prefetch_related(
+4244:         'typ_servisu'
+4245:     ).only(
+4246:         'id', 'vytvorene', 'poruchy', 'formalne_zhodnotenie_ai', 'protokol_uzavrety', 
+4247:         'bezpecnostny_kluc', 'uzavrety_pdf_dokument', 'stav_motohodin'
+4248:     ).order_by('-vytvorene', '-id')
+4249:     
+4250:     servisy_data = []
+4251:     for s in servisy_qs:
+4252:         # Voláme priamo t.nazov, čím obchádzame __str__ a garantujeme 0 extra SQL dopytov
+4253:         typy = ", ".join([t.nazov for t in s.typ_servisu.all()]) or "Všeobecný servis"
+4254:         
+4255:         # Prioritne ťaháme fyzické PDF. Ak neexistuje, použijeme bezpečný dynamický reverz
+4256:         pdf_url = None
+4257:         if s.uzavrety_pdf_dokument and s.uzavrety_pdf_dokument.name:
+4258:             try:
+4259:                 pdf_url = s.uzavrety_pdf_dokument.url
+4260:             except ValueError:
+4261:                 pdf_url = None
+4262:         if not pdf_url and s.protokol_uzavrety and s.bezpecnostny_kluc:
+4263:             try:
+4264:                 pdf_url = reverse('evidencia:protokol_detail', kwargs={'kluc': s.bezpecnostny_kluc})
+4265:             except Exception:
+4266:                 pdf_url = None
+4267:             
+4268:         # Dynamické pridanie stavu počítadla cez odvetvový industry_loader
+4269:         mh_text = f"[{s.meter_display}] " if s.stav_motohodin is not None else ""
+4270:         text_zaznamu = s.formalne_zhodnotenie_ai or s.poruchy or ""
+4271:         popis = text_zaznamu.strip() if text_zaznamu else "Bez popisu"
+4272:         popis = f"{mh_text}{popis}"
+4273:         if len(popis) > 60:
+4274:             popis = popis[:57] + "..."
+4275:             
+4276:         servisy_data.append({
+4277:             'datum': s.vytvorene.strftime('%d.%m.%Y'),
+4278:             'typ': typy,
+4279:             'popis': popis,
+4280:             'pdf_url': pdf_url
+4281:         })
+4282: 
+4283:     # Najbližší plánovaný servis
+4284:     dalsi_servis = PlanovanyServisZariadenia.objects.filter(
+4285:         zariadenie=zariadenie, upozornenie_odoslane=False
+4286:     ).order_by('planovany_datum', 'planovane_motohodiny').first()
+4287:     
+4288:     predikcia_data = None
+4289:     if dalsi_servis:
+4290:         limit_text = []
+4291:         if dalsi_servis.planovany_datum:
+4292:             limit_text.append(f"Dátum: {dalsi_servis.planovany_datum.strftime('%d.%m.%Y')}")
+4293:             
+4294:         percento_opotrebenia = 0
+4295:         if dalsi_servis.planovane_motohodiny is not None:
+4296:             limit_text.append(f"Pri: {dalsi_servis.planovane_motohodiny} {zariadenie.meter_unit}")
+4297:             
+4298:             # 🧠 ISAS CORE: Výpočet reálneho opotrebenia do ďalšieho servisu
+4299:             posledne_mh = 0
+4300:             if dalsi_servis.posledny_zaznam and dalsi_servis.posledny_zaznam.stav_motohodin:
+4301:                 posledne_mh = dalsi_servis.posledny_zaznam.stav_motohodin
+4302:                 
+4303:             rozsah_intervalu = dalsi_servis.planovane_motohodiny - posledne_mh
+4304:             odpracovane_od_servisu = (zariadenie.aktualne_motohodiny or 0) - posledne_mh
+4305:             
+4306:             if rozsah_intervalu > 0:
+4307:                 percento_opotrebenia = max(0, min(int((odpracovane_od_servisu / rozsah_intervalu) * 100), 100))
+4308:         elif dalsi_servis.planovane_motohodiny_zataz is not None:
+4309:             posledne_mh_z = 0
+4310:             if dalsi_servis.posledny_zaznam and dalsi_servis.posledny_zaznam.motohodiny_v_zatazi:
+4311:                 posledne_mh_z = dalsi_servis.posledny_zaznam.motohodiny_v_zatazi
+4312:             rozsah_intervalu = dalsi_servis.planovane_motohodiny_zataz - posledne_mh_z
+4313:             odpracovane_od_servisu = (getattr(zariadenie, 'motohodiny_v_zatazi', 0) or 0) - posledne_mh_z
+4314:             if rozsah_intervalu > 0:
+4315:                 percento_opotrebenia = max(0, min(int((odpracovane_od_servisu / rozsah_intervalu) * 100), 100))
+4316: 
+4317:         if dalsi_servis.planovane_motohodiny_zataz is not None:
+4318:             m_load_unit = get_industry_term('meter_load_unit', zariadenie.meter_unit)
+4319:             limit_text.append(f"{zariadenie.meter_load_label}: {dalsi_servis.planovane_motohodiny_zataz} {m_load_unit}")
+4320:             
+4321:         predikcia_data = {
+4322:             'typ': dalsi_servis.typ_servisu.nazov if dalsi_servis.typ_servisu else 'Údržba',
+4323:             'limit': " | ".join(limit_text) if limit_text else "Podľa potreby",
+4324:             'percento': percento_opotrebenia
+4325:         }
+4326: 
+4327:     # 🧠 ISAS CORE: Vytiahnutie merných jednotiek zo slovníka
+4328:     slovnik_qs = SignalDictionary.objects.filter(zariadenie=zariadenie)
+4329:     jednotky_mapa = {sig.nazov_signalu: sig.merna_jednotka for sig in slovnik_qs if sig.merna_jednotka}
+4330:     
+4331:     ovladanie_mapa = {
+4332:         sig.nazov_signalu: {
+4333:             'adresa': sig.register_adresa,
+4334:             'prava': sig.prava_pristupu,
+4335:             'typ': sig.typ_signalu
+4336:         } for sig in slovnik_qs
+4337:     }
+4338: 
+4339:     # 🆔 ISAS IDENTITY: Dáta stroja (Defenzívne ošetrenie voči chýbajúcemu súboru na úložisku)
+4340:     qr_url = None
+4341:     if zariadenie.qr_kod:
+4342:         try:
+4343:             qr_url = zariadenie.qr_kod.url
+4344:         except (ValueError, AttributeError):
+4345:             qr_url = None
+4346: 
+4347:     je_personal = request.user.is_authenticated and (request.user.is_staff or request.user.is_superuser) and not hasattr(request.user, 'zakaznik_profil')
+4348:     identita_data = {
+4349:         'vyrobca': (str(zariadenie.vyrobca) if zariadenie.vyrobca else '') if je_personal else '',
+4350:         'model': zariadenie.model_zariadenia or zariadenie.nazov or 'Zariadenie',
+4351:         'sn': zariadenie.vyrobne_cislo or 'Nezadané',
+4352:         'rok': zariadenie.rok_vyroby or 'Nezadaný',
+4353:         'qr_kod_url': qr_url,
+4354:         'passport_url': f"/zariadenie/{zariadenie.bezpecnostny_kluc}/" if zariadenie.bezpecnostny_kluc else None,
+4355:         'zaruka_do': zariadenie.zaruka_do.strftime('%d.%m.%Y') if zariadenie.zaruka_do else None,
+4356:         'predlzena_zaruka_do': zariadenie.predlzena_zaruka_do.strftime('%d.%m.%Y') if zariadenie.predlzena_zaruka_do else None,
+4357:         'je_v_zaruke': getattr(zariadenie, 'je_v_zaruke', False),
+4358:     }
+4359:             
+4360:     # 🧠 ISAS CORE: Neutrálne načítanie limitov budíkov od aktívneho odvetvia (Polymorfizmus)
+4361:     parametre = get_zariadenie_parametre(zariadenie)
+4362:     limity = parametre.get_gauge_limits() if (parametre and hasattr(parametre, 'get_gauge_limits')) else {}
+4363: 
+4364:     # =====================================================================
+4365:     # 🔬 ISAS DIAGNOSTIC ENGINE: Automatizovaný audit (F-Plyny, VTZ, ISO)
+4366:     # =====================================================================
+4367:     legislativa = []
+4368:     diagnostika = []
+4369:     dnes = date.today()
+4370: 
+4371:     # 🛡️ ISAS CORE: Bezpečný zápis do Čiernej skrinky (Zero-Spam ochrana s ochranou voči duplicitám)
+4372:     def auto_alarm(kod, popis, zavaznost):
+4373:         try:
+4374:             # Ak už existuje otvorený (nevyriešený) alarm tohto typu, nezapisujeme duplikát
+4375:             if not AlarmLog.objects.filter(zariadenie=zariadenie, kod_chyby=kod, vyriesene=False).exists():
+4376:                 AlarmLog.objects.create(
+4377:                     zariadenie=zariadenie, 
+4378:                     zakaznik=zariadenie.zakaznik,
+4379:                     zavaznost=zavaznost, 
+4380:                     kod_chyby=kod, 
+4381:                     popis=popis
+4382:                 )
+4383:         except Exception as e_alarm:
+4384:             pass # Tichý fail: Zlyhanie zápisu do logu nesmie zhodiť live monitoring dashboard
+4385: 
+4386:     try:
+4387:         # 1. & 2. ZÁKONNÁ LEGISLATÍVA (VTZ A F-PLYNY) cez unifikovaný Compliance Engine s bezpečným mapovaním kľúčov
+4388:         compliance_polozky = get_zariadenie_compliance_audit(zariadenie, referencny_datum=dnes)
+4389:         for c_item in compliance_polozky:
+4390:             c_farba = c_item.get('farba')
+4391:             if not c_farba:
+4392:                 c_stav = c_item.get('stav', '')
+4393:                 if c_stav in ['PREPADNUTA', 'CHYBA_KONTROLA', 'CRITICAL']:
+4394:                     c_farba = 'red'
+4395:                 elif c_stav in ['BLIZI_SA', 'WARNING']:
+4396:                     c_farba = 'orange'
+4397:                 else:
+4398:                     c_farba = 'emerald'
+4399: 
+4400:             c_hodnota = c_item.get('hodnota_ui') or c_item.get('hodnota')
+4401:             if not c_hodnota and c_item.get('stav') == 'CHYBA_KONTROLA':
+
+============================================================
+FILE / SEARCH: SEARCH iot-dashboard / iot_dashboard
+============================================================
+C:\Users\Asus\Desktop\ISAS_app\Evidencia\ai_prompts.py:384:
+- MIDDLEWARE ARCHITEKTÚRA A ROUTING:
+  * ISASAuditMiddleware a `get_current_user()`: Zabezpečuje vláknovo-izolovanú dostupnosť používateľa v modeloch a signáloch (pri anonymoch a úlohách na pozadí `None`) s garantovaným čistením kontextu po požiadavke.
+>>>   * ISASTenantMiddleware: Zabezpečuje multitenancy pre klientske IoT portály. Automaticky prepúšťa verejný web a statické assety. Vyhradené systémové subdomény (www, admin, app, erp, mail, api, dispecing, status, flower, web) ignoruje. Pre bleskový prístup využíva Redis cache (300s nájdený tenant, 60s neexistujúci pod kľúčom `isas_tenant_obj_{subdomain}`). Vyhľadá zákazníka cez lazy import `Zakaznik.objects.filter(subdomena__iexact=subdomain).first()`, nastaví `request.tenant` a `request.is_subdomain = True` (pričom koreňový `dynamic_root_redirect` na subdoméne presmeruje na `/evidencia/iot-dashboard/`, na hlavnej doméne do `/admin/`). Izoluje tenanta zablokovaním centrály (`admin`, `_nested_admin`, `isas-mail-api`, `api`, `spotify`) a v evidencii povoľuje výhradne IoT Dashboard (`evidencia/iot-dashboard`). Ak subdoména v DB neexistuje, nespĺňa RFC 1123 alebo ide o nepovolenú sekciu, vyvolá `Http404`.
+  * PublicWebRoutingMiddleware a koreňový routing: Riadi smerovanie verejného webu podľa domény z `WebNastavenia` (pk=1, doména je cachovaná na 300s, pri DEBUG=True sa cache obchádza). Obsahuje prísny ERP Firewall: na produkčnej verejnej doméne okamžite zablokuje chybou 404 prístup na interné prefixy (`admin`, `evidencia`, `_nested_admin`, `isas-mail-api`, `api/crm-intel`, `api/live-radar`, `api/history-radar`, `api/optimize-route`, `spotify`, `api/spotify`, `api/easter-egg`; login/auth sú ponechané pre B2B zónu). Blokuje nepodporované subdomény verejného webu (wildcard ochrana). Ak host zodpovedá verejnej doméne (`matches_public_domain`) a požiadavka nejde na ERP cestu (resp. v produkcii sú ERP cesty na verejnej doméne blokované), prepne `request.is_public_web = True`, aktivuje `WebBuilder.urls` a vo `finally` bloku garantovane resetuje URLconf (`set_urlconf(None)`).
+  * DynamicCsrfViewMiddleware (`ISASaplikacia/middleware.py`, zapojený v `settings.MIDDLEWARE` namiesto štandardného `CsrfViewMiddleware`): Pri nebezpečných HTTP metódach mimo `('GET', 'HEAD', 'OPTIONS', 'TRACE')` sleduje zmenu `isas_public_web_domain` v Redise a pod thread-safe zámkom `threading.Lock` invaliduje všetky tri kešované vlastnosti (`allowed_origins_exact`, `allowed_origin_subdomains`, `csrf_trusted_origins_hosts`), čím umožňuje zmeniť `WebNastavenia.domena` z ERP adminu za behu bez reštartu Gunicorn workerov (pri výpadku Redisu zachováva existujúce originy).
+---
+C:\Users\Asus\Desktop\ISAS_app\Evidencia\ai_prompts.py:780:
+- WebNastavenia povoľuje existenciu VÝHRADNE dvoch záznamov: LIVE konfigurácia (pk=1) a DRAFT konfigurácia (pk=2). Pokus o vytvorenie ďalšieho záznamu vyvolá ValidationError. Zmazanie WebNastavenia (jednotlivé aj hromadné) je na úrovni jadra prísne zakázané (vyvolá PermissionDenied). Predvolený titulok_webu je 'Profesionálny servis a údržba'. Pri uložení domény systém automaticky odstraňuje protokoly 'http://', 'https://', 'www.', cesty, query parametre a kotvy.
+- CACHOVANIE A RENDEROVANIE WEBU: Statický kontext verejného webu sa pri neexistujúcej cache ukladá do Redisu na 900 sekúnd (15 min) pod kľúčom `public_web_context_v{web_version}_ind_{ind_mod}_zlava_{zlava}_b2b_{b2b_cache_id}` (kde b2b_cache_id je b2b_klient.pk pri prihlásenom klientovi alebo 0; aktívne odvetvie, B2B zľava a konkrétny klient generujú izolovanú cache). Dynamický stav `sla_telemetria` je z tejto 15-minútovej cache vyňatý a vyhodnocuje sa po jej načítaní vždy aktuálne voči času `timezone.now()` (cez neinvazívnu kópiu `{**context, 'sla_telemetria': sla_telemetria}` s 1h cache sviatku `isas_sla_sviatok_{YYYY-MM-DD}` a 60s cache vyťaženosti `isas_sla_zataz_{YYYY-MM-DD}`). Draft režim (`?preview=ai_draft`) sa necachuje a načítava draft bloky a konfiguráciu pk=2. Ak neexistuje konfigurácia pk=1 ani pk=2, systém použije prvý dostupný záznam alebo núdzový fallback (titulok_webu='ISAS CORE WEB').
+>>> - GDPR & ZERO EXTERNAL CDN ARCHITEKTÚRA VEREJNÝCH ŠABLÓN: Verejné a klientske šablóny (`web/base.html`, `web/machine_passport.html`, `documents/portal_design_system.html`, `admin/protokol_podpis.html`, `iot/iot_dashboard_spa.html`) nenačítavajú Google Fonts ani žiadne externé JS/CSS CDN (eliminácia neautorizovaného prenosu IP adries návštevníkov a supply-chain rizík). Všetky assety sa servujú lokálne cez `{% static 'vendor/...' %}` (WhiteNoise): font `Inter` (`vendor/fonts/inter.css` + lokálne `.woff2`), predkompilovaný Tailwind CSS s `@tailwindcss/typography` (`vendor/tailwind/tailwind.min.css` napojený na dynamickú CSS premennú `--brand-rgb` z `WebNastavenia.hlavna_farba`), `Chart.js` + `chartjs-plugin-zoom` (`vendor/chartjs/`), `Hammer.js` (`vendor/hammerjs/`), `jQuery` (`vendor/jquery/`), `Select2` (`vendor/select2/`) a `Flatpickr` (`vendor/flatpickr/`).
+- DYNAMICKÝ ENGINEERING HUB V `public_web_view`:
+  * Spája odvetvový `HUB_CONFIG` s legislatívnou maticou `get_compliance_config(iso)`. Menu nastavuje dynamicky z `identita.predvolena_mena` s fallbackom na `get_firemna_mena()`.
+---
+C:\Users\Asus\Desktop\ISAS_app\Evidencia\urls.py:47:
+    path('hr-dashboard/', views.hr_dashboard_view, name='hr_dashboard'),
+    path('api/iot/telemetry/', views.api_iot_telemetry_ingest, name='api_iot_telemetry_ingest'),
+>>>     path('iot-dashboard/', views.iot_dashboard_spa, name='iot_dashboard_spa'),
+    path('api/iot/devices/', views.api_iot_get_devices, name='api_iot_get_devices'),
+    path('api/iot/live/<int:zariadenie_id>/', views.api_iot_get_live_data, name='api_iot_get_live_data'),
+---
+C:\Users\Asus\Desktop\ISAS_app\Evidencia\views.py:3953:
+    return JsonResponse({'status': 'queued', 'message': 'Dáta prijaté na spracovanie'}, status=200)
+
+>>> def iot_dashboard_spa(request):
+    """
+    🎨 ISAS CORE: VIVID LIGHT SPA Dashboard (HTML Shell).
+---
+C:\Users\Asus\Desktop\ISAS_app\Evidencia\views.py:3980:
+            'meter_load_unit': get_industry_term('meter_load_unit', 'hod.'),
+        }
+>>>         return render(request, 'iot/iot_dashboard_spa.html', context)
+
+    # 2. 🚀 ISAS FIX: Autorizovaný B2B klient prihlásený cez hlavný web
+---
+C:\Users\Asus\Desktop\ISAS_app\Evidencia\views.py:3994:
+            'meter_load_unit': get_industry_term('meter_load_unit', 'hod.'),
+        }
+>>>         return render(request, 'iot/iot_dashboard_spa.html', context)
+    
+    # 3. Interný personál (Technik / Dispečer)
+---
+C:\Users\Asus\Desktop\ISAS_app\Evidencia\views.py:4010:
+    }
+
+>>>     return render(request, 'iot/iot_dashboard_spa.html', context)
+
+def api_iot_get_devices(request):
+---
+C:\Users\Asus\Desktop\ISAS_app\ISASaplikacia\middleware.py:167:
+                # V evidencii na subdoméne povoľujeme výhradne IoT Dashboard a jeho vnorené telemetrické endpointy
+                is_evidencia_path = path_clean == 'evidencia' or path_clean.startswith('evidencia/')
+>>>                 is_valid_iot_dashboard = path_clean == 'evidencia/iot-dashboard' or path_clean.startswith('evidencia/iot-dashboard/')
+                is_unauthorized_evidencia = is_evidencia_path and not is_valid_iot_dashboard
+
+---
+C:\Users\Asus\Desktop\ISAS_app\ISASaplikacia\middleware.py:168:
+                is_evidencia_path = path_clean == 'evidencia' or path_clean.startswith('evidencia/')
+                is_valid_iot_dashboard = path_clean == 'evidencia/iot-dashboard' or path_clean.startswith('evidencia/iot-dashboard/')
+>>>                 is_unauthorized_evidencia = is_evidencia_path and not is_valid_iot_dashboard
+
+                if is_blocked_root or is_unauthorized_evidencia:
+---
+C:\Users\Asus\Desktop\ISAS_app\ISASaplikacia\urls.py:14:
+    """🛡️ Subdoménu klienta presmeruje na IoT Dashboard, hlavnú doménu do ERP Adminu."""
+    if getattr(request, 'is_subdomain', False):
+>>>         return redirect('/evidencia/iot-dashboard/', permanent=False)
+    return redirect('/admin/', permanent=False)
+
+---
+C:\Users\Asus\Desktop\ISAS_app\templates\admin\index.html:878:
+                        
+                        <!-- 🎯 Klikateľná zóna presunutá sem -->
+>>>                         <div class="control-center-panel" data-url="{% url 'evidencia:iot_dashboard_spa' %}" style="cursor: pointer;" title="Kliknite pre otvorenie živého IoT Dashboardu">
+                            <div class="hatch-window">
+                                <div class="gears-container">
+---
+C:\Users\Asus\Desktop\ISAS_app\templates\web\b2b_dashboard.html:65:
+                <div class="flex flex-wrap items-center gap-2 flex-shrink-0">
+                    {% if klient.subdomena %}
+>>>                     <a href="{{ request.scheme }}://{{ klient.subdomena }}.{{ telemetry_domain }}/iot-dashboard/?zariadenie_id={{ al.zariadenie.id }}" target="_blank" rel="noopener noreferrer" class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold px-2.5 py-2 rounded-lg transition whitespace-nowrap" title="Zobraziť živé budíky a telemetriu">
+                        📡 Live Monitoring
+                    </a>
+---
+C:\Users\Asus\Desktop\ISAS_app\templates\web\b2b_dashboard.html:237:
+                            {% if stroj.iot_je_aktivny %}
+                                {% if klient.subdomena %}
+>>>                                 <a href="{{ request.scheme }}://{{ klient.subdomena }}.{{ telemetry_domain }}/iot-dashboard/?zariadenie_id={{ stroj.id }}" target="_blank" rel="noopener noreferrer" class="font-extrabold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 transition hover:bg-emerald-100 shadow-sm" title="Otvoriť živú telemetriu a diagnostiku">
+                                    📡 Live Telemetria
+                                </a>
+---
+

@@ -5,7 +5,7 @@
 
 {% block branding %}
 <h1 id="site-name">
-    <a href="{% url 'admin:index' %}">ISAS CORE</a>
+    <a href="{% if user.is_authenticated and not user.is_staff %}{% url 'webbuilder:b2b_dashboard' %}{% else %}{% url 'admin:index' %}{% endif %}">ISAS CORE</a>
 </h1>
 
 <div class="header-marquee">

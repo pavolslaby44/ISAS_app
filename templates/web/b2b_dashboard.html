@@ -61,11 +61,9 @@
                     <span class="text-[10px] text-gray-400 block mt-0.5">{{ al.casova_peciatka|date:"d.m.Y H:i" }}</span>
                 </div>
                 <div class="flex flex-wrap items-center gap-2 flex-shrink-0">
-                    {% if klient.subdomena %}
-                    <a href="{{ request.scheme }}://{{ klient.subdomena }}.{{ telemetry_domain }}/iot-dashboard/?zariadenie_id={{ al.zariadenie.id }}" target="_blank" rel="noopener noreferrer" class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold px-2.5 py-2 rounded-lg transition whitespace-nowrap" title="Zobraziť živé budíky a telemetriu">
+                    <a href="{% url 'evidencia:iot_dashboard_spa' %}?zariadenie_id={{ al.zariadenie.id }}" target="_blank" rel="noopener noreferrer" class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold px-2.5 py-2 rounded-lg transition whitespace-nowrap" title="Zobraziť živé budíky a telemetriu">
                         📡 Live Monitoring
                     </a>
-                    {% endif %}
                     <button type="button" 
                             data-machine-id="{{ al.zariadenie.id }}" 
                             data-machine-label="{{ al.zariadenie.model_zariadenia|default:al.zariadenie.nazov|default:'Zariadenie'|escape }} (SN: {{ al.zariadenie.vyrobne_cislo|escape }})" 
@@ -233,15 +231,9 @@
                             {% endif %}
 
                             {% if stroj.iot_je_aktivny %}
-                                {% if klient.subdomena %}
-                                <a href="{{ request.scheme }}://{{ klient.subdomena }}.{{ telemetry_domain }}/iot-dashboard/?zariadenie_id={{ stroj.id }}" target="_blank" rel="noopener noreferrer" class="font-extrabold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 transition hover:bg-emerald-100 shadow-sm" title="Otvoriť živú telemetriu a diagnostiku">
+                                <a href="{% url 'evidencia:iot_dashboard_spa' %}?zariadenie_id={{ stroj.id }}" target="_blank" rel="noopener noreferrer" class="font-extrabold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 transition hover:bg-emerald-100 shadow-sm" title="Otvoriť živú telemetriu a diagnostiku">
                                     📡 Live Telemetria
                                 </a>
-                                {% else %}
-                                <span class="font-bold text-gray-400 flex items-center gap-1 bg-gray-100 px-2 py-1 rounded-lg border border-gray-200 text-[10px] cursor-help" title="Telemetria je pripojená, pre aktiváciu prístupu do monitorovacieho portálu kontaktujte dispečing.">
-                                    📡 IoT Online
-                                </span>
-                                {% endif %}
                             {% endif %}
                         </div>
 

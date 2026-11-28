@@ -985,7 +985,7 @@ class Zakaznik(ISASAuditMixin, ISASGDPRMixin, ISASERPExportMixin, models.Model):
         null=True,
         unique=True,
         verbose_name="🔗 Subdoména portálu",
-        help_text="🔗 Alias pre klientsky portál (napr. 'duslo' vytvorí prístup na duslo.telemetria.sk). Píšte len malými písmenami bez medzier."
+        help_text="🔗 Voliteľný alias subdomény pre multitenant portál (funguje iba pri zapnutých wildcard subdoménach na serveri; v single-tenant režime nechajte prázdne – klienti používajú B2B zónu). Píšte malými písmenami bez medzier."
     )
     ico = models.CharField(
         max_length=20,
